@@ -1,0 +1,24 @@
+{                                                                                                     
+  "model_path": "vit",
+  "epochs": 300,
+  "num_workers": 4,
+  "prefetch_factor": 1,
+  "learning_rate": 0.0003, 
+  "weight_decay": 0.0003,
+  "data": {
+      "hdf5_file": "./gameplay-data.hdf5"
+  },
+  "model": {
+      "data": "hdf5",
+      "batch_size": 32,
+      "mixed_precision": false,
+      "image_height": 144,
+      "image_width": 160,
+      "num_frames": 3,
+      "channels": 128,
+      "num_heads": 2,
+      "layers": 5,
+      "patch_size": 16,
+      "gradient_accumulation_steps": 1
+  }
+}                          
