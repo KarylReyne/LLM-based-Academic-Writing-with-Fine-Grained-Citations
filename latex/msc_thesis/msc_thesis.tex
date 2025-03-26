@@ -1,0 +1,44 @@
+\documentclass[
+    a4paper,
+    cleardoubleempty,
+    BCOR1cm
+]{scrbook}
+
+\input{header}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\newcommand{\reffig}[1]{\figurename{ \ref{#1}}}
+\newcommand{\refeq}[1]{Eq. \ref{#1}}
+\newcommand{\D}{\text{d}}% leibniz notation d for derivatives/integrals
+\newcommand{\lp}[1]{\left({#1}\right)}% large parentheses, e.g. for vectors or fractions
+\newcommand{\mono}[1]{\texttt{#1}}% monospace text
+\newcommand{\ceil}[1]{\lceil{#1}\rceil}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+
+% \title{LLM-Enhanced Scientific Literature Search with Active Disambiguation}
+% \author{My Name \thanks{e-mail: my.name@uni-tuebingen.de}}
+% \date{\today}
+\begin{document}
+
+\input{teaser}
+
+\chapter*{Abstract}
+TODO
+
+\tableofcontents
+
+\input{content/introduction.tex}
+
+% \appendix
+% \chapter{TODO}
+
+% \nocite{*} 
+% \bibliographystyle{alpha}
+\bibliography{bibliography}
+
+\end{document}
+
