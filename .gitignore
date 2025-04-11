@@ -1,5 +1,5 @@
 # python
-__pycache__/
+**/__pycache__/
 
 # latex
 latex/**/*.aux
@@ -15,4 +15,8 @@ latex/**/*.xml
 latex/**/*.snm
 latex/**/*.gz
 latex/**/*.toc
+
+# ATD
+src/active-task-disambiguation/outputs/**
+src/active-task-disambiguation/figures/**
 
