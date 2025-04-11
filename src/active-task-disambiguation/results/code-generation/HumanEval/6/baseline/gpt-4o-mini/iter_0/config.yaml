@@ -6,3 +6,5 @@ strategy: baseline
 task_id: HumanEval/6
 seed: 0
 llm: gpt-4o-mini
+dataset_path: ./data/code-generation/HumanEval_for_code_generation.jsonl
+save_dir: code-generation
