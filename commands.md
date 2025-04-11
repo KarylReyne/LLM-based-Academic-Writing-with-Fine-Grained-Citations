@@ -6,7 +6,7 @@ conda activate environment
 <!-- cd src/active-task-disambiguation && conda activate active-reasoning -->
 
 ## remove conda env
-conda remove -n lecture6 --all
+conda remove -n active-reasoning --all
 
 ## TODO
 TODO
