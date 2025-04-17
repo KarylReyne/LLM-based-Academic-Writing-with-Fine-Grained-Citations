@@ -26,7 +26,23 @@
  - Oracle: another LLM, not specified
 
  ### ScholarCopilot
+ - generation of academic writing, only introduction and related work
+ - RAG variant
+ - continuous generation stage, generates retrieval tokens that pause generation to retrieve additional information, usually references (abstracts or key excerpt)
+ - enables user refinement via 
+ - dataset of 501k arxiv papers and 16.8k citation titles matched to either arxiv or semantic scholar
+ - unified loss Lg + lambda*Lr where Lg is max log-likelihood conditioned on prev token and Lr is contrastive loss that differentiates relevant from irrelevant citations
+ - generation model:  Qwen-2.5-7B-re, Qwen-2.5-7B-Instruct, Qwen-2.5-72B-re
+ - retrieval model: E5-Mistral-7B-Instruct
+
+### Tasks for next week
+1. Dataset for fine-grained citation, especially how to build this kind of dataset automatically (like the LongCite and selfCite paper I sent).
+2. Methods for fine-grained citation. LLM-based or light weight model before LLMs.
 
 
  ### Reading List
- - Rainforth et al. 2023 Modern Bayesian Experimental Design
+ - [ ] Vaswani et al. 2017
+ - [ ] LLaMA/Qwen
+ - [ ] SelfCite https://arxiv.org/pdf/2502.09604
+ - [ ] OpenScholar https://arxiv.org/pdf/2411.14199
+ - [ ] LongCite https://arxiv.org/pdf/2409.02897
