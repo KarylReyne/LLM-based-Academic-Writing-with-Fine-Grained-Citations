@@ -83,12 +83,32 @@
  - dataset for LFQA: [this](https://aclanthology.org/2023.findings-emnlp.467/)
 
 ### ReClaim https://arxiv.org/abs/2407.01796
- - 
+ - generation with sentence-level attribution
+ - alternate between generating claim and reference, connecting them via Chain-of-Thought
+ - dataset: WebGLM-QA (~9.4k after processing)
+ - dataset construction from QA dataset:
+    - segment answers
+    - identify (retrieve) citations corresponding to each segment
+    - construct the new attributed answer from the segments and citations
+    - (they perform additional steps to ensure good quality)
+ - generation is not a unified process, instead two models are trained (one for generating claims and one for generating references)
+ - reference generation
+    - generate next ref based on prev output and complete input context (instr., query + reference passages)
+    - input context is not masked
+ - claim generation
+    - generate next claim based on prev output
+ - ReClaim alternates between these two models during inference
+ - eval datasets: ELI5, ASQA
+ - backbone: GPT-4o, GPT-3.5-turbo, Llama3-8B-Instruct, various vicuna models
+ - the same backbone is used for both generation models
 
 ### Miscellaneous
  - improve/evaluate generation quality
     - [Top-k log-probability drop (metric), context pruning](https://arxiv.org/abs/2409.00729)
     - [ALCE (benchmark), Generate-then-Refine](https://arxiv.org/abs/2410.11217)
     - [REASONS](https://arxiv.org/abs/2405.02228)
- - Tools
-    - [Citekit](https://arxiv.org/abs/2408.04662)
+    - [CiteFix (citation correction)](https://arxiv.org/abs/2504.15629)
+ - tools
+    - [Citekit (toolkit for RAG and QA)](https://arxiv.org/abs/2408.04662)
+ - dataset generation
+    - [attributed answers from QA dataset](https://arxiv.org/abs/2407.01796)
