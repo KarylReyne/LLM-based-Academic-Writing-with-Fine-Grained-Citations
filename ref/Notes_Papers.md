@@ -68,7 +68,22 @@
  - backbone: instruction-tuned Llama-3-8B, Phi-3-mini
 
 ### Attribute First, then Generate https://arxiv.org/abs/2403.17104
- - TODO
+ - locally-attributable (sub-document citations) text generation
+ - criterion for precise citations that target arbitrarily small spans
+ - no unified generation process, instead choose relevant details from the context to inform the generation
+    - (1) content selection from the retrieval corpus
+    - (2) organizing and grouping content for sentence fusion
+    - (3) sentence-by-sentence generation based on the selected structured content
+ - prompt-based in-context learning for each step
+ - (1) span/highlight identification by training on query + few-shot examples
+ - (2) concatenate + truncate spans, insert markup symbols (begin/end), instruct LM to organize spans into ordered clusters
+ - (3) LM instructed to generate sentence by sentence where one sentence is generated from a single cluster and all prev. sentences
+ - (2) and (3) may be combined into a Chain-of-Thought-like system
+ - backbone: Gemini
+ - dataset for LFQA: [this](https://aclanthology.org/2023.findings-emnlp.467/)
+
+### ReClaim https://arxiv.org/abs/2407.01796
+ - 
 
 ### Miscellaneous
  - improve/evaluate generation quality
