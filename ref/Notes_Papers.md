@@ -112,3 +112,14 @@
     - [Citekit (toolkit for RAG and QA)](https://arxiv.org/abs/2408.04662)
  - dataset generation
     - [attributed answers from QA dataset](https://arxiv.org/abs/2407.01796)
+ - unordered
+    - https://arxiv.org/abs/2412.02626
+    - https://arxiv.org/abs/2405.02228
+    - https://arxiv.org/abs/2203.11147
+    - https://arxiv.org/abs/2502.10881
+    - https://arxiv.org/abs/2412.12358
+    - https://arxiv.org/abs/2410.23166
+    - https://arxiv.org/abs/2403.18381
+    - https://aclanthology.org/2023.emnlp-main.398/
+    - https://arxiv.org/abs/2409.11242
+    - https://arxiv.org/abs/2412.13746
