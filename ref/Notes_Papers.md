@@ -108,6 +108,7 @@
 - https://arxiv.org/abs/2412.13746
 - [ALCE (benchmark), Generate-then-Refine](https://arxiv.org/abs/2410.11217)
 - [REASONS](https://arxiv.org/abs/2405.02228)
+- [LLaMA3](https://arxiv.org/abs/2407.21783)
 
 ### Miscellaneous
  - improve/evaluate generation quality
