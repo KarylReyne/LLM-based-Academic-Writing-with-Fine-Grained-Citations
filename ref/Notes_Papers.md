@@ -102,24 +102,28 @@
  - backbone: GPT-4o, GPT-3.5-turbo, Llama3-8B-Instruct, various vicuna models
  - the same backbone is used for both generation models
 
+### next to read
+- https://arxiv.org/abs/2405.02228
+- https://arxiv.org/abs/2203.11147
+- https://arxiv.org/abs/2412.13746
+- [ALCE (benchmark), Generate-then-Refine](https://arxiv.org/abs/2410.11217)
+- [REASONS](https://arxiv.org/abs/2405.02228)
+
 ### Miscellaneous
  - improve/evaluate generation quality
     - [Top-k log-probability drop (metric), context pruning](https://arxiv.org/abs/2409.00729)
     - [ALCE (benchmark), Generate-then-Refine](https://arxiv.org/abs/2410.11217)
     - [REASONS](https://arxiv.org/abs/2405.02228)
     - [CiteFix (citation correction)](https://arxiv.org/abs/2504.15629)
+    - https://arxiv.org/abs/2409.11242
  - tools
     - [Citekit (toolkit for RAG and QA)](https://arxiv.org/abs/2408.04662)
  - dataset generation
     - [attributed answers from QA dataset](https://arxiv.org/abs/2407.01796)
  - unordered
     - https://arxiv.org/abs/2412.02626
-    - https://arxiv.org/abs/2405.02228
-    - https://arxiv.org/abs/2203.11147
     - https://arxiv.org/abs/2502.10881
     - https://arxiv.org/abs/2412.12358
     - https://arxiv.org/abs/2410.23166
     - https://arxiv.org/abs/2403.18381
     - https://aclanthology.org/2023.emnlp-main.398/
-    - https://arxiv.org/abs/2409.11242
-    - https://arxiv.org/abs/2412.13746
