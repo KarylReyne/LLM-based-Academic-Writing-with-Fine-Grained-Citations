@@ -102,17 +102,39 @@
  - backbone: GPT-4o, GPT-3.5-turbo, Llama3-8B-Instruct, various vicuna models
  - the same backbone is used for both generation models
 
+### REASONS https://arxiv.org/abs/2405.02228
+ - dataset/benchmark
+ - metadata-augmentation reduces hallucinations
+ - progressively adding metadata (abstract followed by author information) enables successful identification of the correct citation
+ - 2017-2024
+ - contains extracted from related work sections of IEEE-formatted papers in Computer Science and Biology published on ArXiv
+ - dataset creation:
+    - isolate related work section (parsing)
+    - extract individual sentences containing citations
+    - sentences are stored with json metadata, including: source paper ID and pub. date, citation target metadata, cross-domain citation markers, surrounding context sentences, classification tag
+    - only CC Zero, CC BY and CC BY-SA
+ - benchmark tasks
+    - Direct Query: LLM generates author names when given a paper title (author attribution)
+    - Indirect Query: LLM generates the cited paper title when given a sentence (title attribution)
+    - SID Prompting: LLM tasked to identify citations based solely on the quoted text, if LLM is uncertain, (incrementally ?) provide additional information such as complete author information, full abstract text, and additional contextual signals
+ - proposed eval metrics
+    - Hallucination Rate quantifies the model’s tendency to generate incorrect or partially correct citations
+    - Pass Percentage measures the model’s discretion in responding, showing its ability to abstain when uncertain
+
+### ALCE https://arxiv.org/abs/2305.14627
+ - evaluates citation quality on fluency, correctness, and relevance of the citation through question and answer
+ - TODO
+
 ### Miscellaneous
  - improve/evaluate generation quality
     - [Top-k log-probability drop (metric), context pruning](https://arxiv.org/abs/2409.00729)
-    - [ALCE (benchmark), Generate-then-Refine](https://arxiv.org/abs/2410.11217)
-    - [REASONS](https://arxiv.org/abs/2405.02228)
     - [CiteFix (citation correction)](https://arxiv.org/abs/2504.15629)
  - tools
     - [Citekit (toolkit for RAG and QA)](https://arxiv.org/abs/2408.04662)
  - dataset generation
     - [attributed answers from QA dataset](https://arxiv.org/abs/2407.01796)
  - unordered
+    - https://arxiv.org/abs/2410.11217
     - https://arxiv.org/abs/2412.02626
     - https://arxiv.org/abs/2405.02228
     - https://arxiv.org/abs/2203.11147
