@@ -122,22 +122,41 @@
     - Pass Percentage measures the model’s discretion in responding, showing its ability to abstain when uncertain
 
 ### ALCE https://arxiv.org/abs/2305.14627
- - evaluates citation quality on fluency, correctness, and relevance of the citation through question and answer
+ - compiled from ASQA, QAMPARI and ELI5 (many short answers QA, multiple-atomic answers QA and long-form QA respectively)
+ - evaluates citation quality regarding
+    - fluency (MAUVE)
+    - correctness
+       - ASQA: exact match recall
+       - QAMPARI: precision and recall
+       - ELI5: recall of Instruct-GPT-generated claims
+    - relevance to the statement (natural language inference model TRUE that checks entailment)
+       - evaluated via citation recall (statement is supported by passages) and 
+       - citation precision (there are irrelevant passages)
+ - automatic evaluation without expensive human involvement
+ - 1k examples per dataset (sufficient bc not training data)
+ - allows citing multiple passages per statement
+ - experiment setup
+    - retrieval corpus of 100-word passages (2018-12-20 Wikipedia snapshot for ASQA and QAMPARI, Sphere for ELI5)
+    - retrievers: GTR, DPR, BM25 (top-100 passages per question)
+    - generation: (1) given instruction, corpus and question, generate answer with citations from corpus (2) corpus uses shortened passages to fit more passages into the context window, LLm can check full text of passage if needed (3) LLM is allowed to retrieve during generation
+ - they test Chat-GPT (different context windows), GPT-4, LLaMA, Alpaca, Vicuna, Oasst
+
+### On the Capacity of Citation Generation by Large Language Models https://arxiv.org/abs/2410.11217
  - TODO
  
 ### next to read
-- https://arxiv.org/abs/2405.02228
-- https://arxiv.org/abs/2203.11147
-- https://arxiv.org/abs/2412.13746
-- [ALCE (benchmark), Generate-then-Refine](https://arxiv.org/abs/2410.11217)
-- [REASONS](https://arxiv.org/abs/2405.02228)
+- [Local Citation Recommendation with Hierarchical-Attention Text Encoder and SciBERT-based Reranking](https://arxiv.org/abs/2112.01206)
+- [Dual Attention Model for Citation Recommendation](https://arxiv.org/abs/2010.00182)
+- [GopherCite](https://arxiv.org/abs/2203.11147)
+- [RAG-RewardBench](https://arxiv.org/abs/2412.13746)
 - [LLaMA3](https://arxiv.org/abs/2407.21783)
+- [in-context learning (GPT-3)](https://papers.nips.cc/paper/2020/hash/1457c0d6bfcb4967418bfb8ac142f64a-Abstract.html)
 
 ### Miscellaneous
  - improve/evaluate generation quality
     - [Top-k log-probability drop (metric), context pruning](https://arxiv.org/abs/2409.00729)
     - [CiteFix (citation correction)](https://arxiv.org/abs/2504.15629)
-    - https://arxiv.org/abs/2409.11242
+    - [Trust-Align](https://arxiv.org/abs/2409.11242)
  - tools
     - [Citekit (toolkit for RAG and QA)](https://arxiv.org/abs/2408.04662)
  - dataset generation
