@@ -142,7 +142,27 @@
  - they test Chat-GPT (different context windows), GPT-4, LLaMA, Alpaca, Vicuna, Oasst
 
 ### On the Capacity of Citation Generation by Large Language Models https://arxiv.org/abs/2410.11217
- - TODO
+ - evaluation of LLMs ability to attribute sources accurately
+ - eval. on long-form QA datasets: WebGLM-QA, ASQA and ELI5
+ - Generate-then-Refine: adds relevant citations that were not initially generated in the response and removes irrelevant citations
+    - train a refiner model LLM to adjust generated citations post-hoc
+    - goals: retain relevant citations, add missing ones and remove irrelevant ones
+    - dataset generation:
+       - split response into statements, remove existing citations
+       - enum. all possible citation combinations
+       - NLI model determines combinations that support each statement
+       - add 'ground truth' citations to the dataset
+ - evaluation of citation quality with adjusted ALCE metrics
+ - citation generation for datasets via GPT-3 (in-context learning)
+ - correctness metric: BLEU-4, ROUGE-L
+ - citation quality mertric:
+    - citation recall: same as ALCE, except that statements that do not have any citations are not considered for the recall score
+    - citation precision: same as ALCE, except multiple similar citations are not penalized (no longer pursues conciseness)
+ - experiment backbones: GPT, LLaMA, Qwen, GLM, Mistral (for few-shot with LoRA fine-tuning)
+ - T5 as the NLI model
+
+### Local Citation Recommendation with Hierarchical-Attention Text Encoder and SciBERT-based Reranking https://arxiv.org/abs/2112.01206
+ - 
  
 ### next to read
 - [Local Citation Recommendation with Hierarchical-Attention Text Encoder and SciBERT-based Reranking](https://arxiv.org/abs/2112.01206)
