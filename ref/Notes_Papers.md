@@ -117,6 +117,11 @@
     - Direct Query: LLM generates author names when given a paper title (author attribution)
     - Indirect Query: LLM generates the cited paper title when given a sentence (title attribution)
     - SID Prompting: LLM tasked to identify citations based solely on the quoted text, if LLM is uncertain, (incrementally ?) provide additional information such as complete author information, full abstract text, and additional contextual signals
+ - RAG architecture
+    - given sentence s and retrieval corpus R
+    - encode s with query encoder, d in R with document encoder
+    - retrieve top-k relevant documents for s based on embedding similarity (OpenAI bi-encoder)
+    - similarity measure: BM25 or MPNet cross-encoder trained on REASONS doc. index with contrastive loss
  - proposed eval metrics
     - Hallucination Rate quantifies the model’s tendency to generate incorrect or partially correct citations
     - Pass Percentage measures the model’s discretion in responding, showing its ability to abstain when uncertain
@@ -137,7 +142,7 @@
  - allows citing multiple passages per statement
  - experiment setup
     - retrieval corpus of 100-word passages (2018-12-20 Wikipedia snapshot for ASQA and QAMPARI, Sphere for ELI5)
-    - retrievers: GTR, DPR, BM25 (top-100 passages per question)
+    - retrievers: GTR, DPR, BM25 (top-100 passages per question), they mention that they also use in-context learning and cite GPT-3 but do not go into detail
     - generation: (1) given instruction, corpus and question, generate answer with citations from corpus (2) corpus uses shortened passages to fit more passages into the context window, LLm can check full text of passage if needed (3) LLM is allowed to retrieve during generation
  - they test Chat-GPT (different context windows), GPT-4, LLaMA, Alpaca, Vicuna, Oasst
 
@@ -159,13 +164,25 @@
     - citation recall: same as ALCE, except that statements that do not have any citations are not considered for the recall score
     - citation precision: same as ALCE, except multiple similar citations are not penalized (no longer pursues conciseness)
  - experiment backbones: GPT, LLaMA, Qwen, GLM, Mistral (for few-shot with LoRA fine-tuning)
- - T5 as the NLI model
+ - T5 as the NLI model, see [TRUE](https://arxiv.org/abs/2204.04991)
+    - Natural Language Inference [Bowman et al. 2015](https://aclanthology.org/D15-1075/) is to determine, given two sentences, a hypothesis and a premise, whether the hypothesis in entailed by the premise, contradicts it, or is neutral w.r.t to it.
 
-### Local Citation Recommendation with Hierarchical-Attention Text Encoder and SciBERT-based Reranking https://arxiv.org/abs/2112.01206
- - 
+### HAtten https://arxiv.org/abs/2112.01206
+ - addresses local citation recommendation as a retrieval task, a query consists of two 'contexts':
+    - text surrounding the citation placeholder ('local context')
+    - title and abstract of the citing paper ('global context')
+ - recommender pipeline:
+    - prefetching
+       - embed query and documents with bi-encoder
+       - retrieve k nearest neighbors of query (using knn, so probably just vector space distance)
+       - encode query and papers with a two-layer Hierarchical Attention-based text encoder (HAtten) (paragraph embedding -> query/doc embedding)
+    - re-ranking
+       - SciBERT
+ - dataset
+    - 3.2m local citation sentences (with title+abstract of both the cited and citing paper)
+    - they also experiment on: ACL-200, RefSeer, FullTextPeerRead
  
 ### next to read
-- [Local Citation Recommendation with Hierarchical-Attention Text Encoder and SciBERT-based Reranking](https://arxiv.org/abs/2112.01206)
 - [Dual Attention Model for Citation Recommendation](https://arxiv.org/abs/2010.00182)
 - [GopherCite](https://arxiv.org/abs/2203.11147)
 - [RAG-RewardBench](https://arxiv.org/abs/2412.13746)
