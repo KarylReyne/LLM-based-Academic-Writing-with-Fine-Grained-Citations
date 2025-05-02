@@ -134,7 +134,7 @@
        - ASQA: exact match recall
        - QAMPARI: precision and recall
        - ELI5: recall of Instruct-GPT-generated claims
-    - relevance to the statement (natural language inference model TRUE that checks entailment)
+    - relevance to the statement (natural language inference model [TRUE](https://arxiv.org/abs/2204.04991) that checks entailment)
        - evaluated via citation recall (statement is supported by passages) and 
        - citation precision (there are irrelevant passages)
  - automatic evaluation without expensive human involvement
