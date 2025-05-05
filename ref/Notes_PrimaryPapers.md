@@ -55,5 +55,31 @@
 
 ### TODO: Generation Model
 
-### TODO: Alternate Retriever: [ReasonsIR](https://arxiv.org/pdf/2504.20595)
- - TODO
+### Retriever: [ReasonsIR](https://arxiv.org/pdf/2504.20595)
+ - reasoning-intensive document retrieval 
+ - ReasonIR-Synthesizer: synthetically generating two types of reasoning-intensive retrieval data
+    - _varied-length queries_ (VL) and their corresponding synthesized documents, which are of diverse lengths and are designed to extend the effective context length
+       - task LLM to generate a positive document for a given query
+    - _hard queries_ (HQ), reasoning-intensive queries generated based on real seed documents
+       - [BRIGHT](https://arxiv.org/abs/2407.12883) as the initial document pool, scored by the FineWeb-Edu classifier for educational value
+       - task LLM to reason about the background knowledge, common problem-solving patterns, and realistic scenarios before formulating a difficult question while also avoiding seed-document-dependent (e.g. using terms specific to the seed doc) questions
+       - seed doc serves as positive document
+    - each includes synthetic hard negatives, documents that appear superficially relevant but are actually unhelpful for the query
+       - generate the hard negative in a separate turn, conditioning on the previously obtained query and positive document for both VL and HQ data
+ - ReasonIR-8B bi-encoder
+    - LLAMA 3.1-8B with a bi-directional attention mask, fine-tuned on public datasets and synthetic data (ReasonIR-Synthesizer)
+    - consistently benefits from longer rewritten queries
+       - rewriting seeks to make the content of the query more lexically and semantically relevant (such that the retiever can retrieve more relevant top-k documents)
+       - Reason-query: query rewriter g(·,c) with a length configuration c and chain-of-thought reasoning, producing a rewritten query q̃ = g(q,c)
+    - benefits from additional LLM reranking
+       - ReasonIR-Rerank: interpolate the reranking scores with the scores given by the base retriever
+       - QWEN2.5-32B-INSTRUCT
+    - contrastive loss: optimizes the retriever h to embed queries q closer to relevant documents D+ than to irrelevant ones D−
+    - computing distances with all D− is expensive -> train retriever only on hard (difficult) negative documents d~ in D− for which cos sim to q is large
+ - train data
+    - 1.38m public (MS MARCO, Natural Questions, HotpotQA)
+    - 245k VL
+    - 100k HQ
+ - eval datasets
+    - IR: BRIGHT
+    - RAG: MMLU, GPQA

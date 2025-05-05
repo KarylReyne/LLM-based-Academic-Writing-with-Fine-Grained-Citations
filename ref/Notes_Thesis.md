@@ -1,1 +1,2 @@
  - REASONS has a very good introduction that makes many important observations
+ - LLM rerankers have been shown to be effective on reasoning-intensive retrieval, see [BRIGHT](https://arxiv.org/abs/2407.12883)
