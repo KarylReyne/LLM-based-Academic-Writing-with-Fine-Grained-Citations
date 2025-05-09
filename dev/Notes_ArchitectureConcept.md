@@ -57,3 +57,4 @@ _look for more human-annotated data!!!_
  - [PaperQA](https://arxiv.org/abs/2312.07559)
  - [PaperQA2](https://arxiv.org/abs/2409.13740)
  - [OpenResearcher](https://arxiv.org/abs/2408.06941) for retrieval refinement methods
+ 
