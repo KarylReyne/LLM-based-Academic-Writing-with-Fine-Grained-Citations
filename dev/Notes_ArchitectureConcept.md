@@ -1,10 +1,10 @@
 ### Modules
  - Retriever
      - given a query x, retrieves K relevant documents (or chunks ?) from a data collection (scientific papers, e.g. arxiv)
-     - ReasonIR
+     - ReasonIR, [Contriever](https://openreview.net/forum?id=jKN1pXi7b0)
  - Reranker
      - given a query x and K documents, return k re-ranked documents
-     - ReasonIR-Rerank
+     - ReasonIR-Rerank, [BGE-reranker](https://arxiv.org/abs/2309.07597)
  - Generator
      - given a query x and k documents, generate an initial response y0=s1C1...snCn which is composed of statements si and their corresponding set of citations Ci=ci1...cim where each citations cij supports si
      - use self-feedback to update response to yk
