@@ -1,13 +1,18 @@
 ## create new conda env from yml file
 conda env create -f environment.yml
 
-## activate conda env 'environment'
-conda activate environment
-<!-- cd src/active-task-disambiguation -->
-<!-- conda activate active-reasoning -->
+## update conda env from fileco
+conda env update --file environment.yml --prune
+
+## activate conda env 
+conda activate citations
 
 ## remove conda env
-conda remove -n active-reasoning --all
+conda remove -n citations --all
 
-## TODO
-TODO
+## interactive session
+srun --job-name "InteractiveJob" --partition=2080-galvani --ntasks=1 --nodes=1 --gres=gpu:1 --time 1:00:00 --pty bash
+ - get architecture/driver info: nvidia-smi
+
+##
+

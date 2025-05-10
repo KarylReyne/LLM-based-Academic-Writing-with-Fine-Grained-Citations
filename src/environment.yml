@@ -1,0 +1,10 @@
+name: citations
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.13
+  - numpy
+  - matplotlib
+  - pytorch 
+  - transformers>=4.47.0 # req for ReasonIR

@@ -1,6 +1,0 @@
-{
-    "0": "same_chars(\"cat\", \"tac\")",
-    "1": "same_chars(\"good\", \"dog\")",
-    "2": "same_chars(\"hello\", \"world\")",
-    "3": "same_chars(\"abcd\", \"dcba\")"
-}
