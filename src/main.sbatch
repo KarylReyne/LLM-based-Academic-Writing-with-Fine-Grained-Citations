@@ -6,12 +6,12 @@
 #SBATCH --ntasks=1                 # Number of tasks
 #SBATCH --cpus-per-task=8          # Number of CPU cores per task
 #SBATCH --nodes=1                  # Ensure that all cores are on the same machine with nodes=1
-#SBATCH --partition=2080-galvani   # Which partition will run your job
-#SBATCH --time=0-00:05             # Allowed runtime in D-HH:MM
+#SBATCH --partition=a100-galvani   # Which partition will run your job
+#SBATCH --time=0-00:10             # Allowed runtime in D-HH:MM
 #SBATCH --gres=gpu:2               # (optional) Requesting type and number of GPUs
 #SBATCH --mem=50G                  # Total memory pool for all cores (see also --mem-per-cpu); exceeding this number will cause your job to fail.
-#SBATCH --output=/galvani-log/log-%j.out       # File to which STDOUT will be written - make sure this is not on $HOME
-#SBATCH --error=/galvani-log/log-%j.err        # File to which STDERR will be written - make sure this is not on $HOME
+#SBATCH --output=galvani-log/log-a100-%j.out       # File to which STDOUT will be written - make sure this is not on $HOME
+#SBATCH --error=galvani-log/log-a100-%j.err        # File to which STDERR will be written - make sure this is not on $HOME
 #SBATCH --mail-type=ALL            # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=niklas.munkes@student.uni-tuebingen.de   # Email to which notifications will be sent
 
@@ -25,6 +25,10 @@ nvidia-smi # only if you requested gpus
 # add possibly other setup code here, e.g.
 # - copy singularity images or datasets to local on-compute-node storage like /scratch_local
 # - loads virtual envs, like with anaconda
+export CONDA_ROOT=/home/geiger/gwb204/miniconda3
+source $CONDA_ROOT/etc/profile.d/conda.sh
+export PATH="$CONDA_ROOT/envs/citations/bin:$PATH"
+conda activate citations
 # - set environment variables
 # - determine commandline arguments for `srun` calls
 
