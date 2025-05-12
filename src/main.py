@@ -1,23 +1,53 @@
-# from: https://huggingface.co/reasonir/ReasonIR-8B
-# dataset: https://huggingface.co/datasets/reasonir/reasonir-data
-
+import torch
+import json
+import requests
+import subprocess
+import os
 from transformers import AutoModel, AutoTokenizer
 from torch import nn
-model = AutoModel.from_pretrained("reasonir/ReasonIR-8B", torch_dtype="auto", trust_remote_code=True)
+from tqdm import tqdm
 
-query = "The quick brown fox jumps over the lazy dog."
-document = "The quick brown fox jumps over the lazy dog."
-query_instruction = ""
-doc_instruction = ""
 
-# model= nn.DataParallel(model)
-model = model.to("cuda")
-model.eval()
+# http://export.arxiv.org/api/query?search_query=all:electron&start=0&max_results=1
+def dl_arxiv(id='1706.03762'):
+    url = f'https://arxiv.org/src/{id}'
+    
+    response = requests.get(url)
+    with open(f"out/{id}.tar.gz", "wb") as handle:
+        for data in tqdm(response.iter_content(chunk_size=1024), unit="kB"):
+            handle.write(data)
+        handle.close()
+    try:
+        os.makedirs(f"out/{id}")
+    except FileExistsError:
+        pass
+    subprocess.check_call(f"tar -xzf {id}.tar.gz")
+    
 
-query_emb = model.encode(query, instruction=query_instruction)
-doc_emb = model.encode(document, instruction=doc_instruction)
-sim = query_emb @ doc_emb.T
+# srun --job-name "ReasonIRtest" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
+# cd src
+# conda activate citations
+if __name__ == "__main__":
 
-import json
-with open('out/test_sim.json', 'w', encoding='utf-8') as f:
-    json.dump(sim, f, ensure_ascii=False, indent=4)
+    # # from: https://huggingface.co/reasonir/ReasonIR-8B
+    # # dataset: https://huggingface.co/datasets/reasonir/reasonir-data
+    # model = AutoModel.from_pretrained("reasonir/ReasonIR-8B", torch_dtype="auto", trust_remote_code=True)
+
+    # query = "The quick brown fox jumps over the lazy dog."
+    # document = "The fast brown fox jumps over the lazy dog."
+    # query_instruction = ""
+    # doc_instruction = ""
+
+    # # print(torch.cuda.device_count())
+    # # model= nn.DataParallel(model)
+    # model = model.to("cuda")
+    # model.eval()
+
+    # query_emb = model.encode(query, instruction=query_instruction)
+    # doc_emb = model.encode(document, instruction=doc_instruction)
+    # sim = query_emb @ doc_emb.T
+
+    # with open('out/test_sim.json', 'w', encoding='utf-8') as f:
+    #     json.dump({"sim": f"{sim}"}, f, ensure_ascii=False, indent=4)
+
+    dl_arxiv()

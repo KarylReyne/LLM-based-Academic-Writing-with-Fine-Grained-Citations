@@ -11,7 +11,7 @@ conda activate citations
 conda remove -n citations --all
 
 ## interactive session
-srun --job-name "InteractiveJob" --partition=2080-galvani --ntasks=1 --nodes=1 --gres=gpu:1 --time 1:00:00 --pty bash
+srun --job-name "InteractiveJob" --partition=2080-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
  - get architecture/driver info: nvidia-smi
 
 ##
