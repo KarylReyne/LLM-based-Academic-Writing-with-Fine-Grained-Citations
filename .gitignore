@@ -16,7 +16,6 @@ latex/**/*.snm
 latex/**/*.gz
 latex/**/*.toc
 
-# ATD
-src/active-task-disambiguation/outputs/**
-src/active-task-disambiguation/figures/**
+# datasets
+src/data/**
 

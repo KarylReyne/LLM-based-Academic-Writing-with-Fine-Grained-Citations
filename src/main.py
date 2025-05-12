@@ -1,27 +1,29 @@
 import torch
 import json
 import requests
-import subprocess
+# import subprocess
 import os
+import tarfile 
 from transformers import AutoModel, AutoTokenizer
 from torch import nn
 from tqdm import tqdm
 
 
-# http://export.arxiv.org/api/query?search_query=all:electron&start=0&max_results=1
 def dl_arxiv(id='1706.03762'):
     url = f'https://arxiv.org/src/{id}'
     
     response = requests.get(url)
-    with open(f"out/{id}.tar.gz", "wb") as handle:
+    with open(f"data/{id}.tar.gz", "wb") as handle:
         for data in tqdm(response.iter_content(chunk_size=1024), unit="kB"):
             handle.write(data)
         handle.close()
     try:
-        os.makedirs(f"out/{id}")
+        os.makedirs(f"data/{id}")
     except FileExistsError:
         pass
-    subprocess.check_call(f"tar -xzf {id}.tar.gz")
+
+    tar = tarfile.open(f"data/{id}.tar.gz")
+    tar.extractall(f"data/{id}", filter="tar")
     
 
 # srun --job-name "ReasonIRtest" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
