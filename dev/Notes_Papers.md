@@ -188,6 +188,9 @@
 - [RAG-RewardBench](https://arxiv.org/abs/2412.13746)
 - [LLaMA3](https://arxiv.org/abs/2407.21783)
 - [in-context learning (GPT-3)](https://papers.nips.cc/paper/2020/hash/1457c0d6bfcb4967418bfb8ac142f64a-Abstract.html)
+- [DynamicRAG: Leveraging Outputs of Large Language Model as Feedback for Dynamic Reranking in Retrieval-Augmented Generation](https://arxiv.org/abs/2505.07233)
+- [Document Attribution: Examining Citation Relationships using Large Language Models](https://arxiv.org/abs/2505.06324)
+- []()
 
 ### Miscellaneous
  - improve/evaluate generation quality
