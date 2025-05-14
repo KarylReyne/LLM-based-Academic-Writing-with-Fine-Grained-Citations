@@ -117,11 +117,13 @@ def locate_main_tex_file(id):
     path = f"data/{id}/"
     for _, _, files in os.walk(f"data/{id}"):
         matches = [file for file in files if file.endswith(".tex")]
-        
+        # TODO
         break
 
 
-def 
+def extract_full_latex_textbody(id):
+    # TODO
+    pass
     
 
 # srun --job-name "ReasonIRtest" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
