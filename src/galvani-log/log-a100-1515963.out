@@ -1,0 +1,57 @@
+JobId=1515963 JobName=ReasonIRtest
+   UserId=gwb204(5061) GroupId=geiger(4009) MCS_label=N/A
+   Priority=39833 Nice=0 Account=geiger QOS=normal
+   JobState=RUNNING Reason=None Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:01 TimeLimit=1-00:00:00 TimeMin=N/A
+   SubmitTime=2025-05-15T18:48:28 EligibleTime=2025-05-15T18:48:28
+   AccrueTime=2025-05-15T18:48:28
+   StartTime=2025-05-15T18:55:13 EndTime=2025-05-16T18:55:13 Deadline=N/A
+   PreemptEligibleTime=2025-05-15T18:56:13 PreemptTime=None
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2025-05-15T18:55:13 Scheduler=Backfill
+   Partition=a100-galvani AllocNode:Sid=192.168.212.54:1428960
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=galvani-cn214
+   BatchHost=galvani-cn214
+   NumNodes=1 NumCPUs=8 NumTasks=1 CPUs/Task=8 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=8,mem=50G,node=1,billing=11,gres/gpu=2
+   AllocTRES=cpu=8,mem=50G,node=1,billing=11,gres/gpu=2,gres/gpu:a100=2
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=8 MinMemoryNode=50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null)
+   Command=/mnt/lustre/home/geiger/gwb204/Literature-Search-with-Active-Disambiguation/src/main.sbatch
+   WorkDir=/mnt/lustre/home/geiger/gwb204/Literature-Search-with-Active-Disambiguation/src
+   StdErr=/mnt/lustre/home/geiger/gwb204/Literature-Search-with-Active-Disambiguation/src/galvani-log/log-a100-1515963.err
+   StdIn=/dev/null
+   StdOut=/mnt/lustre/home/geiger/gwb204/Literature-Search-with-Active-Disambiguation/src/galvani-log/log-a100-1515963.out
+   Power=
+   TresPerNode=gres:gpu:2
+   MailUser=niklas.munkes@student.uni-tuebingen.de MailType=INVALID_DEPEND,BEGIN,END,FAIL,REQUEUE,STAGE_OUT
+   
+
+/home/geiger/gwb204/Literature-Search-with-Active-Disambiguation/src
+Thu May 15 18:55:14 2025       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 535.104.12             Driver Version: 535.104.12   CUDA Version: 12.2     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA A100-PCIE-40GB          On  | 00000000:A1:00.0 Off |                    0 |
+| N/A   30C    P0              41W / 250W |      4MiB / 40960MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100-PCIE-40GB          On  | 00000000:C1:00.0 Off |                    0 |
+| N/A   32C    P0              43W / 250W |      4MiB / 40960MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|  No running processes found                                                           |
++---------------------------------------------------------------------------------------+

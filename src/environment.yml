@@ -8,3 +8,4 @@ dependencies:
   - matplotlib
   - pytorch 
   - transformers>=4.47.0 # req for ReasonIR
+  - nltk
