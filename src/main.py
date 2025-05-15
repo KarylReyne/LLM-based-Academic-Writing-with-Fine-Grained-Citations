@@ -236,7 +236,7 @@ def get_source_citations(source_id, target_citation_record):
     tokenizer = AutoTokenizer.from_pretrained(MODEL_IDENTIFIER)
     tokens = tokenizer(target_doc).to("cuda")
     tokens = tokens["input_ids"] # get only the encoded tokens
-    target_doc_chunks = [tokenizer.decode(tokens[i:i+CHUNK_SIZE]) for i in range(len(tokens))]
+    target_doc_chunks = [tokenizer.decode(tokens[i:i+CHUNK_SIZE]) for i in range(0, len(tokens), CHUNK_SIZE)]
 
     return citing_sents, target_doc_chunks
 
@@ -327,7 +327,7 @@ if __name__ == "__main__":
         
         idx += 1
 
-    similarity_records = dict(sorted(similarity_records.items(), key=lambda item: item[1]["sim"]))
+    similarity_records = dict(sorted(similarity_records.items(), key=lambda item: item[1]["sim"], reverse=True))
 
     with open('out/similarity_records.json', 'w', encoding='utf-8') as f:
         json.dump({
