@@ -11,6 +11,7 @@ from datetime import datetime
 import urllib, urllib.request
 
 
+ARXIV_MAX_RESULTS = 20
 CITATION_MASK = "<CIT-MASK>"
 MODEL_IDENTIFIER = "reasonir/ReasonIR-8B"
 CHUNK_SIZE = 128
@@ -54,7 +55,7 @@ def get_next_block_lines(current_index, bib_list, block_label, current_lines=[])
     return current_lines
 
 
-def get_citation_data_from_bbl(path):
+def get_citation_data_from_bbl(path, additional_citation_ids=[]):
     bib_list = []
     with open(path, "r") as bib:
         for line in bib.readlines():
@@ -85,11 +86,11 @@ def get_citation_data_from_bbl(path):
 
             # use title to search for and retrieve the arxiv id
             title_for_url = title.replace(" ", "+")
-            url = f'https://export.arxiv.org/api/query?search_query={title_for_url}&searchtype=title&start=0&max_results=1'
+            url = f'https://export.arxiv.org/api/query?search_query={title_for_url}&searchtype=title&start=0&max_results={ARXIV_MAX_RESULTS}'
             data = urllib.request.urlopen(url)
             xml = data.read().decode('utf-8')
-            try: # skip to the actual search result
-                xml = xml.split("<entry>")[1]
+            try: # skip to the actual search results
+                xml = xml.split("<entry>")[1:]
             except IndexError:
                 continue # skip this bib item if the search does not yield a result
             xml = xml.replace(">\n", ">SPLIT").split("SPLIT")
@@ -100,11 +101,15 @@ def get_citation_data_from_bbl(path):
 
             # filter relevant elements and map them
             xml_dict = {"bib_id": bib_id}
-            for item in xml:
+            for search_result_entry in xml:
+                # check if the paper has the correct title
+                
+                if not : 
+
                 for label in ["<id>", "<title>", "<summary>", "<name>"]:
-                    if item.startswith(label):
+                    if search_result_entry.startswith(label):
                         clean_label = label.lstrip("<").rstrip(">")
-                        item_body = item.lstrip(label).rstrip(label.replace("<", "</"))
+                        item_body = search_result_entry.lstrip(label).rstrip(label.replace("<", "</"))
                         if clean_label == "name":
                             try: # check if entry already exists (for multiple author names)
                                 xml_dict[clean_label] += f" {item_body}"
@@ -132,6 +137,9 @@ def get_citation_data_from_bbl(path):
 
             # add id for recursive paper discovery
             ids.append(xml_dict["arxiv_id"])
+
+    # incorporate additional ids (if the corresponding doc is found in the bib file)
+    for additional_id in additional_citation_ids:
 
     return citations_data, ids
 
@@ -223,6 +231,8 @@ def identify_citing_sentences(source_doc, bib_id):
     
     return citing_sents
     
+def get_target_sections(target_doc, section_labels=["\\section", "\\subsection"])
+
 
 def get_source_citations(source_id, target_citation_record):
     target_bib_id = target_citation_record["bib_id"]
@@ -236,9 +246,9 @@ def get_source_citations(source_id, target_citation_record):
     tokenizer = AutoTokenizer.from_pretrained(MODEL_IDENTIFIER)
     tokens = tokenizer(target_doc).to("cuda")
     tokens = tokens["input_ids"] # get only the encoded tokens
-    target_doc_chunks = [tokenizer.decode(tokens[i:i+CHUNK_SIZE]) for i in range(0, len(tokens), CHUNK_SIZE)]
+    target_doc_sections = [tokenizer.decode(tokens[i:i+CHUNK_SIZE]) for i in range(0, len(tokens), CHUNK_SIZE)]
 
-    return citing_sents, target_doc_chunks
+    return citing_sents, target_doc_sections
 
 
 # srun --job-name "ReasonIRtest" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
@@ -271,38 +281,13 @@ if __name__ == "__main__":
     #     #     recursion_depth -= 1
 
 
-    # # from: https://huggingface.co/reasonir/ReasonIR-8B
-    # # dataset: https://huggingface.co/datasets/reasonir/reasonir-data
-    # model = AutoModel.from_pretrained("reasonir/ReasonIR-8B", torch_dtype="auto", trust_remote_code=True)
-
-    # query = "The quick brown fox jumps over the lazy dog."
-    # document = "The fast brown fox jumps over the lazy dog."
-    # query_instruction = ""
-    # doc_instruction = ""
-
-    # # print(torch.cuda.device_count())
-    # # model= nn.DataParallel(model)
-    # model = model.to("cuda")
-    # model.eval()
-
-    # query_emb = model.encode(query, instruction=query_instruction)
-    # doc_emb = model.encode(document, instruction=doc_instruction)
-    # sim = query_emb @ doc_emb.T
-
-    # with open('out/test_sim.json', 'w', encoding='utf-8') as f:
-    #     json.dump({
-    #         "time": f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
-    #         "sim": f"{sim}"
-    #     }, f, ensure_ascii=False, indent=4)
-
-
     id = "1607.06450"
     path = get_bbl_path_from_arxiv_id(id)
     citations_data, _ = get_citation_data_from_bbl(path)
     target_bib_id = list(citations_data.keys())[0]
     target_citation_record = citations_data[target_bib_id]
 
-    citing_sents, target_doc_chunks = get_source_citations(id, target_citation_record)
+    citing_sents, target_doc_sections = get_source_citations(id, target_citation_record)
 
     model = AutoModel.from_pretrained(MODEL_IDENTIFIER, torch_dtype="auto", trust_remote_code=True)
     model = model.to("cuda")
@@ -311,9 +296,21 @@ if __name__ == "__main__":
     citing_sent = citing_sents[0]
     similarity_records = {}
     idx = 0
-    for candidate_chunk in target_doc_chunks:
-        query_instruction = ""
+    for candidate_chunk in target_doc_sections:
+        query_instruction = "" 
         doc_instruction = ""
+
+        # TODOs
+        # experiment with instructions, specify the mask token
+        # create map fastformer 2108.09084 to transformer 1706.03762
+        # test query context length
+        # use sections/subsections instead of chunks
+        # replace figure with captions text
+        # 
+        # https://github.com/stanfordnlp/stanza
+        # https://github.com/IllDepence/unarXive?tab=readme-ov-file
+        # https://huggingface.co/datasets/howey/unarXive
+        # 
 
         query_emb = model.encode(citing_sent, instruction=query_instruction)
         doc_emb = model.encode(candidate_chunk, instruction=doc_instruction)
@@ -331,6 +328,8 @@ if __name__ == "__main__":
 
     with open('out/similarity_records.json', 'w', encoding='utf-8') as f:
         json.dump({
-            "time": f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
-            "records": similarity_records
+            f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}": {
+                "query_doc_id": f"{id}",
+                "records": similarity_records
+            }
         }, f, ensure_ascii=False, indent=4)
