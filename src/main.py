@@ -73,6 +73,7 @@ if __name__ == "__main__":
         doc_instruction = ""
 
         # TODOs
+        # get top k results for each transformer citation!!!
         # experiment with instructions, specify the mask token
         # test query context length
 
