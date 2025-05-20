@@ -3,12 +3,14 @@ import json
 from transformers import AutoModel, AutoTokenizer
 from torch import nn
 from datetime import datetime
+import statistics as stat
 
 from latex_parsing import get_citations_data_from_bbl, get_source_citations
 
 
 MODEL_IDENTIFIER = "reasonir/ReasonIR-8B"
 LABEL_SEPARATOR = "<LABEL-SEP>"
+M = 10 # self-consistency calls
 
 
 # srun --job-name "ReasonIRtest" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
@@ -73,31 +75,50 @@ if __name__ == "__main__":
         # TODOs
         # experiment with instructions, specify the mask token
         # test query context length
-        # replace figure with captions text
 
         # https://arxiv.org/abs/2505.12570
+
+        # maybe add ReasonIR's QwenRerank
 
         t = candidate_chunk.split(LABEL_SEPARATOR)
         chunk_label = t[0]
         chunk = t[1]
 
-        query_emb = model.encode(citing_sent, instruction=query_instruction)
-        doc_emb = model.encode(chunk, instruction=doc_instruction)
-        sim = query_emb @ doc_emb.T
+        # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
+        similarity_scores = []
+        for _ in range(M):
+            query_emb = model.encode(citing_sent, instruction=query_instruction)
+            doc_emb = model.encode(chunk, instruction=doc_instruction)
+            similarity_scores.append(query_emb @ doc_emb.T)
+
+        sim = stat.mean(similarity_scores)
 
         similarity_records[chunk_label] = {
             "query": citing_sent,
-            "chunk": chunk,
+            "section chunk": chunk,
             "sim": f"{sim}"
         }
 
     similarity_records = dict(sorted(similarity_records.items(), key=lambda item: item[1]["sim"], reverse=True))
 
+    results = None
+    try:
+        with open('out/similarity_records.json', 'r', encoding='utf-8') as f:
+            results = json.load(f)
+    except FileNotFoundError:
+        results = {}
+    assert results != None
+
+    results[f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"] = {
+        "query_doc_id": f"{id}",
+        "target_doc_id": f"{target_citation_record["arxiv_id"]}",
+        "config": {
+            "retriever": MODEL_IDENTIFIER,
+            "m": M
+        },
+        "records": similarity_records
+    }
+
     with open('out/similarity_records.json', 'w', encoding='utf-8') as f:
-        json.dump({
-            f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}": {
-                "query_doc_id": f"{id}",
-                "target_doc_id": f"{target_citation_record["arxiv_id"]}",
-                "records": similarity_records
-            }
-        }, f, ensure_ascii=False, indent=4)
+        json.dump(results, f, ensure_ascii=False, indent=4)
+    
