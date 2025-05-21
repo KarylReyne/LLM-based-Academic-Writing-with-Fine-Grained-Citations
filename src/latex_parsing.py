@@ -14,14 +14,14 @@ import urllib, urllib.request
 ARXIV_MAX_RESULTS = 20
 CITATION_MASK = "<CIT-MASK>"
 LABEL_SEPARATOR = "<LABEL-SEP>"
-ENABLE_CHUNKING = True
-CHUNK_SIZE = 512
+TOKENIZER_BEGIN_TOKEN = "<|begin_of_text|>"
 
 
-def dl_arxiv(id='1706.03762'):
+def download_from_arxiv(id='1706.03762'):
     url = f'https://arxiv.org/src/{id}'
-    
     response = requests.get(url)
+
+    # download source archive
     with open(f"data/{id}.tar.gz", "wb") as handle:
         for data in tqdm(response.iter_content(chunk_size=1024), unit="kB"):
             handle.write(data)
@@ -31,12 +31,17 @@ def dl_arxiv(id='1706.03762'):
     except FileExistsError:
         pass
 
+    # extract archive
     try:
         tar = tarfile.open(f"data/{id}.tar.gz")
         tar.extractall(f"data/{id}", filter="tar")
     except tarfile.ReadError as e:
         print(f"data/{id}.tar.gz could not be extracted successfully.")
         raise e
+
+    # delete archive
+    os.remove(f"data/{id}.tar.gz")
+    assert not os.path.isfile(f"data/{id}.tar.gz")
 
 
 def get_next_block_lines(current_index, bib_list, block_label, current_lines=[]):
@@ -56,7 +61,7 @@ def get_next_block_lines(current_index, bib_list, block_label, current_lines=[])
     return current_lines
 
 
-def get_citations_data_from_bbl(id, additional_citation_records=None, force_download=False):
+def search_arxiv_for_citations_data(id, additional_citation_records=None, force_download=False):
     path = get_bbl_path_from_arxiv_id(id)
     data_path = f"data/citations_data/cd_source-{id}.json"
 
@@ -266,7 +271,13 @@ def identify_citing_sentences(source_doc, bib_id):
     return citing_sents
 
 
-def get_target_sections(target_doc_lines, tokenizer, section_labels=["\\begin{abstract}", "\\section", "\\subsection"], with_chunking=False):
+def get_target_sections(
+    target_doc_lines, 
+    tokenizer, 
+    section_labels=["\\begin{abstract}", "\\section", "\\subsection"], 
+    with_chunking=False,
+    chunk_size=512
+):
     
     def is_section_start(l):
         b = False
@@ -292,9 +303,9 @@ def get_target_sections(target_doc_lines, tokenizer, section_labels=["\\begin{ab
                     tokens = tokens["input_ids"] # get only the encoded tokens
 
                     chunk_idx = 0
-                    for i in range(0, len(tokens), CHUNK_SIZE):
+                    for i in range(0, len(tokens), chunk_size):
                         chunk_label = f"{current_section_label}-{chunk_idx}"
-                        chunk = tokenizer.decode(tokens[i:i+CHUNK_SIZE])
+                        chunk = tokenizer.decode(tokens[i:i+chunk_size]).replace(TOKENIZER_BEGIN_TOKEN, "")
                         sections.append(chunk_label+LABEL_SEPARATOR+chunk)
                         chunk_idx += 1
                 else:
@@ -315,7 +326,7 @@ def get_target_sections(target_doc_lines, tokenizer, section_labels=["\\begin{ab
     return sections
 
 
-def get_source_citations(id, target_citation_record, tokenizer):
+def get_source_citations(id, target_citation_record, tokenizer, with_chunking=False, chunk_size=512):
     target_bib_id = target_citation_record["bib_id"]
     target_arxiv_id = target_citation_record["arxiv_id"]
 
@@ -324,11 +335,11 @@ def get_source_citations(id, target_citation_record, tokenizer):
     try:
         _, target_doc_lines = extract_full_latex_textbody(target_arxiv_id)
     except AssertionError: # download if target not found
-        dl_arxiv(target_arxiv_id)
+        download_from_arxiv(target_arxiv_id)
         _, target_doc_lines = extract_full_latex_textbody(target_arxiv_id)
     assert target_doc_lines != None
 
     citing_sents = identify_citing_sentences(source_doc, target_bib_id)
-    target_doc_sections = get_target_sections(target_doc_lines, tokenizer, with_chunking=ENABLE_CHUNKING)
+    target_doc_sections = get_target_sections(target_doc_lines, tokenizer, with_chunking=with_chunking, chunk_size=chunk_size)
 
     return citing_sents, target_doc_sections

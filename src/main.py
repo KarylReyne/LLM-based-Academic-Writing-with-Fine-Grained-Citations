@@ -1,16 +1,24 @@
 import torch
 import json
+import sys
 from transformers import AutoModel, AutoTokenizer
 from torch import nn
 from datetime import datetime
 import statistics as stat
 
-from latex_parsing import get_citations_data_from_bbl, get_source_citations
+from latex_parsing import download_from_arxiv, search_arxiv_for_citations_data, get_source_citations, LABEL_SEPARATOR
 
 
-MODEL_IDENTIFIER = "reasonir/ReasonIR-8B"
-LABEL_SEPARATOR = "<LABEL-SEP>"
-M = 10 # self-consistency calls
+# models
+RETRIEVER_MODEL = "reasonir/ReasonIR-8B"
+# self-consistency calls
+M = 10
+# target doc sections chunking
+ENABLE_CHUNKING = True
+CHUNK_SIZE = 512
+# retrieval
+TOPK_RETR = 10
+TOPK_RERA = 5 # reserved for the reranker
 
 
 # srun --job-name "ReasonIRtest" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
@@ -18,33 +26,24 @@ M = 10 # self-consistency calls
 # conda activate citations
 if __name__ == "__main__":
 
-    # for id in ["1607.06450"]:# , "1409.0473", "1703.03906"]:
-    #     # dl_arxiv(id)
-    #     path = get_bbl_path_from_arxiv_id(id)
-    #     citations_data, ids = get_citations_data_from_bbl(path)
-    #     # print(citations_data)
 
-    #     # recursion_depth = 3
-    #     # ids_to_process = ids
-    #     # new_ids = []
-    #     # while recursion_depth > 0:
-    #     #     for x in ids_to_process:
-    #     #         try:
-    #     #             dl_arxiv(x)
-    #     #         except tarfile.ReadError:
-    #     #             continue # skip if extraction failed
+    # TODOs
+    # experiment with instructions, specify the mask token
+    # test query context length
 
-    #     #         _path = get_bbl_path_from_arxiv_id(x)
-    #     #         _, _new_ids = get_citations_data_from_bbl(_path)
-    #     #         [new_ids.append(y) for y in _new_ids]
+    # https://arxiv.org/abs/2505.12570
 
-    #     #     ids_to_process = new_ids
-    #     #     new_ids = []
-    #     #     recursion_depth -= 1
+    # maybe add ReasonIR's QwenRerank
+
+
+    tokenizer = AutoTokenizer.from_pretrained(RETRIEVER_MODEL)
+    model = AutoModel.from_pretrained(RETRIEVER_MODEL, torch_dtype="auto", trust_remote_code=True)
+    model = model.to("cuda")
+    model.eval()
 
 
     id = "2108.09084" # Fastformer
-    citations_data, _ = get_citations_data_from_bbl(id, additional_citation_records={
+    citations_data, _ = search_arxiv_for_citations_data(id, additional_citation_records={
         "vaswani2017attention": {
             "bib_id": "vaswani2017attention",
             "arxiv_id": "1706.03762", 
@@ -53,58 +52,58 @@ if __name__ == "__main__":
             "name": "Ashish Vaswani Noam Shazeer Niki Parmar Jakob Uszkoreit Llion Jones Aidan~N Gomez Lukasz Kaiser Illia Polosukhin"
         }
     })
-    # print(len(citations_data.items()))
-
     target_bib_id = "vaswani2017attention" # Transformer
     target_citation_record = citations_data[target_bib_id]
+    citing_sents, target_doc_sections = get_source_citations(id, target_citation_record, tokenizer, with_chunking=ENABLE_CHUNKING, chunk_size=CHUNK_SIZE)
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_IDENTIFIER)
+    # retrieval instructions
+    query_instruction = "" 
+    doc_instruction = ""
 
-    citing_sents, target_doc_sections = get_source_citations(id, target_citation_record, tokenizer)
+    evaluation_records = {}
+    for query_idx, citing_sent in enumerate(citing_sents):
 
-    model = AutoModel.from_pretrained(MODEL_IDENTIFIER, torch_dtype="auto", trust_remote_code=True)
-    model = model.to("cuda")
-    model.eval()
-
-    citing_sent = citing_sents[0]
-    similarity_records = {}
-    for candidate_chunk in target_doc_sections:
-        query_instruction = "" 
-        doc_instruction = ""
-
-        # TODOs
-        # get top k results for each transformer citation!!!
-        # experiment with instructions, specify the mask token
-        # test query context length
-
-        # https://arxiv.org/abs/2505.12570
-
-        # maybe add ReasonIR's QwenRerank
-
-        t = candidate_chunk.split(LABEL_SEPARATOR)
-        chunk_label = t[0]
-        chunk = t[1]
-
-        # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
-        similarity_scores = []
-        for _ in range(M):
-            query_emb = model.encode(citing_sent, instruction=query_instruction)
-            doc_emb = model.encode(chunk, instruction=doc_instruction)
-            similarity_scores.append(query_emb @ doc_emb.T)
-
-        sim = stat.mean(similarity_scores)
-
-        similarity_records[chunk_label] = {
-            "query": citing_sent,
-            "section chunk": chunk,
-            "sim": f"{sim}"
+        query_records = {
+            f"query-{query_idx}": citing_sent,
+            "retrieved_documents": {} # filled later
         }
+        retrieved_documents = {}
 
-    similarity_records = dict(sorted(similarity_records.items(), key=lambda item: item[1]["sim"], reverse=True))
+        print() # for console progress report
+
+        for doc_idx, candidate_chunk in enumerate(target_doc_sections):
+
+            sys.stdout.write("\033[F")
+            print(f"processing query {query_idx+1}/{len(citing_sents)} - section {doc_idx+1}/{len(target_doc_sections)}")
+
+            t = candidate_chunk.split(LABEL_SEPARATOR)
+            chunk_label = t[0]
+            chunk = t[1]
+
+            # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
+            similarity_scores = []
+            for _ in range(M):
+                query_emb = model.encode(citing_sent, instruction=query_instruction)
+                doc_emb = model.encode(chunk, instruction=doc_instruction)
+                similarity_scores.append(query_emb @ doc_emb.T)
+
+            sim = stat.mean(similarity_scores)
+
+            retrieved_documents[chunk_label] = {
+                "section chunk": chunk,
+                "sim": f"{sim}"
+            }
+
+        # get topk retrieved documents
+        retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["sim"], reverse=True)[:TOPK_RETR])
+
+        query_records["retrieved_documents"] = retrieved_documents
+        evaluation_records[f"query-{query_idx}"] = query_records
+
 
     results = None
     try:
-        with open('out/similarity_records.json', 'r', encoding='utf-8') as f:
+        with open('out/evaluation_records.json', 'r', encoding='utf-8') as f:
             results = json.load(f)
     except FileNotFoundError:
         results = {}
@@ -114,12 +113,16 @@ if __name__ == "__main__":
         "query_doc_id": f"{id}",
         "target_doc_id": f"{target_citation_record["arxiv_id"]}",
         "config": {
-            "retriever": MODEL_IDENTIFIER,
-            "m": M
+            "retriever": RETRIEVER_MODEL,
+            "m": M,
+            "target_chunking": ENABLE_CHUNKING,
+            "chunk_size": CHUNK_SIZE,
+            "retriever_topk": TOPK_RETR,
+            "reranker_topk": TOPK_RERA
         },
-        "records": similarity_records
+        "records": evaluation_records
     }
 
-    with open('out/similarity_records.json', 'w', encoding='utf-8') as f:
+    with open('out/evaluation_records.json', 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
     
