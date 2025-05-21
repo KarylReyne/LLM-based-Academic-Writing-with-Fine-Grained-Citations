@@ -16,6 +16,9 @@ M = 10
 # target doc sections chunking
 ENABLE_CHUNKING = True
 CHUNK_SIZE = 512
+# query context
+EXPAND_QUERY_CONTEXT = True
+QUERY_CONTEXT_SIZE = 128
 # retrieval
 TOPK_RETR = 10
 TOPK_RERA = 5 # reserved for the reranker
@@ -29,7 +32,6 @@ if __name__ == "__main__":
 
     # TODOs
     # experiment with instructions, specify the mask token
-    # test query context length
 
     # https://arxiv.org/abs/2505.12570
 
@@ -54,17 +56,26 @@ if __name__ == "__main__":
     })
     target_bib_id = "vaswani2017attention" # Transformer
     target_citation_record = citations_data[target_bib_id]
-    citing_sents, target_doc_sections = get_source_citations(id, target_citation_record, tokenizer, with_chunking=ENABLE_CHUNKING, chunk_size=CHUNK_SIZE)
+    (citing_sents, citing_context), target_doc_sections = get_source_citations(
+        id, 
+        target_citation_record, 
+        tokenizer, 
+        with_chunking=ENABLE_CHUNKING, 
+        chunk_size=CHUNK_SIZE,
+        include_query_context=EXPAND_QUERY_CONTEXT,
+        query_context_size=QUERY_CONTEXT_SIZE
+    )
 
     # retrieval instructions
     query_instruction = "" 
     doc_instruction = ""
 
     evaluation_records = {}
-    for query_idx, citing_sent in enumerate(citing_sents):
+    queries = citing_sents if not EXPAND_QUERY_CONTEXT else citing_context
+    for query_idx, query in enumerate(queries):
 
         query_records = {
-            f"query-{query_idx}": citing_sent,
+            f"query-{query_idx}": query,
             "retrieved_documents": {} # filled later
         }
         retrieved_documents = {}
@@ -83,7 +94,7 @@ if __name__ == "__main__":
             # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
             similarity_scores = []
             for _ in range(M):
-                query_emb = model.encode(citing_sent, instruction=query_instruction)
+                query_emb = model.encode(query, instruction=query_instruction)
                 doc_emb = model.encode(chunk, instruction=doc_instruction)
                 similarity_scores.append(query_emb @ doc_emb.T)
 
@@ -99,6 +110,9 @@ if __name__ == "__main__":
 
         query_records["retrieved_documents"] = retrieved_documents
         evaluation_records[f"query-{query_idx}"] = query_records
+
+        # DEBUG
+        # break
 
 
     results = None
@@ -117,6 +131,8 @@ if __name__ == "__main__":
             "m": M,
             "target_chunking": ENABLE_CHUNKING,
             "chunk_size": CHUNK_SIZE,
+            "expand_query": EXPAND_QUERY_CONTEXT,
+            "query_context": QUERY_CONTEXT_SIZE,
             "retriever_topk": TOPK_RETR,
             "reranker_topk": TOPK_RERA
         },

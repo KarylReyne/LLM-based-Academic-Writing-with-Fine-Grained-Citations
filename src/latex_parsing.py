@@ -4,6 +4,7 @@ import requests
 import os
 import tarfile
 import nltk
+import numpy as np
 from transformers import AutoModel, AutoTokenizer
 from torch import nn
 from tqdm import tqdm
@@ -251,8 +252,9 @@ def extract_full_latex_textbody(id):
     return " ".join(lines), lines
 
 
-def identify_citing_sentences(source_doc, bib_id):
+def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, include_query_context=False, query_context_size=128):
     citing_sents = []
+    citing_context = []
 
     # split source doc into sentences and retain sentences that contain bib_id
     try:
@@ -266,9 +268,30 @@ def identify_citing_sentences(source_doc, bib_id):
                 citing_sents.append(masked_sent)
     except LookupError:
         nltk.download('punkt_tab')
-        citing_sents = identify_citing_sentences(source_doc, bib_id)
-    
-    return citing_sents
+        citing_sents = identify_citations_in_source_doc(source_doc, bib_id)
+
+    # get larger context if required
+    if include_query_context:
+        tokenizer.add_special_tokens({"additional_special_tokens": [bib_id]}) # ensure that the tokenizer does not destroy the bib id
+        tokens = tokenizer(source_doc).to("cuda")
+        tokens = tokens["input_ids"] # get only the encoded tokens
+        indices = []
+        for i, e in enumerate(tokens):
+            t = tokenizer.decode(e)
+            if t == bib_id:
+                indices.append(i)
+        w = int(np.floor(query_context_size/2))
+        for index in indices:
+            low = max(index-w, 0)
+            high = min(index+w, len(tokens)-1)
+            context = tokenizer.decode(tokens[low:high])
+            context = context.replace(TOKENIZER_BEGIN_TOKEN, "")
+            context = context.replace(bib_id, CITATION_MASK)
+            citing_context.append(context)
+
+        assert len(citing_sents) == len(citing_context)
+        
+    return (citing_sents, citing_context)
 
 
 def get_target_sections(
@@ -326,7 +349,7 @@ def get_target_sections(
     return sections
 
 
-def get_source_citations(id, target_citation_record, tokenizer, with_chunking=False, chunk_size=512):
+def get_source_citations(id, target_citation_record, tokenizer, with_chunking=False, chunk_size=512, include_query_context=False, query_context_size=128):
     target_bib_id = target_citation_record["bib_id"]
     target_arxiv_id = target_citation_record["arxiv_id"]
 
@@ -339,7 +362,8 @@ def get_source_citations(id, target_citation_record, tokenizer, with_chunking=Fa
         _, target_doc_lines = extract_full_latex_textbody(target_arxiv_id)
     assert target_doc_lines != None
 
-    citing_sents = identify_citing_sentences(source_doc, target_bib_id)
+    # list of (citing sentence, larger context centered at citation)
+    source_doc_citations = identify_citations_in_source_doc(source_doc, target_bib_id, tokenizer, include_query_context, query_context_size)
     target_doc_sections = get_target_sections(target_doc_lines, tokenizer, with_chunking=with_chunking, chunk_size=chunk_size)
 
-    return citing_sents, target_doc_sections
+    return source_doc_citations, target_doc_sections

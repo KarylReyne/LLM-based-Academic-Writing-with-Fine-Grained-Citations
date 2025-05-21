@@ -1,0 +1,9 @@
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  6.36it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  6.51it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  6.51it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  7.19it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  6.91it/s]
+Traceback (most recent call last):
+  File "/mnt/lustre/home/geiger/gwb204/Literature-Search-with-Active-Disambiguation/src/main.py", line 60, in <module>
+    citing_sents, target_doc_sections = get_source_citations(id, target_citation_record, tokenizer, with_chunking=ENABLE_CHUNKING, chunk_size=CHUNK_SIZE)
+                                        ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/lustre/home/geiger/gwb204/Literature-Search-with-Active-Disambiguation/src/latex_parsing.py", line 346, in get_source_citations
+NameError: name 'citing_sents' is not defined
+srun: error: galvani-cn209: task 0: Exited with exit code 1
+srun: Terminating StepId=1522686.0
