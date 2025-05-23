@@ -14,7 +14,7 @@ RETRIEVER_MODEL = "reasonir/ReasonIR-8B"
 RERANKER_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 # self-consistency calls
 M_RETR = 10
-M_RERA = 10
+M_RERA = 2
 # target doc sections chunking
 ENABLE_CHUNKING = True
 CHUNK_SIZE = 512
@@ -184,6 +184,16 @@ if __name__ == "__main__":
         reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
 
         query_records["reranked_documents"] = reranked_documents
+
+
+        # temperature=0.6-0.8
+        # batching
+        # rewrite the instruction
+        # min max normalization both retr rera
+        # full pointwise slf-consist.
+        # analyse query 3 why are all docs not relevant, try reranking not retrieved chunks
+        # rera all chunks if rera is unsure, try better prompt maybe?
+        # consistency between different model architectures? (llama, qwen, gpt, ...) - search for literature
 
 
         # obtain final ranking score s
