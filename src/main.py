@@ -3,6 +3,8 @@ import json
 import sys
 from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
 from torch import nn
+import numpy as np
+import itertools
 from datetime import datetime
 import statistics as stat
 
@@ -14,7 +16,7 @@ RETRIEVER_MODEL = "reasonir/ReasonIR-8B"
 RERANKER_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 # self-consistency calls
 M_RETR = 10
-M_RERA = 2
+M_RERA = 10
 # target doc sections chunking
 ENABLE_CHUNKING = True
 CHUNK_SIZE = 512
@@ -24,6 +26,7 @@ QUERY_CONTEXT_SIZE = 128
 # retrieval
 TOPK_RETR = 10
 TOPK_RERA = 5
+BATCH_SIZE = 20
 # final scoring
 DELTA = 0.5
 
@@ -81,6 +84,32 @@ if __name__ == "__main__":
 
     evaluation_records = {}
     queries = citing_sents if not EXPAND_QUERY_CONTEXT else citing_context
+    num_queries = len(queries)
+
+    query_records = {}
+    for i, q in enumerate(queries):
+        query_records[f"query-{i}"] = {
+            f"query-{i}": q,
+            "retrieved_documents": {},
+            "reranked_documents": {},
+            "final ranking": {}
+        }
+
+    queries = [itertools.repeat(q, len(target_doc_sections)) for q in queries] # repeat queries for each candidate doc
+    queries = itertools.chain.from_iterable(queries) # flatten
+
+    documents = itertools.repeat(target_doc_sections, num_queries)
+    documents = itertools.chain.from_iterable(documents) # flatten
+
+    print() # for console progress report
+
+    for idx, (query, document) in enumerate(zip(queries, documents)):
+        
+        # TODO: refactor pipeline for batch processing!!!
+        
+
+
+
 
     for query_idx in range(len(queries)):
 
