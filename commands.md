@@ -17,5 +17,3 @@ srun --job-name "InteractiveJob" --partition=a100-galvani --ntasks=1 --nodes=1 -
 ## get architecture/driver info 
 nvidia-smi
 
-##
-

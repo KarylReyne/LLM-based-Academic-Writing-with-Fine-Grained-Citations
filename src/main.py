@@ -80,12 +80,12 @@ if __name__ == "__main__":
     queries = citing_sents if not EXPAND_QUERY_CONTEXT else citing_context
     num_queries = len(queries)
 
-    query_records = {}
+    evaluation_records = {}
     for i, q in enumerate(queries):
-        query_records[f"query-{i}"] = {
+        evaluation_records[f"query-{i}"] = {
             f"query-{i}": q,
-            "retrieved_documents": {},
-            "reranked_documents": {},
+            "retrieved documents": {},
+            "reranked documents": {},
             "final ranking": {}
         }
 
@@ -132,187 +132,126 @@ if __name__ == "__main__":
         ]
 
         # update eval data with the current batch
+        query_index = None
         for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
 
             queries_idx = i+j # aka index within the list 'queries'
             query_index = query_idx[queries_idx]
 
-            retrieved_documents = query_records[f"query-{query_index}"]["retrieved_documents"]
+            retrieved_documents = evaluation_records[f"query-{query_index}"]["retrieved documents"]
             retrieved_documents[document_labels[queries_idx]] = {
                 "section chunk": documents[queries_idx],
-                "sim_embeddings": f"{batch_sim_scores[j]}",
+                "retrieval score": f"{batch_sim_scores[j]}",
             }
-        query_records[f"query-{query_index}"]["retrieved_documents"] = retrieved_documents
+        evaluation_records[f"query-{query_index}"]["retrieved documents"] = retrieved_documents
     
     # retain only the top k retrieved documents
     for i in range(num_queries):
-        retrieved_documents = query_records[f"query-{i}"]["retrieved_documents"]
-        retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["sim_embeddings"], reverse=True)[:TOPK_RETR])
-        query_records[f"query-{i}"]["retrieved_documents"] = retrieved_documents
+        retrieved_documents = evaluation_records[f"query-{i}"]["retrieved documents"]
+        retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["retrieval score"], reverse=True)[:TOPK_RETR])
+        evaluation_records[f"query-{i}"]["retrieved documents"] = retrieved_documents
 
 
     # --- RERANKING ---
-    # queries = []
-    # document_labels = []
-    # documents = []
-    # for i in range(num_queries):
-    #     for doc_label, doc_dict in query_records[f"query-{i}"]["retrieved_documents"].items():
-    #         queries.append(query_records[f"query-{i}"][f"query-{i}"])
-    #         document_labels.append(doc_label)
-    #         documents.append(doc_dict["section chunk"])
+    reranking_inputs = []
+    document_labels = []
+    documents = []
+    for i in range(num_queries):
+        for doc_label, doc_dict in evaluation_records[f"query-{i}"]["retrieved documents"].items():
+            q = evaluation_records[f"query-{i}"][f"query-{i}"]
+            d = doc_dict["section chunk"]
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
+                {"role": "user", "content": reranking_instruction(q, d)}
+            ]
+            reranking_inputs.append(messages)
+            document_labels.append(doc_label)
+            documents.append(d)
 
-    # assert len(queries) == len(document_labels) == len(documents)
+    query_idx = [list(itertools.repeat(i, TOPK_RETR)) for i in range(num_queries)] # repeat query idx for each topk retrieved doc (for later access via the index in reranking_inputs)
+    query_idx = list(itertools.chain.from_iterable(query_idx)) # flatten
 
-    # print() # for console progress report
+    assert len(reranking_inputs) == num_queries*TOPK_RETR, f"{len(reranking_inputs)}, {num_queries*TOPK_RETR}"
 
-    # for i in range(0, len(queries), BATCH_SIZE):
+    print() # for console progress report
 
-    #     query_idx = i % TOPK_RETR
+    num_batch = 1
+    for i in range(0, len(reranking_inputs), BATCH_SIZE):
 
-    #     sys.stdout.write("\033[F")
-    #     print(f"[RERANKING] processing batch {i+1 % BATCH_SIZE}/{len(queries) % BATCH_SIZE}")
+        sys.stdout.write("\033[F")
+        print(f"[RERANKING] processing batch {num_batch+1}/{(len(reranking_inputs)//BATCH_SIZE)+1}")
+        num_batch += 1
 
+        batch_reranking_inputs = reranking_inputs[i:i+BATCH_SIZE]
 
-
-
-    # for query_idx in range(len(queries)):
-
-        # query_records = {
-        #     f"query-{query_idx}": queries[query_idx],
-        #     "reranking_instruction": reranking_instruction("{}", "{}"),
-        #     "retrieved_documents": {}
-        # }
-        # retrieved_documents = {}
-
-        # print() # for console progress report
-
-        # for doc_idx, candidate_chunk in enumerate(target_doc_sections):
-
-        #     sys.stdout.write("\033[F")
-        #     print(f"[RETRIEVAL] processing query {query_idx+1}/{len(citing_sents)} - section {doc_idx+1}/{len(target_doc_sections)}")
+        # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
+        scores_for_each_llm_call = [] # num_llm_calls x batch_size
+        for _ in range(M_RERA):
+            batch_scores = []
+            for messages in batch_reranking_inputs:
+                chat = rera_tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True
+                )
+                inputs = rera_tokenizer([chat], return_tensors="pt").to("cuda")
+                generated_encoded_tokens = reranker.generate(**inputs, max_new_tokens=512)
+                generated_encoded_tokens = [
+                    output_ids[len(input_ids):] for input_ids, output_ids in zip(inputs.input_ids, generated_encoded_tokens)
+                ]
+                response = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)[0]
             
-        #     # retrieval
-        #     t = candidate_chunk.split(LABEL_SEPARATOR)
-        #     chunk_label = t[0]
-        #     chunk = t[1]
+                try:
+                    inst_score = float(response.lstrip("Relevance score: ").rstrip("<|im_end|>"))*0.1
+                except ValueError as e:
+                    print(response)
+                    raise e
+                batch_scores.append(inst_score)
+            scores_for_each_llm_call.append(batch_scores)
 
-        #     # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
-        #     similarity_scores_emb = []
-        #     for _ in range(M_RETR):
-        #         query_emb = retriever.encode(queries[query_idx], instruction="")
-        #         doc_emb = retriever.encode(chunk, instruction="")
-        #         similarity_scores_emb.append(query_emb @ doc_emb.T)
+        batch_aggr_scores = [
+            stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
+            for j in range(len(batch_reranking_inputs)) 
+        ]
 
-        #     sim_emb = stat.mean(similarity_scores_emb)
+        # update eval data with the current batch
+        query_index = None
+        for j in range(len(batch_reranking_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
 
-        #     retrieved_documents[chunk_label] = {
-        #         "section chunk": chunk,
-        #         "sim_embeddings": f"{sim_emb}",
-        #     }
+            reranking_inputs_idx = i+j # aka index within the list 'reranking_inputs'
+            query_index = query_idx[reranking_inputs_idx]
 
-        # # get topk retrieved documents
-        # retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["sim_embeddings"], reverse=True)[:TOPK_RETR])
-
-        # query_records["retrieved_documents"] = retrieved_documents
-
-
-        # # reranking
-        # reranked_documents = {}
-
-        # print() # for console progress report
-
-        # rera_chunk_labels = []
-        # rera_topk_documents = []
-        # for item in retrieved_documents.items():
-        #     rera_chunk_labels.append(item[0])
-        #     rera_topk_documents.append(item[1]["section chunk"])
+            reranked_documents = evaluation_records[f"query-{query_index}"]["reranked documents"]
+            reranked_documents[document_labels[reranking_inputs_idx]] = {
+                "section chunk": documents[reranking_inputs_idx],
+                "reranking score": f"{batch_aggr_scores[j]}",
+            }
+        reranked_documents = evaluation_records[f"query-{query_index}"]["reranked documents"]
         
-        # for doc_idx in range(TOPK_RETR):
+    # sort reranked docs
+    for i in range(num_queries):
+        reranked_documents = evaluation_records[f"query-{i}"]["reranked documents"]
+        reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
+        evaluation_records[f"query-{i}"]["reranked documents"] = reranked_documents
 
-        #     sys.stdout.write("\033[F")
-        #     print(f"[RERANKING] processing query {query_idx+1}/{len(citing_sents)} - section {doc_idx+1}/{TOPK_RETR}")
+        # obtain final ranking score s
+        # s = (1-delta)*s_retr + delta*s_rera
+        final_scores = {}
+        # reranked_documents still exists, retrieved_documents does not
+        retrieved_documents = evaluation_records[f"query-{i}"]["retrieved documents"]
+        for label in reranked_documents:
+            doc = reranked_documents[label]["section chunk"]
+            s_retr = float(retrieved_documents[label]["retrieval score"])
+            s_rera = float(reranked_documents[label]["reranking score"])
+            s = (1-DELTA)*s_retr + DELTA*s_rera
+            final_scores[label] = {
+                "section chunk": doc,
+                "final ranking score": s
+            }
+        final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
 
-        #     chunk_label = rera_chunk_labels[doc_idx]
-        #     chunk = rera_topk_documents[doc_idx]
+        evaluation_records[f"query-{i}"]["final ranking"] = final_scores
 
-        #     prompt = reranking_instruction(queries[query_idx], chunk)
-        #     messages = [
-        #         {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
-        #         {"role": "user", "content": prompt}
-        #     ]
-        #     chat = rera_tokenizer.apply_chat_template(
-        #         messages,
-        #         tokenize=False,
-        #         add_generation_prompt=True
-        #     )
-        #     input_tokens = rera_tokenizer([chat], return_tensors="pt").to("cuda")
-
-        #     # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
-        #     generation_scores = []
-        #     for _ in range(M_RERA):
-        #         query_emb = retriever.encode(queries[query_idx], instruction="")
-        #         doc_emb = retriever.encode(chunk, instruction="")
-        #         similarity_scores_emb.append(query_emb @ doc_emb.T)
-
-        #         generated_encoded_tokens = reranker.generate(**input_tokens, max_new_tokens=512)
-        #         generated_encoded_tokens = [
-        #             output_ids[len(input_ids):] for input_ids, output_ids in zip(input_tokens.input_ids, generated_encoded_tokens)
-        #         ]
-
-        #         response = rera_tokenizer.batch_decode(generated_encoded_tokens)[0]
-        #         try:
-        #             inst_score = float(response.lstrip("Relevance score: ").rstrip("<|im_end|>"))*0.1
-        #             generation_scores.append(inst_score)
-        #         except ValueError as e:
-        #             print(response)
-        #             raise e
-
-        #     inst_score = stat.mean(generation_scores)
-
-        #     reranked_documents[chunk_label] = {
-        #         "section chunk": chunk,
-        #         "reranking score": f"{inst_score}",
-        #     }
-        
-        # reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
-
-        # query_records["reranked_documents"] = reranked_documents
-
-
-        # temperature=0.6-0.8
-        # batching
-        # rewrite the instruction
-        # min max normalization both retr rera
-        # full pointwise slf-consist.
-        # analyse query 3 why are all docs not relevant, try reranking not retrieved chunks
-        # rera all chunks if rera is unsure, try better prompt maybe?
-        # consistency between different model architectures? (llama, qwen, gpt, ...) - search for literature
-
-
-        # # obtain final ranking score s
-        # # s = (1-delta)*s_retr + delta*s_rera
-        # final_scores = {}
-        # for label in reranked_documents:
-        #     doc = reranked_documents[label]["section chunk"]
-        #     s_retr = float(retrieved_documents[label]["sim_embeddings"])
-        #     s_rera = float(reranked_documents[label]["reranking score"])
-        #     s = (1-DELTA)*s_retr + DELTA*s_rera
-        #     final_scores[label] = {
-        #         "section chunk": doc,
-        #         "final ranking score": s
-        #     }
-
-        # final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
-
-        # query_records["final ranking"] = final_scores
-
-        # collect all computed rankings for this query
-        # evaluation_records[f"query-{query_idx}"] = query_records
-
-        # DEBUG
-        # break
-
-    evaluation_records = query_records
 
     results = None
     try:
