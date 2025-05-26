@@ -23,10 +23,11 @@ CHUNK_SIZE = 512
 # query context
 EXPAND_QUERY_CONTEXT = True
 QUERY_CONTEXT_SIZE = 128
-# retrieval
+# retrieval/reranking params
 TOPK_RETR = 10
 TOPK_RERA = 5
 BATCH_SIZE = 20
+RERA_TEMPERATURE = 0.6
 # final scoring
 DELTA = 0.5
 
@@ -74,7 +75,7 @@ if __name__ == "__main__":
     retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant documents that address and/or describe the citation\n<|embed|>\n"
     retrieval_instruction_document = f"<|embed|>\n"
     # reranking_instruction = lambda q, d: f"You are given a query with a citation marked by '{CITATION_MASK}' and a paragraph. A paragraph is relevant if it addresses, describes and/or contains information about the citation. A paragraph is not relevant if it doesn't contain information about the citation, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a number from 0-10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
-    reranking_instruction = lambda q, d: f"You are given a query with a citation '{CITATION_MASK}' and a paragraph. A citation is a token that identifies a paragraph that is relevant to the query at the position in the query where the citation is placed. A paragraph is relevant if it contain information about the topic discussed at the position of the citation in the query. A paragraph is not relevant if it doesn't contain information discussed in the query, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a number from 0-10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
+    reranking_instruction = lambda q, d: f"You are given a query with a citation '{CITATION_MASK}' and a paragraph. A citation is a token that identifies a paragraph that is relevant to the query at the position in the query where the citation is placed. A paragraph is relevant if it contain information about the topic discussed at the position of the citation in the query. A paragraph is not relevant if it doesn't contain information discussed in the query, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a natural number between 0 and 10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
 
 
     evaluation_records = {}
@@ -161,11 +162,13 @@ if __name__ == "__main__":
         for doc_label, doc_dict in evaluation_records[f"query-{i}"]["retrieved documents"].items():
             q = evaluation_records[f"query-{i}"][f"query-{i}"]
             d = doc_dict["section chunk"]
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
-                {"role": "user", "content": reranking_instruction(q, d)}
-            ]
-            reranking_inputs.append(messages)
+            reranking_inputs.append(rera_tokenizer.apply_chat_template([
+                    {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
+                    {"role": "user", "content": reranking_instruction(q, d)}
+                ],
+                tokenize=False,
+                add_generation_prompt=True
+            ))
             document_labels.append(doc_label)
             documents.append(d)
 
@@ -180,7 +183,7 @@ if __name__ == "__main__":
     for i in range(0, len(reranking_inputs), BATCH_SIZE):
 
         sys.stdout.write("\033[F")
-        print(f"[RERANKING] processing batch {num_batch+1}/{(len(reranking_inputs)//BATCH_SIZE)+1}")
+        print(f"[RERANKING] processing batch {num_batch}/{(len(reranking_inputs)//BATCH_SIZE)+1}")
         num_batch += 1
 
         batch_reranking_inputs = reranking_inputs[i:i+BATCH_SIZE]
@@ -188,27 +191,23 @@ if __name__ == "__main__":
         # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
         scores_for_each_llm_call = [] # num_llm_calls x batch_size
         for _ in range(M_RERA):
+            inputs = rera_tokenizer(batch_reranking_inputs, return_tensors="pt", padding=True, padding_side="left").to("cuda")
+            generated_encoded_tokens = reranker.generate(
+                **inputs, 
+                max_new_tokens=32,
+                temperature=RERA_TEMPERATURE
+            )
+            responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
+
             batch_scores = []
-            for messages in batch_reranking_inputs:
-                chat = rera_tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True
-                )
-                inputs = rera_tokenizer([chat], return_tensors="pt").to("cuda")
-                generated_encoded_tokens = reranker.generate(**inputs, max_new_tokens=512)
-                generated_encoded_tokens = [
-                    output_ids[len(input_ids):] for input_ids, output_ids in zip(inputs.input_ids, generated_encoded_tokens)
-                ]
-                response = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)[0]
-            
+            for response in responses:
                 try:
-                    inst_score = float(response.lstrip("Relevance score: ").rstrip("<|im_end|>"))*0.1
+                    inst_score = float(response.split("assistant\nRelevance score: ")[1])*0.1
                 except ValueError as e:
                     print(response)
                     raise e
                 batch_scores.append(inst_score)
-            scores_for_each_llm_call.append(batch_scores)
+        scores_for_each_llm_call.append(batch_scores)
 
         batch_aggr_scores = [
             stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
@@ -235,6 +234,7 @@ if __name__ == "__main__":
         reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
         evaluation_records[f"query-{i}"]["reranked documents"] = reranked_documents
 
+
         # obtain final ranking score s
         # s = (1-delta)*s_retr + delta*s_rera
         final_scores = {}
@@ -250,7 +250,6 @@ if __name__ == "__main__":
                 "final ranking score": s
             }
         final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
-
         evaluation_records[f"query-{i}"]["final ranking"] = final_scores
 
 
@@ -277,6 +276,7 @@ if __name__ == "__main__":
             "query_context": QUERY_CONTEXT_SIZE,
             "retriever_topk": TOPK_RETR,
             "reranker_topk": TOPK_RERA,
+            "reranker_temperature": RERA_TEMPERATURE,
             "instructions": {
                 "retr_query": retrieval_instruction_query,
                 "retr_document": retrieval_instruction_document,
