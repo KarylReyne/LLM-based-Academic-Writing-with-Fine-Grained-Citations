@@ -15,7 +15,7 @@ from latex_parsing import download_from_arxiv, search_arxiv_for_citations_data, 
 RETRIEVER_MODEL = "reasonir/ReasonIR-8B"
 RERANKER_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 # self-consistency calls
-M_RETR = 10
+M_RETR = 1 # according to Korikov et al. 2025, this doesn't do anything
 M_RERA = 10
 # target doc sections chunking
 ENABLE_CHUNKING = True
