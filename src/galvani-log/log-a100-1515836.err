@@ -1,4 +1,0 @@
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  6.80it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  7.22it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  7.37it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  7.61it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  7.44it/s]
-srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
-slurmstepd: error: *** JOB 1515836 ON galvani-cn201 CANCELLED AT 2025-05-15T18:31:17 DUE TO TIME LIMIT ***
-slurmstepd: error: *** STEP 1515836.0 ON galvani-cn201 CANCELLED AT 2025-05-15T18:31:17 DUE TO TIME LIMIT ***

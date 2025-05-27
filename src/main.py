@@ -15,7 +15,7 @@ from latex_parsing import download_from_arxiv, search_arxiv_for_citations_data, 
 RETRIEVER_MODEL = "reasonir/ReasonIR-8B"
 RERANKER_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 # self-consistency calls
-M_RETR = 1 # according to Korikov et al. 2025, this doesn't do anything
+M_RETR = 10 # according to Korikov et al. 2025 for encoder retrievers, this doesn't do anything
 M_RERA = 10
 # target doc sections chunking
 ENABLE_CHUNKING = True
@@ -94,64 +94,71 @@ if __name__ == "__main__":
 
     # --- RETRIEVAL ---
     # prepare data for batch processing
-    queries = [list(itertools.repeat(q, len(target_doc_sections))) for q in queries] # repeat queries for each candidate doc
-    queries = list(itertools.chain.from_iterable(queries)) # flatten
-    query_idx = [list(itertools.repeat(i, len(target_doc_sections))) for i in range(num_queries)] # repeat query idx for each candidate doc (for later access via the index in queries)
-    query_idx = list(itertools.chain.from_iterable(query_idx)) # flatten
+
+    # repeat queries for each candidate doc
+    queries = [list(itertools.repeat(q, len(target_doc_sections))) for q in queries] # num_queries x num_sections
+    # queries = list(itertools.chain.from_iterable(queries)) # flatten
+
+    # repeat query idx for each candidate doc (for later access via the index in queries)
+    query_idx = [list(itertools.repeat(i, len(target_doc_sections))) for i in range(num_queries)] # num_queries x num_sections
+    # query_idx = list(itertools.chain.from_iterable(query_idx)) # flatten
 
     # separate section labels and documents
     doc_lbls = [d.split(LABEL_SEPARATOR)[0] for d in target_doc_sections]
     docs = [d.split(LABEL_SEPARATOR)[1] for d in target_doc_sections]
 
-    document_labels = list(itertools.repeat(doc_lbls, num_queries))
-    document_labels = list(itertools.chain.from_iterable(document_labels)) # flatten
-    documents = list(itertools.repeat(docs, num_queries))
-    documents = list(itertools.chain.from_iterable(documents)) # flatten
+    document_labels = list(itertools.repeat(doc_lbls, num_queries)) # num_queries x num_sections
+    # document_labels = list(itertools.chain.from_iterable(document_labels)) # flatten
+
+    documents = list(itertools.repeat(docs, num_queries)) # num_queries x num_sections
+    # documents = list(itertools.chain.from_iterable(documents)) # flatten
 
     assert len(queries) == len(document_labels) == len(documents), f"{len(queries)}, {len(document_labels)}, {len(documents)}"
+    assert len(queries[0]) == len(document_labels[0]) == len(documents[0]), f"{len(queries[0])}, {len(document_labels[0])}, {len(documents[0])}"
 
     print() # for console progress report
 
-    num_batch = 1
-    for i in range(0, len(queries), BATCH_SIZE):
+    for k in range(len(queries)): # iterates queries
+        num_batch = 1
+        for i in range(0, len(queries[k]), BATCH_SIZE): # iterates sections, batched
 
-        sys.stdout.write("\033[F")
-        print(f"[RETRIEVAL] processing batch {num_batch}/{(len(queries)//BATCH_SIZE)+1}")
-        num_batch += 1
+            sys.stdout.write("\033[F")
+            print(f"[RETRIEVAL] processing query {k+1}/{len(queries)} - batch {num_batch}/{(len(queries[k])//BATCH_SIZE)+1}")
+            num_batch += 1
 
-        query_inputs = queries[i:i+BATCH_SIZE]
-        document_inputs = documents[i:i+BATCH_SIZE]
-        # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
-        scores_for_each_llm_call = [] # num_llm_calls x batch_size
-        for _ in range(M_RETR):
-            query_embs = retriever.encode(query_inputs, instruction=retrieval_instruction_query)
-            doc_embs = retriever.encode(document_inputs, instruction=retrieval_instruction_document)
-            scores_for_each_llm_call.append([query_embs[j] @ doc_embs[j] for j in range(len(query_inputs))])
+            query_inputs = queries[k][i:i+BATCH_SIZE]
+            document_inputs = documents[k][i:i+BATCH_SIZE]
+            # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
+            scores_for_each_llm_call = [] # num_llm_calls x batch_size
+            for _ in range(M_RETR):
+                query_embs = retriever.encode(query_inputs, instruction=retrieval_instruction_query)
+                doc_embs = retriever.encode(document_inputs, instruction=retrieval_instruction_document)
+                scores_for_each_llm_call.append([query_embs[j] @ doc_embs[j] for j in range(len(query_inputs))])
 
-        batch_sim_scores = [
-            stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
-            for j in range(len(query_inputs)) 
-        ]
+            batch_sim_scores = [
+                stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
+                for j in range(len(query_inputs)) 
+            ]
 
-        # update eval data with the current batch
-        query_index = None
-        for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
+            # update eval data with the current batch
+            query_index = None
+            for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
 
-            queries_idx = i+j # aka index within the list 'queries'
-            query_index = query_idx[queries_idx]
+                queries_idx = i+j # aka index within the list 'queries'
+                query_index = query_idx[queries_idx]
 
-            retrieved_documents = evaluation_records[f"query-{query_index}"]["retrieved documents"]
-            retrieved_documents[document_labels[queries_idx]] = {
-                "section chunk": documents[queries_idx],
-                "retrieval score": f"{batch_sim_scores[j]}",
-            }
-        evaluation_records[f"query-{query_index}"]["retrieved documents"] = retrieved_documents
-    
-    # retain only the top k retrieved documents
-    for i in range(num_queries):
-        retrieved_documents = evaluation_records[f"query-{i}"]["retrieved documents"]
+                retrieved_documents = evaluation_records[f"query-{query_index}"]["retrieved documents"]
+                retrieved_documents[document_labels[k][queries_idx]] = {
+                    "section chunk": documents[queries_idx],
+                    "retrieval score": f"{batch_sim_scores[j]}",
+                }
+            evaluation_records[f"query-{query_index}"]["retrieved documents"] = retrieved_documents
+        
+
+        # retain only the top k retrieved documents
+        retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
         retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["retrieval score"], reverse=True)[:TOPK_RETR])
-        evaluation_records[f"query-{i}"]["retrieved documents"] = retrieved_documents
+        evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents
 
 
     # --- RERANKING ---
@@ -172,74 +179,77 @@ if __name__ == "__main__":
             document_labels.append(doc_label)
             documents.append(d)
 
-    query_idx = [list(itertools.repeat(i, TOPK_RETR)) for i in range(num_queries)] # repeat query idx for each topk retrieved doc (for later access via the index in reranking_inputs)
-    query_idx = list(itertools.chain.from_iterable(query_idx)) # flatten
+    # repeat query idx for each topk retrieved doc (for later access via the index in reranking_inputs)
+    # num_queries x topk_retrieval
+    query_idx = [list(itertools.repeat(i, TOPK_RETR)) for i in range(num_queries)]
+    # query_idx = list(itertools.chain.from_iterable(query_idx)) # flatten
 
-    assert len(reranking_inputs) == num_queries*TOPK_RETR, f"{len(reranking_inputs)}, {num_queries*TOPK_RETR}"
+    assert len(reranking_inputs) == num_queries, f"{len(reranking_inputs)}, {num_queries}"
+    assert len(reranking_inputs[0]) == TOPK_RETR, f"{len(reranking_inputs[0])}, {TOPK_RETR}"
 
     print() # for console progress report
 
-    num_batch = 1
-    for i in range(0, len(reranking_inputs), BATCH_SIZE):
+    for k in range(len(queries)): # iterates queries
+        num_batch = 1
+        for i in range(0, len(reranking_inputs), BATCH_SIZE): # iterates sections, batched
 
-        sys.stdout.write("\033[F")
-        print(f"[RERANKING] processing batch {num_batch}/{(len(reranking_inputs)//BATCH_SIZE)+1}")
-        num_batch += 1
+            sys.stdout.write("\033[F")
+            print(f"[RERANKING] processing query {k+1}/{len(queries)} - batch {num_batch}/{(len(reranking_inputs[k])//BATCH_SIZE)+1}")
+            num_batch += 1
 
-        batch_reranking_inputs = reranking_inputs[i:i+BATCH_SIZE]
+            batch_reranking_inputs = reranking_inputs[k][i:i+BATCH_SIZE]
 
-        # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
-        scores_for_each_llm_call = [] # num_llm_calls x batch_size
-        for _ in range(M_RERA):
-            inputs = rera_tokenizer(batch_reranking_inputs, return_tensors="pt", padding=True, padding_side="left").to("cuda")
-            generated_encoded_tokens = reranker.generate(
-                **inputs, 
-                max_new_tokens=32,
-                temperature=RERA_TEMPERATURE
-            )
-            responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
+            # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
+            scores_for_each_llm_call = [] # num_llm_calls x batch_size
+            for _ in range(M_RERA):
+                inputs = rera_tokenizer(batch_reranking_inputs, return_tensors="pt", padding=True, padding_side="left").to("cuda")
+                generated_encoded_tokens = reranker.generate(
+                    **inputs, 
+                    max_new_tokens=32,
+                    temperature=RERA_TEMPERATURE
+                )
+                responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
 
-            batch_scores = []
-            for response in responses:
-                try:
-                    inst_score = float(response.split("assistant\nRelevance score: ")[1])*0.1
-                except ValueError as e:
-                    print(response)
-                    raise e
-                batch_scores.append(inst_score)
-        scores_for_each_llm_call.append(batch_scores)
+                batch_scores = []
+                for response in responses:
+                    try:
+                        inst_score = float(response.split("assistant\nRelevance score: ")[1])*0.1
+                    except ValueError as e:
+                        print(response)
+                        raise e
+                    batch_scores.append(inst_score)
+            scores_for_each_llm_call.append(batch_scores)
 
-        batch_aggr_scores = [
-            stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
-            for j in range(len(batch_reranking_inputs)) 
-        ]
+            batch_aggr_scores = [
+                stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
+                for j in range(len(batch_reranking_inputs)) 
+            ]
 
-        # update eval data with the current batch
-        query_index = None
-        for j in range(len(batch_reranking_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
+            # update eval data with the current batch
+            query_index = None
+            for j in range(len(batch_reranking_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
 
-            reranking_inputs_idx = i+j # aka index within the list 'reranking_inputs'
-            query_index = query_idx[reranking_inputs_idx]
+                reranking_inputs_idx = i+j # aka index within the list 'reranking_inputs'
+                query_index = query_idx[reranking_inputs_idx]
 
+                reranked_documents = evaluation_records[f"query-{query_index}"]["reranked documents"]
+                reranked_documents[document_labels[reranking_inputs_idx]] = {
+                    "section chunk": documents[reranking_inputs_idx],
+                    "reranking score": f"{batch_aggr_scores[j]}",
+                }
             reranked_documents = evaluation_records[f"query-{query_index}"]["reranked documents"]
-            reranked_documents[document_labels[reranking_inputs_idx]] = {
-                "section chunk": documents[reranking_inputs_idx],
-                "reranking score": f"{batch_aggr_scores[j]}",
-            }
-        reranked_documents = evaluation_records[f"query-{query_index}"]["reranked documents"]
-        
-    # sort reranked docs
-    for i in range(num_queries):
-        reranked_documents = evaluation_records[f"query-{i}"]["reranked documents"]
+            
+        # sort reranked docs
+        reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
         reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
-        evaluation_records[f"query-{i}"]["reranked documents"] = reranked_documents
+        evaluation_records[f"query-{k}"]["reranked documents"] = reranked_documents
 
 
         # obtain final ranking score s
         # s = (1-delta)*s_retr + delta*s_rera
         final_scores = {}
         # reranked_documents still exists, retrieved_documents does not
-        retrieved_documents = evaluation_records[f"query-{i}"]["retrieved documents"]
+        retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
         for label in reranked_documents:
             doc = reranked_documents[label]["section chunk"]
             s_retr = float(retrieved_documents[label]["retrieval score"])
@@ -250,7 +260,7 @@ if __name__ == "__main__":
                 "final ranking score": s
             }
         final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
-        evaluation_records[f"query-{i}"]["final ranking"] = final_scores
+        evaluation_records[f"query-{k}"]["final ranking"] = final_scores
 
 
     results = None

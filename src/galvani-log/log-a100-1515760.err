@@ -1,3 +1,0 @@
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  6.74it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  7.14it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  7.29it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  7.52it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  7.37it/s]
-slurmstepd: error: *** JOB 1515760 ON galvani-cn201 CANCELLED AT 2025-05-15T18:05:42 DUE TO TIME LIMIT ***
-slurmstepd: error: *** STEP 1515760.0 ON galvani-cn201 CANCELLED AT 2025-05-15T18:05:42 DUE TO TIME LIMIT ***
