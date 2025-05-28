@@ -71,11 +71,17 @@ if __name__ == "__main__":
     )
 
 
-    # retrieval instructions (based on ReasonIR / BRIGHT)
-    retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant documents that address and/or describe the citation\n<|embed|>\n"
+    # instructions (based on ReasonIR / BRIGHT)
+
+    # retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant documents that address and/or describe the citation\n<|embed|>\n"
+    retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant passages that describe the cited topic\n<|embed|>\n"
     retrieval_instruction_document = f"<|embed|>\n"
-    # reranking_instruction = lambda q, d: f"You are given a query with a citation marked by '{CITATION_MASK}' and a paragraph. A paragraph is relevant if it addresses, describes and/or contains information about the citation. A paragraph is not relevant if it doesn't contain information about the citation, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a number from 0-10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
-    reranking_instruction = lambda q, d: f"You are given a query with a citation '{CITATION_MASK}' and a paragraph. A citation is a token that identifies a paragraph that is relevant to the query at the position in the query where the citation is placed. A paragraph is relevant if it contain information about the topic discussed at the position of the citation in the query. A paragraph is not relevant if it doesn't contain information discussed in the query, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a natural number between 0 and 10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
+
+    # retrieval_instruction_query = f""
+    # retrieval_instruction_document = f""
+
+    # reranking_instruction = lambda q, d: f"You are given a query with a citation '{CITATION_MASK}' and a paragraph. A citation is a token that identifies a paragraph that is relevant to the query at the position in the query where the citation is placed. A paragraph is relevant if it contain information about the topic discussed at the position of the citation in the query. A paragraph is not relevant if it doesn't contain information discussed in the query, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a natural number between 0 and 10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
+    reranking_instruction = lambda q, d: f"You are given a query with a citation marked by '{CITATION_MASK}' and a paragraph. A paragraph is relevant if it describes or contains information about the cited topic. A paragraph is not relevant if it doesn't contain information about the cited topic, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a number from 0-10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
 
 
     evaluation_records = {}
@@ -98,10 +104,6 @@ if __name__ == "__main__":
     # repeat queries for each candidate doc
     queries = [list(itertools.repeat(q, len(target_doc_sections))) for q in queries] # num_queries x num_sections
     # queries = list(itertools.chain.from_iterable(queries)) # flatten
-
-    # repeat query idx for each candidate doc (for later access via the index in queries)
-    query_idx = [list(itertools.repeat(i, len(target_doc_sections))) for i in range(num_queries)] # num_queries x num_sections
-    # query_idx = list(itertools.chain.from_iterable(query_idx)) # flatten
 
     # separate section labels and documents
     doc_lbls = [d.split(LABEL_SEPARATOR)[0] for d in target_doc_sections]
@@ -141,19 +143,13 @@ if __name__ == "__main__":
             ]
 
             # update eval data with the current batch
-            query_index = None
             for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
-
-                queries_idx = i+j # aka index within the list 'queries'
-                query_index = query_idx[queries_idx]
-
-                retrieved_documents = evaluation_records[f"query-{query_index}"]["retrieved documents"]
-                retrieved_documents[document_labels[k][queries_idx]] = {
-                    "section chunk": documents[queries_idx],
+                retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
+                retrieved_documents[document_labels[k][j]] = {
+                    "section chunk": documents[k][j],
                     "retrieval score": f"{batch_sim_scores[j]}",
                 }
-            evaluation_records[f"query-{query_index}"]["retrieved documents"] = retrieved_documents
-        
+            evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents
 
         # retain only the top k retrieved documents
         retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
@@ -162,27 +158,28 @@ if __name__ == "__main__":
 
 
     # --- RERANKING ---
-    reranking_inputs = []
-    document_labels = []
-    documents = []
+    reranking_inputs = [] # num_queries x topk_retrieval
+    document_labels = [] # num_queries x topk_retrieval
+    documents = [] # num_queries x topk_retrieval
     for i in range(num_queries):
+        qry_reranking_inputs = []
+        qry_document_labels = []
+        qry_documents = []
         for doc_label, doc_dict in evaluation_records[f"query-{i}"]["retrieved documents"].items():
             q = evaluation_records[f"query-{i}"][f"query-{i}"]
             d = doc_dict["section chunk"]
-            reranking_inputs.append(rera_tokenizer.apply_chat_template([
+            qry_reranking_inputs.append(rera_tokenizer.apply_chat_template([
                     {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
                     {"role": "user", "content": reranking_instruction(q, d)}
                 ],
                 tokenize=False,
                 add_generation_prompt=True
             ))
-            document_labels.append(doc_label)
-            documents.append(d)
-
-    # repeat query idx for each topk retrieved doc (for later access via the index in reranking_inputs)
-    # num_queries x topk_retrieval
-    query_idx = [list(itertools.repeat(i, TOPK_RETR)) for i in range(num_queries)]
-    # query_idx = list(itertools.chain.from_iterable(query_idx)) # flatten
+            qry_document_labels.append(doc_label)
+            qry_documents.append(d)
+        reranking_inputs.append(qry_reranking_inputs)
+        document_labels.append(qry_document_labels)
+        documents.append(qry_documents)
 
     assert len(reranking_inputs) == num_queries, f"{len(reranking_inputs)}, {num_queries}"
     assert len(reranking_inputs[0]) == TOPK_RETR, f"{len(reranking_inputs[0])}, {TOPK_RETR}"
@@ -228,16 +225,12 @@ if __name__ == "__main__":
             # update eval data with the current batch
             query_index = None
             for j in range(len(batch_reranking_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
-
-                reranking_inputs_idx = i+j # aka index within the list 'reranking_inputs'
-                query_index = query_idx[reranking_inputs_idx]
-
-                reranked_documents = evaluation_records[f"query-{query_index}"]["reranked documents"]
-                reranked_documents[document_labels[reranking_inputs_idx]] = {
-                    "section chunk": documents[reranking_inputs_idx],
+                reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
+                reranked_documents[document_labels[k][j]] = {
+                    "section chunk": documents[k][j],
                     "reranking score": f"{batch_aggr_scores[j]}",
                 }
-            reranked_documents = evaluation_records[f"query-{query_index}"]["reranked documents"]
+            reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
             
         # sort reranked docs
         reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]

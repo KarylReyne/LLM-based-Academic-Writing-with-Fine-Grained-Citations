@@ -268,7 +268,7 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, include_quer
                 citing_sents.append(masked_sent)
     except LookupError:
         nltk.download('punkt_tab')
-        citing_sents = identify_citations_in_source_doc(source_doc, bib_id)
+        citing_sents = identify_citations_in_source_doc(source_doc, bib_id, tokenizer, include_query_context, query_context_size)
 
     # get larger context if required
     if include_query_context:
