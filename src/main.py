@@ -26,7 +26,7 @@ QUERY_CONTEXT_SIZE = 128
 # retrieval/reranking params
 TOPK_RETR = 10
 TOPK_RERA = 5
-BATCH_SIZE = 20
+BATCH_SIZE = 4
 RERA_TEMPERATURE = 0.6
 # final scoring
 DELTA = 0.5
@@ -39,13 +39,21 @@ if __name__ == "__main__":
 
     # retrieval model definition
     retr_tokenizer = AutoTokenizer.from_pretrained(RETRIEVER_MODEL)
-    retriever = AutoModel.from_pretrained(RETRIEVER_MODEL, torch_dtype="auto", trust_remote_code=True)
+    retriever = AutoModel.from_pretrained(
+        RETRIEVER_MODEL, 
+        torch_dtype="auto", 
+        trust_remote_code=True
+    )
     retriever = retriever.to("cuda")
     retriever.eval()
 
     # reranker model definition
     rera_tokenizer = AutoTokenizer.from_pretrained(RERANKER_MODEL)
-    reranker = AutoModelForCausalLM.from_pretrained(RERANKER_MODEL, torch_dtype="auto", trust_remote_code=True)
+    reranker = AutoModelForCausalLM.from_pretrained(
+        RERANKER_MODEL, 
+        torch_dtype="auto", 
+        trust_remote_code=True
+    )
     reranker = reranker.to("cuda")
 
     id = "2108.09084" # Fastformer
@@ -126,15 +134,23 @@ if __name__ == "__main__":
 
             sys.stdout.write("\033[F")
             print(f"[RETRIEVAL] processing query {k+1}/{len(queries)} - batch {num_batch}/{(len(queries[k])//BATCH_SIZE)+1}")
-            num_batch += 1
 
             query_inputs = queries[k][i:i+BATCH_SIZE]
             document_inputs = documents[k][i:i+BATCH_SIZE]
             # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
             scores_for_each_llm_call = [] # num_llm_calls x batch_size
             for _ in range(M_RETR):
-                query_embs = retriever.encode(query_inputs, instruction=retrieval_instruction_query)
-                doc_embs = retriever.encode(document_inputs, instruction=retrieval_instruction_document)
+                # they do this in the reasonir repo code, but doc_embs is immediately overwritten?!
+                # inputs = retr_tokenizer(
+                #     document_inputs,
+                #     padding=True,
+                #     truncation=True,
+                #     return_tensors='pt',
+                #     max_length=CHUNK_SIZE,
+                # ).to("cuda")
+                # doc_embs = retriever(**inputs)[0] # not sure what this does ?!
+                query_embs = retriever.encode(query_inputs, instruction=retrieval_instruction_query, batch_size=BATCH_SIZE, max_length=QUERY_CONTEXT_SIZE)
+                doc_embs = retriever.encode(document_inputs, instruction=retrieval_instruction_document, batch_size=BATCH_SIZE, max_length=CHUNK_SIZE)
                 scores_for_each_llm_call.append([query_embs[j] @ doc_embs[j] for j in range(len(query_inputs))])
 
             batch_sim_scores = [
@@ -143,13 +159,16 @@ if __name__ == "__main__":
             ]
 
             # update eval data with the current batch
+            retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
             for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
-                retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
-                retrieved_documents[document_labels[k][j]] = {
-                    "section chunk": documents[k][j],
+                global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
+                retrieved_documents[document_labels[k][global_batch_idx]] = {
+                    "section chunk": documents[k][global_batch_idx],
                     "retrieval score": f"{batch_sim_scores[j]}",
                 }
             evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents
+
+            num_batch += 1
 
         # retain only the top k retrieved documents
         retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
@@ -192,7 +211,6 @@ if __name__ == "__main__":
 
             sys.stdout.write("\033[F")
             print(f"[RERANKING] processing query {k+1}/{len(queries)} - batch {num_batch}/{(len(reranking_inputs[k])//BATCH_SIZE)+1}")
-            num_batch += 1
 
             batch_reranking_inputs = reranking_inputs[k][i:i+BATCH_SIZE]
 
@@ -223,14 +241,16 @@ if __name__ == "__main__":
             ]
 
             # update eval data with the current batch
-            query_index = None
+            reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
             for j in range(len(batch_reranking_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
-                reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
-                reranked_documents[document_labels[k][j]] = {
-                    "section chunk": documents[k][j],
+                global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
+                reranked_documents[document_labels[k][global_batch_idx]] = {
+                    "section chunk": documents[k][global_batch_idx],
                     "reranking score": f"{batch_aggr_scores[j]}",
                 }
-            reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
+            evaluation_records[f"query-{k}"]["reranked documents"] = reranked_documents
+
+            num_batch += 1
             
         # sort reranked docs
         reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
@@ -279,6 +299,7 @@ if __name__ == "__main__":
             "query_context": QUERY_CONTEXT_SIZE,
             "retriever_topk": TOPK_RETR,
             "reranker_topk": TOPK_RERA,
+            "batch_size": BATCH_SIZE,
             "reranker_temperature": RERA_TEMPERATURE,
             "instructions": {
                 "retr_query": retrieval_instruction_query,
