@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
     for k in range(len(queries)): # iterates queries
         num_batch = 1
-        for i in range(0, len(reranking_inputs), BATCH_SIZE): # iterates sections, batched
+        for i in range(0, len(reranking_inputs[k]), BATCH_SIZE): # iterates sections, batched
 
             sys.stdout.write("\033[F")
             print(f"[RERANKING] processing query {k+1}/{len(queries)} - batch {num_batch}/{(len(reranking_inputs[k])//BATCH_SIZE)+1}")
