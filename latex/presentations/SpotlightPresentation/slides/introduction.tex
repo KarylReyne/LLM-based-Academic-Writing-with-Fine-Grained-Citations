@@ -5,26 +5,48 @@
 \end{frame}
 
 \begin{frame}{Related Work}
-    \textbf{ScholarCopilot}\\
+    \textbf{ScholarCopilot}\cite{wang2025scholarcopilottraininglargelanguage}\\
     \begin{itemize}
-        \item TODO
+        \item RAG with dynamic retrieval during generation via the generation of retrieval tokens
+        \item focused on academic writing, currently introduction and related work sections 
+    \end{itemize}\\
+    \\
+    \textbf{ContextCite}\cite{cohenwang2024contextciteattributingmodelgeneration}\\
+    \begin{itemize}
+        \item method for scoring candidate context passages for \emph{contributive attribution} ('\emph{is this source the reason this statement was generated?}')
+        \item determines how the prob. of the generated statement changes in a specific source is excluded
+        \item evaluated on Wikipedia QA and news summarization datasets
     \end{itemize}
-    \textbf{ContextCite}\\
+\end{frame}
+
+\begin{frame}{Related Work, continued}
+    \textbf{ReasonIR}\cite{shao2025reasonirtrainingretrieversreasoning}\\
     \begin{itemize}
-        \item TODO
-    \end{itemize}
-    \textbf{ReasonIR}\\
-    \begin{itemize}
-        \item TODO
-    \end{itemize}
-    \textbf{Other Work}\\
-    \begin{itemize}
-        \item TODO
+        \item model+dataset for reasoning-intensive long context retrieval
+        \item they also propose a method for generating synthetic training data
+        \item dataset based on MS MARCO, Natural Questions + HotpotQA
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Method}
-    TODO \cite{vaswani-2017-transformer}
+    \textbf{"Dataset"}\\
+    \begin{itemize}
+        \item citing document $A$: Fastformer \cite{wu2021fastformeradditiveattentionneed}
+        \item cited document $B$: Transformer \cite{vaswani2023attentionneed}
+        \item this yields 4 citations (2x in introduction, 1x in methods and in experiments)
+    \end{itemize}
+    \textbf{Retriever: \mono{ReasonIR-8B}}\\
+    \begin{itemize}
+        \item \mono{LLaMA3.1-8B} fine-tuned on the ReasonIR dataset
+    \end{itemize}
+    \textbf{Reranker: \mono{Qwen2.5-7B-Instruct}}\\
+    \textbf{Additional processing steps}\\
+    \begin{itemize}
+        \item simple self-consistency (see for example \cite{korikov2025batchedselfconsistencyimprovesllm})
+        \item final score interpolation:\\
+        $s=(1-\lambda)s_{retrieval}+\lambda s_reranking$
+    \end{itemize}
+
 \end{frame}
 
 \begin{frame}{Current Results}
