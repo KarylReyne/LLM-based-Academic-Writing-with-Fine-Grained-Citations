@@ -5,13 +5,13 @@
 \end{frame}
 
 \begin{frame}{Related Work}
-    \textbf{ScholarCopilot}\cite{wang2025scholarcopilottraininglargelanguage}\\
+    \textbf{ScholarCopilot} \cite{wang2025scholarcopilottraininglargelanguage}\\
     \begin{itemize}
         \item RAG with dynamic retrieval during generation via the generation of retrieval tokens
         \item focused on academic writing, currently introduction and related work sections 
-    \end{itemize}\\
-    \\
-    \textbf{ContextCite}\cite{cohenwang2024contextciteattributingmodelgeneration}\\
+    \end{itemize}
+    \bigskip
+    \textbf{ContextCite} \cite{cohenwang2024contextciteattributingmodelgeneration}\\
     \begin{itemize}
         \item method for scoring candidate context passages for \emph{contributive attribution} ('\emph{is this source the reason this statement was generated?}')
         \item determines how the prob. of the generated statement changes in a specific source is excluded
@@ -20,7 +20,7 @@
 \end{frame}
 
 \begin{frame}{Related Work, continued}
-    \textbf{ReasonIR}\cite{shao2025reasonirtrainingretrieversreasoning}\\
+    \textbf{ReasonIR} \cite{shao2025reasonirtrainingretrieversreasoning}\\
     \begin{itemize}
         \item model+dataset for reasoning-intensive long context retrieval
         \item they also propose a method for generating synthetic training data
@@ -28,31 +28,37 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Method}
-    \textbf{"Dataset"}\\
+\begin{frame}{Method - Dataset}
     \begin{itemize}
         \item citing document $A$: Fastformer \cite{wu2021fastformeradditiveattentionneed}
         \item cited document $B$: Transformer \cite{vaswani2023attentionneed}
         \item this yields 4 citations (2x in introduction, 1x in methods and in experiments)
     \end{itemize}
-    \textbf{Retriever: \mono{ReasonIR-8B}}\\
+
+\end{frame}
+
+\begin{frame}{Method - Model}
+    \textbf{Retriever: \mono{ReasonIR-8B}} \cite{shao2025reasonirtrainingretrieversreasoning}\\
     \begin{itemize}
         \item \mono{LLaMA3.1-8B} fine-tuned on the ReasonIR dataset
     \end{itemize}
-    \textbf{Reranker: \mono{Qwen2.5-7B-Instruct}}\\
-    \textbf{Additional processing steps}\\
+    \bigskip
+    \textbf{Reranker: \mono{Qwen2.5-7B-Instruct}} \cite{qwen2, qwen2.5}\\
     \begin{itemize}
-        \item simple self-consistency (see for example \cite{korikov2025batchedselfconsistencyimprovesllm})
-        \item final score interpolation:\\
-        $s=(1-\lambda)s_{retrieval}+\lambda s_reranking$
+        \item additionally, the reranking score for each passage is averaged over $m$ LLM calls (this implements a simple version of batched self-consistency \cite{korikov2025batchedselfconsistencyimprovesllm}, see also \cite{wang2023selfconsistencyimproveschainthought})
     \end{itemize}
-
+    \bigskip
+    \textbf{Final Score}\\
+    \begin{itemize}
+        \item interpolation of both ranking scores (for each passage):\\
+        $s_{final}=(1-\lambda)s_{retrieval}+\lambda s_{reranking}$ (I currently use $\lambda=0.5$)
+    \end{itemize}
 \end{frame}
 
-\begin{frame}{Current Results}
-    TODO \cite{vaswani-2017-transformer}
+\begin{frame}{Current Results (Example)}
+    TODO 
 \end{frame}
 
 \begin{frame}{Outlook}
-    TODO \cite{vaswani-2017-transformer}
+    TODO
 \end{frame}
