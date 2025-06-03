@@ -31,7 +31,15 @@
 \begin{frame}{Method - Dataset}
     \begin{itemize}
         \item citing document $A$: Fastformer \cite{wu2021fastformeradditiveattentionneed}
+            \begin{itemize}
+                \item citation context window size: 128 tokens
+                \item context window centered at the citation
+            \end{itemize}
         \item cited document $B$: Transformer \cite{vaswani2023attentionneed}
+            \begin{itemize}
+                \item sections / subsections split into chunks 
+                \item chunk size: 512 tokens
+            \end{itemize}
         \item this yields 4 citations (2x in introduction, 1x in methods and in experiments)
     \end{itemize}
 
@@ -42,21 +50,74 @@
     \begin{itemize}
         \item \mono{LLaMA3.1-8B} fine-tuned on the ReasonIR dataset
     \end{itemize}
-    \bigskip
+    % \bigskip
     \textbf{Reranker: \mono{Qwen2.5-7B-Instruct}} \cite{qwen2, qwen2.5}\\
     \begin{itemize}
         \item additionally, the reranking score for each passage is averaged over $m$ LLM calls (this implements a simple version of batched self-consistency \cite{korikov2025batchedselfconsistencyimprovesllm}, see also \cite{wang2023selfconsistencyimproveschainthought})
+        \item I currently use $m_{retrieval}=m_{reranking}=10$
     \end{itemize}
-    \bigskip
+    % \bigskip
     \textbf{Final Score}\\
     \begin{itemize}
-        \item interpolation of both ranking scores (for each passage):\\
+        \item interpolation of both ranking scores:\\
         $s_{final}=(1-\lambda)s_{retrieval}+\lambda s_{reranking}$ (I currently use $\lambda=0.5$)
     \end{itemize}
+    \bigskip
+    \textcolor{red}{All scores are currently obtained by comparing the query to every candidate document individually, this will be changed in the near future!}
 \end{frame}
 
-\begin{frame}{Current Results (Example)}
-    TODO 
+\begin{frame}{Current Results (Good Example)}
+    \begin{figure}
+        \centering
+        \begin{tabular}{|c|c|c|c|}
+            \hline 
+            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            \hline 
+            Conclusion-0 & $0.627$ & $0.8$ & $0.71$ \\
+            \hline 
+            abstract-0 & $0.547$ & $0.25$ & $0.4$ \\
+            \hline 
+            Background-0 & $0.59$ & $0.14$ & $0.37$ \\
+            \hline 
+            Introduction-0 & $0.594$ & $0.06$ & $0.33$ \\
+            \hline 
+            Model Architecture-0 & $0.589$ & $0$ & $0.29$ \\
+            \hline 
+        \end{tabular}
+        \caption{Ranking scores for query-0. Ranked are passages extracted from the Transformer paper.}
+    \end{figure}
+    % \bigskip
+    \begin{block}{query-0 (first citation in the Fastformer paper)}
+        \small
+        [...] Transformer models and can meanwhile achieve comparable or even better long text modeling performance. Introduction Transformer (\mono{<CIT-MASK>}) and their variants have achieved great success in many fields. For example, Transformer is the backbone architecture of many state-of-the-art pre-trained language models in NLP, such as [...]
+    \end{block}
+\end{frame}
+
+\begin{frame}{Current Results (Bad Example)}
+    \begin{figure}
+        \centering
+        \begin{tabular}{|c|c|c|c|}
+            \hline 
+            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            \hline 
+            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            \hline 
+            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            \hline 
+            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            \hline 
+            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            \hline 
+            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            \hline 
+        \end{tabular}
+        \caption{Ranking scores for query-.}
+    \end{figure}
+    % \bigskip
+    \begin{block}{query-}
+        \small
+        [...]  [...]
+    \end{block}
 \end{frame}
 
 \begin{frame}{Outlook}
