@@ -40,9 +40,9 @@
                 \item sections / subsections split into chunks 
                 \item chunk size: 512 tokens
             \end{itemize}
-        \item this yields 4 citations (2x in introduction, 1x in methods and in experiments)
+        \item this yields 4 citations in $A$ (two in the introduction, one in methods and one in experiments)
+        \item and 34 passages in $B$ (these form the retrieval corpus)
     \end{itemize}
-
 \end{frame}
 
 \begin{frame}{Method - Model}
@@ -54,7 +54,7 @@
     \textbf{Reranker: \mono{Qwen2.5-7B-Instruct}} \cite{qwen2, qwen2.5}\\
     \begin{itemize}
         \item additionally, the reranking score for each passage is averaged over $m$ LLM calls (this implements a simple version of batched self-consistency \cite{korikov2025batchedselfconsistencyimprovesllm}, see also \cite{wang2023selfconsistencyimproveschainthought})
-        \item I currently use $m_{retrieval}=m_{reranking}=10$
+        \item I currently use $m=10$
     \end{itemize}
     % \bigskip
     \textbf{Final Score}\\
@@ -66,60 +66,72 @@
     \textcolor{red}{All scores are currently obtained by comparing the query to every candidate document individually, this will be changed in the near future!}
 \end{frame}
 
-\begin{frame}{Current Results (Good Example)}
+\begin{frame}{Current Results - Example 1}
     \begin{figure}
         \centering
         \begin{tabular}{|c|c|c|c|}
             \hline 
             section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
             \hline 
-            Conclusion-0 & $0.627$ & $0.8$ & $0.71$ \\
+            Conclusion-0 & $0.627$ & $0.8$ & $0.713$ \\
             \hline 
-            abstract-0 & $0.547$ & $0.25$ & $0.4$ \\
+            abstract-0 & $0.547$ & $0.25$ & $0.398$ \\
             \hline 
-            Background-0 & $0.59$ & $0.14$ & $0.37$ \\
+            Background-0 & $0.59$ & $0.14$ & $0.365$ \\
             \hline 
-            Introduction-0 & $0.594$ & $0.06$ & $0.33$ \\
+            Introduction-0 & $0.594$ & $0.06$ & $0.327$ \\
             \hline 
-            Model Architecture-0 & $0.589$ & $0$ & $0.29$ \\
+            Model Architecture-0 & $0.589$ & $0$ & $0.294$ \\
             \hline 
         \end{tabular}
         \caption{Ranking scores for query-0. Ranked are passages extracted from the Transformer paper.}
     \end{figure}
     % \bigskip
-    \begin{block}{query-0 (first citation in the Fastformer paper)}
+    \begin{block}{query-0 (beginning of the introduction in the Fastformer paper)}
         \small
-        [...] Transformer models and can meanwhile achieve comparable or even better long text modeling performance. Introduction Transformer (\mono{<CIT-MASK>}) and their variants have achieved great success in many fields. For example, Transformer is the backbone architecture of many state-of-the-art pre-trained language models in NLP, such as [...]
+        [...] Transformer models and can meanwhile achieve comparable or even better long text modeling performance. Introduction Transformer (\mono{<CIT-MASK>}) and their variants have achieved great success in many fields. For example, Transformer is the backbone architecture of many [...]
     \end{block}
 \end{frame}
 
-\begin{frame}{Current Results (Bad Example)}
+\begin{frame}{Current Results - Example 2}
     \begin{figure}
         \centering
         \begin{tabular}{|c|c|c|c|}
             \hline 
             section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
             \hline 
-            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            Conclusion-0 & $0.569$ & $0.2$ & $0.385$ \\
             \hline 
-            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            Model Architecture-0 & $0.54$ & $0.0$ & $0.27$ \\
             \hline 
-            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            Background-0 & $0.536$ & $0.0$ & $0.268$ \\
             \hline 
-            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            Conclusion-4 & $0.534$ & $0.0$ & $0.267$ \\
             \hline 
-            section-chunk & $s_{retrieval}$ & $s_{reranking}$ & $s_{final}$ \\
+            Machine Translation-1 & $0.53$ & $0.0$ & $0.265$ \\
             \hline 
         \end{tabular}
-        \caption{Ranking scores for query-.}
+        \caption{Ranking scores for query-3.}
     \end{figure}
     % \bigskip
-    \begin{block}{query-}
+    \begin{block}{query-3 (model comparison in the experiments section)}
         \small
-        [...]  [...]
+        [...] Effectiveness Comparison First, we compare the performance of Fastformer with many baseline methods, including: (1) Transformer (\mono{<CIT-MASK>}), the vanilla Transformer; (2) Longformer (Beltagy et al., 2020), a Transformer variant with sparse attention. It combines sliding window [...]
     \end{block}
+    \textcolor{red}{Conclusion-4 refers to a part of the references section, this is a bug.}
 \end{frame}
 
 \begin{frame}{Outlook}
-    TODO
+    \textbf{In progress}
+    \begin{itemize}
+        \item implement batch processing
+        \item implement batched self-consistency \cite{korikov2025batchedselfconsistencyimprovesllm}
+        \item achieve consistent reranking performance
+    \end{itemize}
+    \bigskip
+    \textbf{Long-term goals}
+    \begin{itemize}
+        \item construct dataset of scientific documents (probably mainly for retrieval fine-tuning)
+        \item integrate passage retrieval into ScholarCopilot \cite{wang2025scholarcopilottraininglargelanguage}
+    \end{itemize}
 \end{frame}
