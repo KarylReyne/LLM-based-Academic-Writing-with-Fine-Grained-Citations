@@ -1,0 +1,15 @@
+{
+    "retriever": "reasonir/ReasonIR-8B",
+    "reranker": "Qwen/Qwen2.5-7B-Instruct",
+    "m_retrieval": 10,
+    "m_reranking": 10,
+    "final_score_delta": 0.5,
+    "target_chunking": true,
+    "chunk_size": 512,
+    "expand_query": true,
+    "query_context": 128,
+    "retriever_topk": 10,
+    "reranker_topk": 5,
+    "batch_size": 4,
+    "reranker_temperature": 0.6
+}

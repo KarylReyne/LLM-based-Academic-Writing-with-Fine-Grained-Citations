@@ -1,35 +1,51 @@
 import torch
 import json
-import sys
+import os
 from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
 from torch import nn
 import numpy as np
 import itertools
 from datetime import datetime
-import statistics as stat
 
 from latex_parsing import download_from_arxiv, search_arxiv_for_citations_data, get_source_citations, LABEL_SEPARATOR, CITATION_MASK
+from retrieval import retrieval
+from reranking import reranking_and_scoring
 
 
-# models
-RETRIEVER_MODEL = "reasonir/ReasonIR-8B"
-RERANKER_MODEL = "Qwen/Qwen2.5-7B-Instruct"
-# self-consistency calls
-M_RETR = 10 # according to Korikov et al. 2025 for encoder retrievers, this doesn't do anything
-M_RERA = 10
-# target doc sections chunking
-ENABLE_CHUNKING = True
-CHUNK_SIZE = 512
-# query context
-EXPAND_QUERY_CONTEXT = True
-QUERY_CONTEXT_SIZE = 128
-# retrieval/reranking params
-TOPK_RETR = 10
-TOPK_RERA = 5
-BATCH_SIZE = 4
-RERA_TEMPERATURE = 0.6
-# final scoring
-DELTA = 0.5
+def save_results(
+    evaluation_records,
+    id,
+    target_citation_record,
+    retrieval_instruction_query,
+    retrieval_instruction_document,
+    reranking_instruction,
+    config
+):
+    results = None
+    try:
+        with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records.json', 'r', encoding='utf-8') as f:
+            results = json.load(f)
+    except FileNotFoundError:
+        if not os.path.exists(f'out/{datetime.now().strftime('%Y-%m-%d')}'):
+            os.makedirs(f'out/{datetime.now().strftime('%Y-%m-%d')}')
+        results = {}
+    assert os.path.exists(f'out/{datetime.now().strftime('%Y-%m-%d')}')
+    assert results != None
+
+    results[f"{datetime.now().strftime('%H-%M-%S')}"] = {
+        "query_doc_id": f"{id}",
+        "target_doc_id": f"{target_citation_record["arxiv_id"]}",
+        "config": config,
+        "instructions": {
+            "retr_query": retrieval_instruction_query,
+            "retr_document": retrieval_instruction_document,
+            "rera_scoring": reranking_instruction("", "")
+        },
+        "records": evaluation_records
+    }
+
+    with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records.json', 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
 
 
 # srun --job-name "FineGrainedCitations" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
@@ -37,10 +53,15 @@ DELTA = 0.5
 # conda activate citations
 if __name__ == "__main__":
 
+    config = None
+    with open('cfg/config.json', 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    assert config != None
+
     # retrieval model definition
-    retr_tokenizer = AutoTokenizer.from_pretrained(RETRIEVER_MODEL)
+    retr_tokenizer = AutoTokenizer.from_pretrained(config["retriever"])
     retriever = AutoModel.from_pretrained(
-        RETRIEVER_MODEL, 
+        config["retriever"], 
         torch_dtype="auto", 
         trust_remote_code=True
     )
@@ -48,9 +69,9 @@ if __name__ == "__main__":
     retriever.eval()
 
     # reranker model definition
-    rera_tokenizer = AutoTokenizer.from_pretrained(RERANKER_MODEL)
+    rera_tokenizer = AutoTokenizer.from_pretrained(config["reranker"])
     reranker = AutoModelForCausalLM.from_pretrained(
-        RERANKER_MODEL, 
+        config["reranker"], 
         torch_dtype="auto", 
         trust_remote_code=True
     )
@@ -72,28 +93,24 @@ if __name__ == "__main__":
         id, 
         target_citation_record, 
         retr_tokenizer, 
-        with_chunking=ENABLE_CHUNKING, 
-        chunk_size=CHUNK_SIZE,
-        include_query_context=EXPAND_QUERY_CONTEXT,
-        query_context_size=QUERY_CONTEXT_SIZE
+        with_chunking=config["target_chunking"], 
+        chunk_size=config["chunk_size"],
+        include_query_context=config["expand_query"],
+        query_context_size=config["query_context"]
     )
 
 
     # instructions (based on ReasonIR / BRIGHT)
-
-    # retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant documents that address and/or describe the citation\n<|embed|>\n"
     retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant passages that describe the cited topic\n<|embed|>\n"
     retrieval_instruction_document = f"<|embed|>\n"
-
     # retrieval_instruction_query = f""
     # retrieval_instruction_document = f""
 
-    # reranking_instruction = lambda q, d: f"You are given a query with a citation '{CITATION_MASK}' and a paragraph. A citation is a token that identifies a paragraph that is relevant to the query at the position in the query where the citation is placed. A paragraph is relevant if it contain information about the topic discussed at the position of the citation in the query. A paragraph is not relevant if it doesn't contain information discussed in the query, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a natural number between 0 and 10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
     reranking_instruction = lambda q, d: f"You are given a query with a citation marked by '{CITATION_MASK}' and a paragraph. A paragraph is relevant if it describes or contains information about the cited topic. A paragraph is not relevant if it doesn't contain information about the cited topic, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a number from 0-10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
 
 
     evaluation_records = {}
-    queries = citing_sents if not EXPAND_QUERY_CONTEXT else citing_context
+    queries = citing_sents if not config["expand_query"] else citing_context
     num_queries = len(queries)
 
     evaluation_records = {}
@@ -109,77 +126,39 @@ if __name__ == "__main__":
     # --- RETRIEVAL ---
     # prepare data for batch processing
 
-    # repeat queries for each candidate doc
-    queries = [list(itertools.repeat(q, len(target_doc_sections))) for q in queries] # num_queries x num_sections
-    # queries = list(itertools.chain.from_iterable(queries)) # flatten
-
     # separate section labels and documents
-    doc_lbls = [d.split(LABEL_SEPARATOR)[0] for d in target_doc_sections]
-    docs = [d.split(LABEL_SEPARATOR)[1] for d in target_doc_sections]
+    doc_lbls = []
+    docs = []
+    for d in target_doc_sections:
+        split = d.split(LABEL_SEPARATOR)
+        doc_lbls.append(split[0])
+        docs.append(split[1])
 
+    queries = [list(itertools.repeat(q, len(target_doc_sections))) for q in queries] # num_queries x num_sections
     document_labels = list(itertools.repeat(doc_lbls, num_queries)) # num_queries x num_sections
-    # document_labels = list(itertools.chain.from_iterable(document_labels)) # flatten
-
     documents = list(itertools.repeat(docs, num_queries)) # num_queries x num_sections
-    # documents = list(itertools.chain.from_iterable(documents)) # flatten
 
     assert len(queries) == len(document_labels) == len(documents), f"{len(queries)}, {len(document_labels)}, {len(documents)}"
     assert len(queries[0]) == len(document_labels[0]) == len(documents[0]), f"{len(queries[0])}, {len(document_labels[0])}, {len(documents[0])}"
 
-    print() # for console progress report
-
-    for k in range(len(queries)): # iterates queries
-        num_batch = 1
-        for i in range(0, len(queries[k]), BATCH_SIZE): # iterates sections, batched
-
-            sys.stdout.write("\033[F")
-            print(f"[RETRIEVAL] processing query {k+1}/{len(queries)} - batch {num_batch}/{(len(queries[k])//BATCH_SIZE)+1}")
-
-            query_inputs = queries[k][i:i+BATCH_SIZE]
-            document_inputs = documents[k][i:i+BATCH_SIZE]
-            # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
-            scores_for_each_llm_call = [] # num_llm_calls x batch_size
-            for _ in range(M_RETR):
-                # they do this in the reasonir repo code, but doc_embs is immediately overwritten?!
-                # inputs = retr_tokenizer(
-                #     document_inputs,
-                #     padding=True,
-                #     truncation=True,
-                #     return_tensors='pt',
-                #     max_length=CHUNK_SIZE,
-                # ).to("cuda")
-                # doc_embs = retriever(**inputs)[0] # not sure what this does ?!
-                query_embs = retriever.encode(query_inputs, instruction=retrieval_instruction_query, batch_size=BATCH_SIZE, max_length=QUERY_CONTEXT_SIZE)
-                doc_embs = retriever.encode(document_inputs, instruction=retrieval_instruction_document, batch_size=BATCH_SIZE, max_length=CHUNK_SIZE)
-                scores_for_each_llm_call.append([query_embs[j] @ doc_embs[j] for j in range(len(query_inputs))])
-
-            batch_sim_scores = [
-                stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
-                for j in range(len(query_inputs)) 
-            ]
-
-            # update eval data with the current batch
-            retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
-            for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
-                global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
-                retrieved_documents[document_labels[k][global_batch_idx]] = {
-                    "section chunk": documents[k][global_batch_idx],
-                    "retrieval score": f"{batch_sim_scores[j]}",
-                }
-            evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents
-
-            num_batch += 1
-
-        # retain only the top k retrieved documents
-        retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
-        retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["retrieval score"], reverse=True)[:TOPK_RETR])
-        evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents
+    retrieval(
+        evaluation_records, 
+        num_queries, 
+        queries, 
+        document_labels, 
+        documents, 
+        retrieval_instruction_query, 
+        retrieval_instruction_document, 
+        retriever, 
+        config
+    )
 
 
     # --- RERANKING ---
     reranking_inputs = [] # num_queries x topk_retrieval
     document_labels = [] # num_queries x topk_retrieval
     documents = [] # num_queries x topk_retrieval
+
     for i in range(num_queries):
         qry_reranking_inputs = []
         qry_document_labels = []
@@ -201,115 +180,27 @@ if __name__ == "__main__":
         documents.append(qry_documents)
 
     assert len(reranking_inputs) == num_queries, f"{len(reranking_inputs)}, {num_queries}"
-    assert len(reranking_inputs[0]) == TOPK_RETR, f"{len(reranking_inputs[0])}, {TOPK_RETR}"
+    assert len(reranking_inputs[0]) == config["retriever_topk"], f"{len(reranking_inputs[0])}, {config["retriever_topk"]}"
 
-    print() # for console progress report
+    reranking_and_scoring(
+        evaluation_records, 
+        num_queries, 
+        reranking_inputs, 
+        document_labels, 
+        documents, 
+        reranking_instruction, 
+        reranker, 
+        rera_tokenizer, 
+        config
+    )
 
-    for k in range(len(queries)): # iterates queries
-        num_batch = 1
-        for i in range(0, len(reranking_inputs[k]), BATCH_SIZE): # iterates sections, batched
-
-            sys.stdout.write("\033[F")
-            print(f"[RERANKING] processing query {k+1}/{len(queries)} - batch {num_batch}/{(len(reranking_inputs[k])//BATCH_SIZE)+1}")
-
-            batch_reranking_inputs = reranking_inputs[k][i:i+BATCH_SIZE]
-
-            # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
-            scores_for_each_llm_call = [] # num_llm_calls x batch_size
-            for _ in range(M_RERA):
-                inputs = rera_tokenizer(batch_reranking_inputs, return_tensors="pt", padding=True, padding_side="left").to("cuda")
-                generated_encoded_tokens = reranker.generate(
-                    **inputs, 
-                    max_new_tokens=32,
-                    temperature=RERA_TEMPERATURE
-                )
-                responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
-
-                batch_scores = []
-                for response in responses:
-                    try:
-                        inst_score = float(response.split("assistant\nRelevance score: ")[1])*0.1
-                    except ValueError as e:
-                        print(response)
-                        raise e
-                    batch_scores.append(inst_score)
-            scores_for_each_llm_call.append(batch_scores)
-
-            batch_aggr_scores = [
-                stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call])
-                for j in range(len(batch_reranking_inputs)) 
-            ]
-
-            # update eval data with the current batch
-            reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
-            for j in range(len(batch_reranking_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
-                global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
-                reranked_documents[document_labels[k][global_batch_idx]] = {
-                    "section chunk": documents[k][global_batch_idx],
-                    "reranking score": f"{batch_aggr_scores[j]}",
-                }
-            evaluation_records[f"query-{k}"]["reranked documents"] = reranked_documents
-
-            num_batch += 1
-            
-        # sort reranked docs
-        reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
-        reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
-        evaluation_records[f"query-{k}"]["reranked documents"] = reranked_documents
-
-
-        # obtain final ranking score s
-        # s = (1-delta)*s_retr + delta*s_rera
-        final_scores = {}
-        # reranked_documents still exists, retrieved_documents does not
-        retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
-        for label in reranked_documents:
-            doc = reranked_documents[label]["section chunk"]
-            s_retr = float(retrieved_documents[label]["retrieval score"])
-            s_rera = float(reranked_documents[label]["reranking score"])
-            s = (1-DELTA)*s_retr + DELTA*s_rera
-            final_scores[label] = {
-                "section chunk": doc,
-                "final ranking score": s
-            }
-        final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
-        evaluation_records[f"query-{k}"]["final ranking"] = final_scores
-
-
-    results = None
-    try:
-        with open('out/evaluation_records.json', 'r', encoding='utf-8') as f:
-            results = json.load(f)
-    except FileNotFoundError:
-        results = {}
-    assert results != None
-
-    results[f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"] = {
-        "query_doc_id": f"{id}",
-        "target_doc_id": f"{target_citation_record["arxiv_id"]}",
-        "config": {
-            "retriever": RETRIEVER_MODEL,
-            "reranker": RERANKER_MODEL,
-            "m_retrieval": M_RETR,
-            "m_reranking": M_RERA,
-            "final_score_delta": DELTA,
-            "target_chunking": ENABLE_CHUNKING,
-            "chunk_size": CHUNK_SIZE,
-            "expand_query": EXPAND_QUERY_CONTEXT,
-            "query_context": QUERY_CONTEXT_SIZE,
-            "retriever_topk": TOPK_RETR,
-            "reranker_topk": TOPK_RERA,
-            "batch_size": BATCH_SIZE,
-            "reranker_temperature": RERA_TEMPERATURE,
-            "instructions": {
-                "retr_query": retrieval_instruction_query,
-                "retr_document": retrieval_instruction_document,
-                "rera_scoring": reranking_instruction("", "")
-            }
-        },
-        "records": evaluation_records
-    }
-
-    with open('out/evaluation_records.json', 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=4)
+    save_results(
+        evaluation_records, 
+        id, 
+        target_citation_record, 
+        retrieval_instruction_query, 
+        retrieval_instruction_document, 
+        reranking_instruction, 
+        config
+    )
     
