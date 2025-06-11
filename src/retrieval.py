@@ -56,7 +56,7 @@ def retrieval(
                 global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
                 retrieved_documents[document_labels[k][global_batch_idx]] = {
                     "section chunk": documents[k][global_batch_idx],
-                    "retrieval score": f"{batch_sim_scores[j]}",
+                    "retrieval score": float(batch_sim_scores[j]),
                 }
             evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents
 

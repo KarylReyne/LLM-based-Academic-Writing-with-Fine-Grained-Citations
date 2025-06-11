@@ -296,7 +296,7 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expans
     elif query_expansion_method == "left":
         for index in indices:
             low = max(index-query_context_size, 0)
-            high = index
+            high = index+1
             context = tokenizer.decode(tokens[low:high])
             context = context.replace(TOKENIZER_BEGIN_TOKEN, "")
             context = context.replace(bib_id, CITATION_MASK)

@@ -6,7 +6,7 @@ from util import minmax_normalization
 def reranking_and_scoring(
     evaluation_records, 
     num_queries, 
-    reranking_inputs, 
+    single_queries, 
     document_labels,
     documents,
     reranking_instruction,
@@ -25,46 +25,61 @@ def reranking_and_scoring(
 
     for k in range(num_queries): # iterates queries
         num_batch = 1
-        for i in range(0, len(reranking_inputs[k]), BATCH_SIZE): # iterates sections, batched
+        for i in range(0, len(documents[k]), BATCH_SIZE): # iterates sections, batched
 
             sys.stdout.write("\033[F")
-            print(f"[RERANKING] processing query {k+1}/{num_queries} - batch {num_batch}/{(len(reranking_inputs[k])//BATCH_SIZE)+1}")
+            print(f"[RERANKING] processing query {k+1}/{num_queries} - batch {num_batch}/{(len(documents[k])//BATCH_SIZE)+1}")
 
-            batch_reranking_inputs = reranking_inputs[k][i:i+BATCH_SIZE]
+            batch_query = single_queries[k]
+            batch_documents = documents[k][i:i+BATCH_SIZE]
 
-            # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
+            batch_reranking_input = rera_tokenizer.apply_chat_template([
+                    {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
+                    {"role": "user", "content": reranking_instruction(batch_query, batch_documents)}
+                ],
+                tokenize=False,
+                add_generation_prompt=True
+            )
+
+            # score aggregation for batched self-consistency
+            # https://arxiv.org/abs/2505.12570
             scores_for_each_llm_call = [] # num_llm_calls x batch_size
             for _ in range(M_RERA): # iterates llm calls
-                inputs = rera_tokenizer(batch_reranking_inputs, return_tensors="pt", padding=True, padding_side="left").to("cuda")
+                llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to("cuda")
                 generated_encoded_tokens = reranker.generate(
-                    **inputs, 
-                    max_new_tokens=32,
+                    **llm_call_input, 
+                    max_new_tokens=128,
                     temperature=RERA_TEMPERATURE
                 )
-                responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
+                response = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
 
-                batch_scores = []
-                for response in responses: # iterates current batch
-                    try:
-                        inst_score = float(response.split("assistant\nRelevance score: ")[1])*0.1
-                    except ValueError as e:
-                        print(response)
-                        raise e
-                    batch_scores.append(inst_score)
-            scores_for_each_llm_call.append(batch_scores)
+                batch_scores = None
+                try:
+                    response = response[0].split("assistant\nRelevance scores: ")[1] # list only
+                    response = response.lstrip("[").rstrip("]")
+                    batch_scores = [float(score)*0.1 for score in response.split(", ")]
+                    assert len(batch_scores) == len(batch_documents)
+                except AssertionError as e:
+                    print(f"generated scores don't match current batch size: {len(batch_scores)} != {len(batch_documents)}\n")
+                    batch_scores = batch_scores[:len(batch_documents)] # dirty fix ;)
+                except Exception as e:
+                    print(batch_reranking_input)
+                    print(response)
+                    raise e
+                scores_for_each_llm_call.append(batch_scores)
             
             batch_rera_scores = []
-            for j in range(len(batch_reranking_inputs)): # iterates current batch
+            for j in range(len(batch_documents)): # iterates current batch
                 mean_over_llm_calls = stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call]) # iterates llm calls
                 batch_rera_scores.append(mean_over_llm_calls)
 
             # update eval data with the current batch
             reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
-            for j in range(len(batch_reranking_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
+            for j in range(len(batch_documents)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
                 global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
                 reranked_documents[document_labels[k][global_batch_idx]] = {
                     "section chunk": documents[k][global_batch_idx],
-                    "reranking score": f"{batch_rera_scores[j]}",
+                    "reranking score": float(batch_rera_scores[j]),
                 }
             evaluation_records[f"query-{k}"]["reranked documents"] = reranked_documents
 

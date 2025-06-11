@@ -106,11 +106,12 @@ if __name__ == "__main__":
     # retrieval_instruction_query = f""
     # retrieval_instruction_document = f""
 
-    reranking_instruction = lambda q, d: f"You are given a query with a citation marked by '{CITATION_MASK}' and a paragraph. A paragraph is relevant if it describes or contains information about the cited topic. A paragraph is not relevant if it doesn't contain information about the cited topic, even if it mentions similar topics. Is the paragraph below relevant to the query below? The answer should be 'Relevance score: X' where X is a number from 0-10. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query:<start_query>{q}<end_query>Here is the paragraph:<start_paragraph>{d}<end_paragraph>"
+    reranking_instruction = lambda q, d: f"You are given a query with a citation marked by '{CITATION_MASK}' and a list of paragraphs. A paragraph is relevant if it describes or contains information about the cited topic. A paragraph is not relevant if it doesn't contain information about the cited topic, even if it mentions similar topics. Rank all paragraphs below based on how relevant to the query they are. Following the order of the passages below, your answer should be 'Relevance scores: X' where X is a list of numbers from 0-10 where each number is the score of the corresponding paragraph. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query: <start_query>{q}<end_query>Here are the paragraphs: {"".join([f"<start_paragraph-{i+1}>{p}<end_paragraph-{i+1}>" for i, p in enumerate(d)])} <start_example_answer>Relevance scores: [<score for paragraph-1>, <score for paragraph-2>, ...]<end_example_answer>"
 
 
     evaluation_records = {}
-    queries = citing_sents if not config["expand_query"] else citing_context
+    # queries = citing_sents if not config["expand_query"] else citing_context
+    queries = citing_context
     num_queries = len(queries)
 
     evaluation_records = {}
@@ -155,37 +156,54 @@ if __name__ == "__main__":
 
 
     # --- RERANKING ---
-    reranking_inputs = [] # num_queries x topk_retrieval
+    # reranking_inputs = [] # num_queries x topk_retrieval
+    # document_labels = [] # num_queries x topk_retrieval
+    # documents = [] # num_queries x topk_retrieval
+
+    # for i in range(num_queries):
+    #     qry_reranking_inputs = []
+    #     qry_document_labels = []
+    #     qry_documents = []
+    #     for doc_label, doc_dict in evaluation_records[f"query-{i}"]["retrieved documents"].items():
+    #         q = evaluation_records[f"query-{i}"][f"query-{i}"]
+    #         d = doc_dict["section chunk"]
+    #         qry_reranking_inputs.append(rera_tokenizer.apply_chat_template([
+    #                 {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
+    #                 {"role": "user", "content": reranking_instruction(q, d)}
+    #             ],
+    #             tokenize=False,
+    #             add_generation_prompt=True
+    #         ))
+    #         qry_document_labels.append(doc_label)
+    #         qry_documents.append(d)
+    #     reranking_inputs.append(qry_reranking_inputs)
+    #     document_labels.append(qry_document_labels)
+    #     documents.append(qry_documents)
+
+    # assert len(reranking_inputs) == num_queries, f"{len(reranking_inputs)}, {num_queries}"
+    # assert len(reranking_inputs[0]) == config["retriever_topk"], f"{len(reranking_inputs[0])}, {config["retriever_topk"]}"
+
+    single_queries = [] # num_queries x 1 (not repeated like queries)
     document_labels = [] # num_queries x topk_retrieval
     documents = [] # num_queries x topk_retrieval
 
     for i in range(num_queries):
-        qry_reranking_inputs = []
         qry_document_labels = []
         qry_documents = []
         for doc_label, doc_dict in evaluation_records[f"query-{i}"]["retrieved documents"].items():
-            q = evaluation_records[f"query-{i}"][f"query-{i}"]
-            d = doc_dict["section chunk"]
-            qry_reranking_inputs.append(rera_tokenizer.apply_chat_template([
-                    {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
-                    {"role": "user", "content": reranking_instruction(q, d)}
-                ],
-                tokenize=False,
-                add_generation_prompt=True
-            ))
             qry_document_labels.append(doc_label)
-            qry_documents.append(d)
-        reranking_inputs.append(qry_reranking_inputs)
+            qry_documents.append(doc_dict["section chunk"])
+        single_queries.append(evaluation_records[f"query-{i}"][f"query-{i}"])
         document_labels.append(qry_document_labels)
         documents.append(qry_documents)
 
-    assert len(reranking_inputs) == num_queries, f"{len(reranking_inputs)}, {num_queries}"
-    assert len(reranking_inputs[0]) == config["retriever_topk"], f"{len(reranking_inputs[0])}, {config["retriever_topk"]}"
+    assert len(single_queries) == num_queries, f"{len(single_queries)}, {num_queries}"
+    assert len(documents[0]) == config["retriever_topk"], f"{len(documents[0])}, {config["retriever_topk"]}"
 
     reranking_and_scoring(
         evaluation_records, 
         num_queries, 
-        reranking_inputs, 
+        single_queries, 
         document_labels, 
         documents, 
         reranking_instruction, 
