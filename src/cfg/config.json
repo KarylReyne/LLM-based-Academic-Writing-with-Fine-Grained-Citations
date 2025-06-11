@@ -7,7 +7,7 @@
     "ranking_score_normalization": true,
     "target_chunking": true,
     "chunk_size": 512,
-    "expand_query": true,
+    "query_expansion_method": "left",
     "query_context": 128,
     "retriever_topk": 10,
     "reranker_topk": 5,

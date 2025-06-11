@@ -252,7 +252,7 @@ def extract_full_latex_textbody(id):
     return " ".join(lines), lines
 
 
-def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, include_query_context=False, query_context_size=128):
+def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expansion_method="left", query_context_size=128):
     citing_sents = []
     citing_context = []
 
@@ -268,19 +268,21 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, include_quer
                 citing_sents.append(masked_sent)
     except LookupError:
         nltk.download('punkt_tab')
-        citing_sents = identify_citations_in_source_doc(source_doc, bib_id, tokenizer, include_query_context, query_context_size)
+        citing_sents = identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expansion_method, query_context_size)
+
+    # prepare tokens for query expansion
+    tokenizer.add_special_tokens({"additional_special_tokens": [bib_id]}) # ensure that the tokenizer does not destroy the bib id
+    tokens = tokenizer(source_doc).to("cuda")
+    tokens = tokens["input_ids"] # get only the encoded tokens
+    indices = [] # indices of each bib id in the source doc
+    for i, e in enumerate(tokens):
+        t = tokenizer.decode(e)
+        if t == bib_id:
+            indices.append(i)
 
     # get larger context if required
-    if include_query_context:
-        tokenizer.add_special_tokens({"additional_special_tokens": [bib_id]}) # ensure that the tokenizer does not destroy the bib id
-        tokens = tokenizer(source_doc).to("cuda")
-        tokens = tokens["input_ids"] # get only the encoded tokens
-        indices = []
-        for i, e in enumerate(tokens):
-            t = tokenizer.decode(e)
-            if t == bib_id:
-                indices.append(i)
-        w = int(np.floor(query_context_size/2))
+    if query_expansion_method == "center":
+        w = int(np.floor(query_context_size/2)) # context window size
         for index in indices:
             low = max(index-w, 0)
             high = min(index+w, len(tokens)-1)
@@ -290,6 +292,20 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, include_quer
             citing_context.append(context)
 
         assert len(citing_sents) == len(citing_context)
+
+    elif query_expansion_method == "left":
+        for index in indices:
+            low = max(index-query_context_size, 0)
+            high = index
+            context = tokenizer.decode(tokens[low:high])
+            context = context.replace(TOKENIZER_BEGIN_TOKEN, "")
+            context = context.replace(bib_id, CITATION_MASK)
+            citing_context.append(context)
+
+        assert len(citing_sents) == len(citing_context)
+
+    else:
+        raise NotImplementedError(f"Query expansion method '{query_expansion_method}' is not implemented. Currently supported are 'center' and 'left'.")
         
     return (citing_sents, citing_context)
 
@@ -349,7 +365,7 @@ def get_target_sections(
     return sections
 
 
-def get_source_citations(id, target_citation_record, tokenizer, with_chunking=False, chunk_size=512, include_query_context=False, query_context_size=128):
+def get_source_citations(id, target_citation_record, tokenizer, with_chunking=False, chunk_size=512, query_expansion_method="left", query_context_size=128):
     target_bib_id = target_citation_record["bib_id"]
     target_arxiv_id = target_citation_record["arxiv_id"]
 
@@ -363,7 +379,7 @@ def get_source_citations(id, target_citation_record, tokenizer, with_chunking=Fa
     assert target_doc_lines != None
 
     # list of (citing sentence, larger context centered at citation)
-    source_doc_citations = identify_citations_in_source_doc(source_doc, target_bib_id, tokenizer, include_query_context, query_context_size)
+    source_doc_citations = identify_citations_in_source_doc(source_doc, target_bib_id, tokenizer, query_expansion_method, query_context_size)
     target_doc_sections = get_target_sections(target_doc_lines, tokenizer, with_chunking=with_chunking, chunk_size=chunk_size)
 
     return source_doc_citations, target_doc_sections

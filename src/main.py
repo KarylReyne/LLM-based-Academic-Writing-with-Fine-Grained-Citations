@@ -95,7 +95,7 @@ if __name__ == "__main__":
         retr_tokenizer, 
         with_chunking=config["target_chunking"], 
         chunk_size=config["chunk_size"],
-        include_query_context=config["expand_query"],
+        query_expansion_method=config["query_expansion_method"],
         query_context_size=config["query_context"]
     )
 
