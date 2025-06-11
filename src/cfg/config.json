@@ -9,8 +9,8 @@
     "chunk_size": 512,
     "query_expansion_method": "left",
     "query_context": 128,
-    "retriever_topk": 10,
-    "reranker_topk": 5,
-    "batch_size": 4,
+    "retriever_topk": 20,
+    "reranker_topk": 10,
+    "batch_size": 10,
     "reranker_temperature": 0.6
 }

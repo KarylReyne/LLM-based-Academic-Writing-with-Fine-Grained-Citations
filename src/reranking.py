@@ -60,8 +60,9 @@ def reranking_and_scoring(
                     batch_scores = [float(score)*0.1 for score in response.split(", ")]
                     assert len(batch_scores) == len(batch_documents)
                 except AssertionError as e:
-                    print(f"generated scores don't match current batch size: {len(batch_scores)} != {len(batch_documents)}\n")
+                    print(f"generated scores don't match current batch size: {len(batch_scores)} != {len(batch_documents)}")
                     batch_scores = batch_scores[:len(batch_documents)] # dirty fix ;)
+                    [batch_scores.append(0) for _ in range(len(batch_documents)-len(batch_scores))] # zero padding
                 except Exception as e:
                     print(batch_reranking_input)
                     print(response)
