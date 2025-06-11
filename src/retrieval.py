@@ -1,5 +1,7 @@
 import sys
 import statistics as stat
+from util import minmax_normalization
+
 
 def retrieval(
     evaluation_records, 
@@ -17,14 +19,11 @@ def retrieval(
     QUERY_CONTEXT_SIZE = config["query_context"]
     CHUNK_SIZE = config["chunk_size"]
     TOPK_RETR = config["retriever_topk"]
+    NORMALIZE_SCORES = config["ranking_score_normalization"]
 
     print() # for console progress report
 
     for k in range(num_queries): # iterates queries
-        # for min-max norm
-        min_score = 1
-        max_score = 0
-
         num_batch = 1
         for i in range(0, len(queries[k]), BATCH_SIZE): # iterates sections, batched
 
@@ -50,8 +49,6 @@ def retrieval(
             for j in range(len(query_inputs)): # iterates current batch
                 mean_over_llm_calls = stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call]) # iterates llm calls
                 batch_sim_scores.append(mean_over_llm_calls)
-                min_score = min([min_score, mean_over_llm_calls])
-                max_score = max([max_score, mean_over_llm_calls])
 
             # update eval data with the current batch
             retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
@@ -64,12 +61,16 @@ def retrieval(
             evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents
 
             num_batch += 1
-        
+
 
         # retain only the top k retrieved documents
         retrieved_documents = evaluation_records[f"query-{k}"]["retrieved documents"]
-        for key in retrieved_documents: # min-max normalization
-            normalized_score = (float(retrieved_documents[key]["retrieval score"])-min_score)/(max_score-min_score)
-            retrieved_documents[key]["retrieval score"] = f"{normalized_score}"
+
+        if NORMALIZE_SCORES: # min-max normalization
+            scores = [float(retrieved_documents[section_id]["retrieval score"]) for section_id in retrieved_documents]
+            scores = minmax_normalization(scores)
+            for idx, section_id in enumerate(retrieved_documents): # iterates doc records
+                retrieved_documents[section_id]["retrieval score"] = scores[idx]
+
         retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["retrieval score"], reverse=True)[:TOPK_RETR])
         evaluation_records[f"query-{k}"]["retrieved documents"] = retrieved_documents

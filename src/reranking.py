@@ -1,5 +1,7 @@
 import sys
 import statistics as stat
+from util import minmax_normalization
+
 
 def reranking_and_scoring(
     evaluation_records, 
@@ -17,14 +19,11 @@ def reranking_and_scoring(
     RERA_TEMPERATURE = config["reranker_temperature"]
     TOPK_RERA = config["reranker_topk"]
     DELTA = config["final_score_delta"]
+    NORMALIZE_SCORES = config["ranking_score_normalization"]
 
     print() # for console progress report
 
     for k in range(num_queries): # iterates queries
-        # for min-max norm
-        min_score = 1
-        max_score = 0
-
         num_batch = 1
         for i in range(0, len(reranking_inputs[k]), BATCH_SIZE): # iterates sections, batched
 
@@ -58,8 +57,6 @@ def reranking_and_scoring(
             for j in range(len(batch_reranking_inputs)): # iterates current batch
                 mean_over_llm_calls = stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call]) # iterates llm calls
                 batch_rera_scores.append(mean_over_llm_calls)
-                min_score = min([min_score, mean_over_llm_calls])
-                max_score = max([max_score, mean_over_llm_calls])
 
             # update eval data with the current batch
             reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
@@ -73,11 +70,16 @@ def reranking_and_scoring(
 
             num_batch += 1
             
+
         # sort reranked docs
         reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
-        for key in reranked_documents: # min-max normalization
-            normalized_score = (float(reranked_documents[key]["reranking score"])-min_score)/(max_score-min_score)
-            reranked_documents[key]["reranking score"] = f"{normalized_score}"
+        
+        if NORMALIZE_SCORES: # min-max normalization
+            scores = [float(reranked_documents[section_id]["reranking score"]) for section_id in reranked_documents]
+            scores = minmax_normalization(scores)
+            for idx, section_id in enumerate(reranked_documents): # iterates doc records
+                reranked_documents[section_id]["reranking score"] = scores[idx]
+
         reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
         evaluation_records[f"query-{k}"]["reranked documents"] = reranked_documents
 
