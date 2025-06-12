@@ -49,9 +49,12 @@ def reranking_and_scoring(
             print(f"[RERANKING] processing query {k+1}/{num_queries} - batch {num_batch}/{(len(documents[k])//BATCH_SIZE)+1}")
 
             batch_query = single_queries[k]
-            batch_documents = documents[k][i:i+BATCH_SIZE]
 
-            scores_for_each_llm_call = [] # num_llm_calls x batch_size
+            l = document_labels[k][i:i+BATCH_SIZE]
+            d = documents[k][i:i+BATCH_SIZE]
+            batch_documents = list(zip(l, d))
+
+            scores_for_each_llm_call = [] # num_llm_calls x batch_size, contains (label, document, score) triples
             for _ in range(M_RERA): # iterates llm calls
 
                 # shuffles before each llm call -> passage mixture of each batch is different across llm calls
@@ -61,7 +64,9 @@ def reranking_and_scoring(
                 # create self-consistency batches
                 batch_reranking_input = [] # batch_size/PASSAGES_PER_CALL x 1
                 sc_batch_lengths = [] # for checking if enough scores are generated
-                for sc_batch_idx in range(0, len(batch_documents), PASSAGES_PER_CALL): # iterates self-consistency batches
+                shuffled_batch_labels = []
+                shuffled_batch_documents = []
+                for sc_batch_idx in range(0, BATCH_SIZE, PASSAGES_PER_CALL): # iterates self-consistency batches
 
                     sc_batch_documents = batch_documents[sc_batch_idx:sc_batch_idx+PASSAGES_PER_CALL]
                     sc_batch_lengths.append(len(sc_batch_documents))
@@ -69,10 +74,14 @@ def reranking_and_scoring(
                     # shuffles after batching -> passage mixture of each batch is the same across llm calls
                     if SC_PERMUTATION_MODE == "bts":
                         random.shuffle(sc_batch_documents)
+                    
+                    for (l, d) in sc_batch_documents:
+                        shuffled_batch_labels.append(l)
+                        shuffled_batch_documents.append(d)
 
                     batch_reranking_input.append(rera_tokenizer.apply_chat_template([
                             {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
-                            {"role": "user", "content": reranking_instruction(batch_query, sc_batch_documents)}
+                            {"role": "user", "content": reranking_instruction(batch_query, [d for (l, d) in sc_batch_documents])}
                         ],
                         tokenize=False,
                         add_generation_prompt=True
@@ -104,20 +113,33 @@ def reranking_and_scoring(
                         print(response)
                         raise e
                     [batch_scores.append(s) for s in sc_batch_scores]
-                scores_for_each_llm_call.append(batch_scores)
+
+                scores_for_each_llm_call.append(zip(shuffled_batch_labels, shuffled_batch_documents, batch_scores))
             
-            batch_rera_scores = []
-            for j in range(len(batch_documents)): # iterates current batch
-                mean_over_llm_calls = stat.mean([llm_call_scores[j] for llm_call_scores in scores_for_each_llm_call]) # iterates llm calls
-                batch_rera_scores.append(mean_over_llm_calls)
+
+            batch_rera_scores = {} # batch_rera_scores[label] = score 
+            batch_rera_docs = {} # batch_rera_docs[label] = doc 
+            for llm_call_data in scores_for_each_llm_call: # iterates llm calls
+                for (label, document, score) in llm_call_data: # iterates batch
+                    try:
+                        batch_rera_scores[label].append(score)
+                    except KeyError:
+                        batch_rera_scores[label] = [score]
+                        batch_rera_docs[label] = document
+
+
+            for label in batch_rera_scores:
+                scores = batch_rera_scores[label]
+                assert len(scores) == M_RERA # ensure that we have all the scores
+                batch_rera_scores[label] = stat.mean(scores)
+
 
             # update eval data with the current batch
             reranked_documents = evaluation_records[f"query-{k}"]["reranked documents"]
-            for j in range(len(batch_documents)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
-                global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
-                reranked_documents[document_labels[k][global_batch_idx]] = {
-                    "section chunk": documents[k][global_batch_idx],
-                    "reranking score": float(batch_rera_scores[j]),
+            for label in batch_rera_scores:
+                reranked_documents[label] = {
+                    "section chunk": batch_rera_docs[label],
+                    "reranking score": float(batch_rera_scores[label]),
                 }
             evaluation_records[f"query-{k}"]["reranked documents"] = reranked_documents
 

@@ -41,7 +41,7 @@ def retrieval(
 
                 llm_call_scores = []
                 for j in range(len(query_inputs)): # iterates current batch
-                    s = query_embs[j] @ doc_embs[j]
+                    s = query_embs[j] @ doc_embs[j] # mat. mult. aka dot product
                     llm_call_scores.append(s)
                 scores_for_each_llm_call.append(llm_call_scores)
             
