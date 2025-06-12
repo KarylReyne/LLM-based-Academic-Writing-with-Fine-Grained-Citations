@@ -1,6 +1,5 @@
 import sys
 import statistics as stat
-import random
 from util import minmax_normalization
 
 
@@ -16,28 +15,15 @@ def reranking_and_scoring(
     config
 ):
     BATCH_SIZE = config["rera_batch_size"]
-    PASSAGES_PER_CALL = config["rera_passages_per_call"]
-    SC_PERMUTATION_MODE = config["rera_sc_permutation_mode"]
     M_RERA = config["m_reranking"]
     RERA_TEMPERATURE = config["reranker_temperature"]
     TOPK_RERA = config["reranker_topk"]
     DELTA = config["final_score_delta"]
     NORMALIZE_SCORES = config["ranking_score_normalization"]
 
-    # ensure that inputs are not batched during evaluation
-    if (not reranker.training) and (BATCH_SIZE != TOPK_RERA):
-        raise NotImplementedError("[RERANKING] weight update batch size is irrelevant for evaluation, don't change it!")
-
-    if SC_PERMUTATION_MODE not in ["stb", "bts"]:
-        raise NotImplementedError(f"self-consistency permutation mode {SC_PERMUTATION_MODE} is not implemented. Currently supported are: stb, bts")
-
     if BATCH_SIZE > TOPK_RERA:
-        print(f"[RERANKING] batch size ({BATCH_SIZE}) cannot be larger that reranker topk ({TOPK_RERA}). Setting BATCH_SIZE={TOPK_RERA}")
+        print(f"[RERANKING] batch size ({BATCH_SIZE}) cannot be larger that reranker topk ({TOPK_RERA}). Setting batch_size={TOPK_RERA}")
         BATCH_SIZE = TOPK_RERA
-
-    if PASSAGES_PER_CALL > TOPK_RERA:
-        print(f"[RERANKING] self-consistency batch size ({PASSAGES_PER_CALL}) cannot be larger that reranker topk ({TOPK_RERA}). Setting PASSAGES_PER_CALL={TOPK_RERA}")
-        PASSAGES_PER_CALL = TOPK_RERA
 
     print() # for console progress report
 
@@ -51,59 +37,39 @@ def reranking_and_scoring(
             batch_query = single_queries[k]
             batch_documents = documents[k][i:i+BATCH_SIZE]
 
+            # score aggregation for batched self-consistency
+            # https://arxiv.org/abs/2505.12570
             scores_for_each_llm_call = [] # num_llm_calls x batch_size
             for _ in range(M_RERA): # iterates llm calls
-
-                # shuffles before each llm call -> passage mixture of each batch is different across llm calls
-                if SC_PERMUTATION_MODE == "stb":
-                    random.shuffle(batch_documents)
-
-                # create self-consistency batches
-                batch_reranking_input = [] # batch_size/PASSAGES_PER_CALL x 1
-                sc_batch_lengths = [] # for checking if enough scores are generated
-                for sc_batch_idx in range(0, len(batch_documents), PASSAGES_PER_CALL): # iterates self-consistency batches
-
-                    sc_batch_documents = batch_documents[sc_batch_idx:sc_batch_idx+PASSAGES_PER_CALL]
-                    sc_batch_lengths.append(len(sc_batch_documents))
-
-                    # shuffles after batching -> passage mixture of each batch is the same across llm calls
-                    if SC_PERMUTATION_MODE == "bts":
-                        random.shuffle(sc_batch_documents)
-
-                    batch_reranking_input.append(rera_tokenizer.apply_chat_template([
-                            {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
-                            {"role": "user", "content": reranking_instruction(batch_query, sc_batch_documents)}
-                        ],
-                        tokenize=False,
-                        add_generation_prompt=True
-                    ))
-
+                batch_reranking_input = rera_tokenizer.apply_chat_template([
+                        {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
+                        {"role": "user", "content": reranking_instruction(batch_query, batch_documents)}
+                    ],
+                    tokenize=False,
+                    add_generation_prompt=True
+                )
                 llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to("cuda")
                 generated_encoded_tokens = reranker.generate(
                     **llm_call_input, 
                     max_new_tokens=128,
                     temperature=RERA_TEMPERATURE
                 )
-                responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
+                response = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
 
-                batch_scores = []
-                for sc_batch_idx in range(len(responses)): # iterates self-consistency batches
-                    try:
-                        response = responses[sc_batch_idx].split("assistant\nRelevance scores: ")[1] # list only
-                        response = response.lstrip("[").rstrip("]")
-                        sc_batch_scores = [float(score)*0.1 for score in response.split(", ")]
-                        assert len(sc_batch_scores) == sc_batch_lengths[sc_batch_idx]
-                    except AssertionError as e:
-                        print(f"[RERANKING] generated scores don't match current sc batch size: {len(sc_batch_scores)} != {sc_batch_lengths[sc_batch_idx]}")
-                        print(responses[sc_batch_idx])
-                        raise e
-                        # sc_batch_scores = sc_batch_scores[:len(batch_documents)] # dirty fix ;)
-                        # [sc_batch_scores.append(0) for _ in range(len(batch_documents)-len(sc_batch_scores))] # zero padding
-                    except Exception as e:
-                        print(batch_reranking_input)
-                        print(response)
-                        raise e
-                    [batch_scores.append(s) for s in sc_batch_scores]
+                batch_scores = None
+                try:
+                    response = response[0].split("assistant\nRelevance scores: ")[1] # list only
+                    response = response.lstrip("[").rstrip("]")
+                    batch_scores = [float(score)*0.1 for score in response.split(", ")]
+                    assert len(batch_scores) == len(batch_documents)
+                except AssertionError as e:
+                    print(f"[RERANKING] generated scores don't match current batch size: {len(batch_scores)} != {len(batch_documents)}")
+                    batch_scores = batch_scores[:len(batch_documents)] # dirty fix ;)
+                    [batch_scores.append(0) for _ in range(len(batch_documents)-len(batch_scores))] # zero padding
+                except Exception as e:
+                    print(batch_reranking_input)
+                    print(response)
+                    raise e
                 scores_for_each_llm_call.append(batch_scores)
             
             batch_rera_scores = []

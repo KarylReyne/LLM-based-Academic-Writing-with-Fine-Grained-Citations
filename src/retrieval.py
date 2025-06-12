@@ -14,7 +14,7 @@ def retrieval(
     retriever,
     config
 ):
-    BATCH_SIZE = config["batch_size"]
+    BATCH_SIZE = config["retr_batch_size"]
     M_RETR = config["m_retrieval"]
     QUERY_CONTEXT_SIZE = config["query_context"]
     CHUNK_SIZE = config["chunk_size"]
