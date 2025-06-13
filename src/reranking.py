@@ -63,25 +63,25 @@ def reranking_and_scoring(
 
                 # create self-consistency batches
                 batch_reranking_input = [] # batch_size/PASSAGES_PER_CALL x 1
-                sc_batch_lengths = [] # for checking if enough scores are generated
+                sc_passages_lengths = [] # for checking if enough scores are generated
                 shuffled_batch_labels = []
                 shuffled_batch_documents = []
-                for sc_batch_idx in range(0, BATCH_SIZE, PASSAGES_PER_CALL): # iterates self-consistency batches
+                for sc_passages_idx in range(0, BATCH_SIZE, PASSAGES_PER_CALL): # iterates self-consistency batches
 
-                    sc_batch_documents = batch_documents[sc_batch_idx:sc_batch_idx+PASSAGES_PER_CALL]
-                    sc_batch_lengths.append(len(sc_batch_documents))
+                    sc_passages_documents = batch_documents[sc_passages_idx:sc_passages_idx+PASSAGES_PER_CALL]
+                    sc_passages_lengths.append(len(sc_passages_documents))
 
                     # shuffles after batching -> passage mixture of each batch is the same across llm calls
                     if SC_PERMUTATION_MODE == "bts":
-                        random.shuffle(sc_batch_documents)
+                        random.shuffle(sc_passages_documents)
                     
-                    for (l, d) in sc_batch_documents:
+                    for (l, d) in sc_passages_documents:
                         shuffled_batch_labels.append(l)
                         shuffled_batch_documents.append(d)
 
                     batch_reranking_input.append(rera_tokenizer.apply_chat_template([
                             {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
-                            {"role": "user", "content": reranking_instruction(batch_query, [d for (l, d) in sc_batch_documents])}
+                            {"role": "user", "content": reranking_instruction(batch_query, [d for (l, d) in sc_passages_documents])}
                         ],
                         tokenize=False,
                         add_generation_prompt=True
@@ -96,23 +96,23 @@ def reranking_and_scoring(
                 responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
 
                 batch_scores = []
-                for sc_batch_idx in range(len(responses)): # iterates self-consistency batches
+                for sc_passages_idx in range(len(responses)): # iterates self-consistency batches
                     try:
-                        response = responses[sc_batch_idx].split("assistant\nRelevance scores: ")[1] # list only
+                        response = responses[sc_passages_idx].split("assistant\nRelevance scores: ")[1] # list only
                         response = response.lstrip("[").rstrip("]")
-                        sc_batch_scores = [float(score)*0.1 for score in response.split(", ")]
-                        assert len(sc_batch_scores) == sc_batch_lengths[sc_batch_idx]
+                        sc_passages_scores = [float(score)*0.1 for score in response.split(", ")]
+                        assert len(sc_passages_scores) == sc_passages_lengths[sc_passages_idx]
                     except AssertionError as e:
-                        print(f"[RERANKING] generated scores don't match current sc batch size: {len(sc_batch_scores)} != {sc_batch_lengths[sc_batch_idx]}")
-                        print(responses[sc_batch_idx])
+                        print(f"[RERANKING] generated scores don't match current sc batch size: {len(sc_passages_scores)} != {sc_passages_lengths[sc_passages_idx]}")
+                        print(responses[sc_passages_idx])
                         raise e
-                        # sc_batch_scores = sc_batch_scores[:len(batch_documents)] # dirty fix ;)
-                        # [sc_batch_scores.append(0) for _ in range(len(batch_documents)-len(sc_batch_scores))] # zero padding
+                        # sc_passages_scores = sc_passages_scores[:len(batch_documents)] # dirty fix ;)
+                        # [sc_passages_scores.append(0) for _ in range(len(batch_documents)-len(sc_passages_scores))] # zero padding
                     except Exception as e:
                         print(batch_reranking_input)
                         print(response)
                         raise e
-                    [batch_scores.append(s) for s in sc_batch_scores]
+                    [batch_scores.append(s) for s in sc_passages_scores]
 
                 scores_for_each_llm_call.append(zip(shuffled_batch_labels, shuffled_batch_documents, batch_scores))
             
