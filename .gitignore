@@ -18,4 +18,7 @@ latex/**/*.toc
 
 # datasets
 src/data/**
+src/ScholarCopilot/data/**
+src/ScholarCopilot/model_*/**
+src/ScholarCopilot/run_demo/.gradio/**
 
