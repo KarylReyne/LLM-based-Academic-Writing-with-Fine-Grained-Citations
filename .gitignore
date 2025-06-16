@@ -21,4 +21,7 @@ src/data/**
 src/ScholarCopilot/data/**
 src/ScholarCopilot/model_*/**
 src/ScholarCopilot/run_demo/.gradio/**
+src/ScholarCopilot_modified/data/**
+src/ScholarCopilot_modified/model_*/**
+src/ScholarCopilot_modified/run_demo/.gradio/**
 
