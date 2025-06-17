@@ -48,7 +48,7 @@ def check_3_sentence(display_text):
     return display_text[: end_index + 1]
 
 
-def stream_complete_3_sentence(text, citations_data, progress=gr.Progress()):
+def stream_complete_3_sentence(text, citations_data):
     sentence_num = 0
     enough = False
     current_text = text
@@ -103,7 +103,7 @@ def stream_complete_3_sentence(text, citations_data, progress=gr.Progress()):
     time.sleep(0.1)
 
 
-def stream_generate(text, citations_data, progress=gr.Progress()):
+def stream_generate(text, citations_data):
     sentence_num = 0
     enough = False
     current_text = text
@@ -171,15 +171,7 @@ def search_and_show_citations(input_text):
         item = format_citation(citation_key + ": " + title, url)
         # print("item", item)
         choices.append(item)
-    # return {
-    #     citation_box: gr.Group(visible=True),
-    #     citation_checkboxes: gr.CheckboxGroup(
-    #         choices=choices,
-    #         value=[],
-    #     ),
-    #     curr_search_candidates: curr_search_candidates
-    # }
-    return gr.Group(visible=True), gr.CheckboxGroup(choices=choices, value=[]), curr_search_candidates
+    return curr_search_candidates
 
 
 def insert_selected_citations(text, selected_citations, citations_data, curr_search_candidates):
@@ -209,13 +201,7 @@ def update_bibtex(citations_data):
 
 
 def clear_cache(citations_data, curr_search_candidates):
-    # citations_data = []
-    # curr_search_candidates = []
-    citations_checkbox = gr.CheckboxGroup(
-        choices=[],
-        value=[],
-    )
-    return "", citations_checkbox, "", [], []
+    return "", False, "", [], []
 
 
 def load_example(file_name=""):
@@ -252,29 +238,49 @@ if __name__ == "__main__":
     index, lookup_indices = load_faiss_index(index_dir)
     print("index building finished")
 
-
-    curr_search_candidates = []
-
     # app started here
     citations_data = []
     curr_search_candidates = []
-    example_text = load_example("template.txt") # choose by calling load_example_text
+    # example_text = load_example("template.txt") # choose by calling load_example_text
 
-    # app inputs
-    example_text = "Start writing your academic paper..."
-
-    # app buttons
-    text_input, citations_data = stream_complete_3_sentence(text_input, citations_data)
-
-    text_input, citations_data = stream_generate(text_input, citations_data)
-
-    citation_box, citation_checkboxes, curr_search_candidates = search_and_show_citations(text_input)
-
-    text_input = insert_selected_citations(text_input, citation_checkboxes, citations_data, curr_search_candidates)
-
-    text_input, citation_checkboxes, bibtex_display, citations_data, curr_search_candidates = clear_cache(citations_data, curr_search_candidates)
-
-    bibtex_display = update_bibtex(citation_data)
-
+    # values from the "Choose an example:" button
+    # aka starting left-side context for the generation model
+    example_selector = "Example 3"
     text_input = load_example_text(example_selector)
+
+    print("pre-generation text_input:", text_input)
+
+    # TASK = "Complete 3 sentences"
+    TASK = "Generate to the end"
+    # TASK = "Search citations"
+    # TASK = "Update BibTeX"
+    # TASK = "Clear All"
+
+    if TASK == "Complete 3 sentences":
+        gen = stream_complete_3_sentence(text_input, citations_data)
+        for out in gen:
+            text_input, citations_data = out
+        print("text_input:", text_input)
+        print("citations_data:", citations_data)
+
+    elif TASK == "Generate to the end":
+        gen = stream_generate(text_input, citations_data)
+        for out in gen:
+            text_input, citations_data = out
+        print("text_input:", text_input)
+        print("citations_data:", citations_data)
+
+    elif TASK == "Search citations":
+        curr_search_candidates = search_and_show_citations(text_input)
+        print(curr_search_candidates)
+        # TODO select citations from search result
+        citation_checkboxes = False
+        if citation_checkboxes: # insert citations
+            text_input = insert_selected_citations(text_input, citation_checkboxes, citations_data, curr_search_candidates)
+
+    elif TASK == "Update BibTeX":
+        bibtex_display = update_bibtex(citation_data)
+
+    elif TASK == "Clear All":
+        text_input, citation_checkboxes, bibtex_display, citations_data, curr_search_candidates = clear_cache(citations_data, curr_search_candidates)
 
