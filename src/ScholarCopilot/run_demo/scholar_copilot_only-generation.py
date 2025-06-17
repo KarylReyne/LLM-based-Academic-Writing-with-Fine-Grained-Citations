@@ -258,7 +258,7 @@ if __name__ == "__main__":
     # app started here
     citations_data = []
     curr_search_candidates = []
-    example_text = load_example("template.txt")
+    example_text = load_example("template.txt") # choose by calling load_example_text
 
     # app inputs
     example_text = "Start writing your academic paper..."
@@ -266,4 +266,15 @@ if __name__ == "__main__":
     # app buttons
     text_input, citations_data = stream_complete_3_sentence(text_input, citations_data)
 
+    text_input, citations_data = stream_generate(text_input, citations_data)
+
+    citation_box, citation_checkboxes, curr_search_candidates = search_and_show_citations(text_input)
+
+    text_input = insert_selected_citations(text_input, citation_checkboxes, citations_data, curr_search_candidates)
+
+    text_input, citation_checkboxes, bibtex_display, citations_data, curr_search_candidates = clear_cache(citations_data, curr_search_candidates)
+
+    bibtex_display = update_bibtex(citation_data)
+
+    text_input = load_example_text(example_selector)
 
