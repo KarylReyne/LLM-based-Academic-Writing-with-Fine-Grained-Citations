@@ -127,7 +127,6 @@ def reranking_and_scoring(
                         batch_rera_scores[label] = [score]
                         batch_rera_docs[label] = document
 
-
             for label in batch_rera_scores:
                 scores = batch_rera_scores[label]
                 assert len(scores) == M_RERA # ensure that we have all the scores
