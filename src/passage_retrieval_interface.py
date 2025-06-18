@@ -6,8 +6,9 @@ from torch import nn
 import numpy as np
 import itertools
 from datetime import datetime
+import tarfile
 
-from latex_parsing import download_from_arxiv, search_arxiv_for_citations_data, get_source_citations, LABEL_SEPARATOR, CITATION_MASK
+from latex_parsing import *
 from passage_retrieval import retrieval
 from passage_reranking import reranking_and_scoring
 from passage_retrieval_instructions import *
@@ -23,7 +24,8 @@ def get_config():
 
 def save_results(
     evaluation_records,
-    config
+    config,
+    mode="passage retrieval" # "passage retrieval" for saving passages, "generation" for saving generation output
 ):
     results = None
     try:
@@ -36,15 +38,29 @@ def save_results(
     assert os.path.exists(f'out/{datetime.now().strftime('%Y-%m-%d')}')
     assert results != None
 
-    results[f"{datetime.now().strftime('%H-%M-%S')}"] = {
-        "config": config,
-        "instructions": {
+    if mode == "passage retrieval":
+        results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        results["config"] = config
+        results["instructions"] = {
             "retr_query": retrieval_instruction_query,
             "retr_document": retrieval_instruction_document,
             "rera_scoring": reranking_instruction("", [])
-        },
-        "records": evaluation_records
-    }
+        }
+        for key in evaluation_records:
+            try:
+                results["records"][key] = evaluation_records[key]
+            except KeyError:
+                results["records"] = {}
+                results["records"][key] = evaluation_records[key]
+
+    elif mode == "generation":
+        results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        for key in evaluation_records:
+            results[key] = evaluation_records[key]
+
+    else:
+        raise NotImplementedError(f"mode '{mode}' is not implemented!")
+
 
     with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records.json', 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
@@ -58,7 +74,7 @@ def get_passage_retrieval_models(config):
         torch_dtype="auto", 
         trust_remote_code=True
     )
-    retriever = retriever.to("cuda")
+    retriever = retriever.to("cuda:2")
     retriever.eval()
 
     # reranker model definition
@@ -68,7 +84,7 @@ def get_passage_retrieval_models(config):
         torch_dtype="auto", 
         trust_remote_code=True
     )
-    reranker = reranker.to("cuda")
+    reranker = reranker.to("cuda:2")
     return retr_tokenizer, retriever, rera_tokenizer, reranker
 
 
@@ -84,13 +100,9 @@ def get_candidate_passages(target_id, tokenizer, config):
     return target_doc_sections
 
 
-def unified_passage_retrieval(generated_context, target_id, config):
-    retr_tokenizer, retriever, rera_tokenizer, reranker = get_passage_retrieval_models(config)
-
-    target_doc_sections = get_candidate_passages(target_id, retr_tokenizer, config)
-
+def unified_passage_retrieval(generated_context, target_doc_sections, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config):
     evaluation_records = {}
-    evaluation_records["ScholarCopilot_Generation"] = {
+    evaluation_records[f"reference_id-{reference_id}"] = {
         "generated context": generated_context,
         "retrieved documents": {},
         "reranked documents": {},
@@ -111,6 +123,7 @@ def unified_passage_retrieval(generated_context, target_id, config):
         generated_context, 
         document_labels, 
         documents,
+        reference_id,
         retriever, 
         config
     )
@@ -119,17 +132,16 @@ def unified_passage_retrieval(generated_context, target_id, config):
     document_labels = []
     documents = []
 
-    for doc_label, doc_dict in evaluation_records["ScholarCopilot_Generation"]["retrieved documents"].items():
+    for doc_label, doc_dict in evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"].items():
         document_labels.append(doc_label)
         documents.append(doc_dict["section chunk"])
 
-    assert len(documents) == config["retriever_topk"], f"{len(documents)}, {config["retriever_topk"]}"
-
-    reranking_and_scoring(
+    best_matching_passage, best_passage_label, best_passage_score = reranking_and_scoring(
         evaluation_records, 
         generated_context,
         document_labels, 
         documents,
+        reference_id,
         reranker, 
         rera_tokenizer, 
         config
@@ -140,13 +152,28 @@ def unified_passage_retrieval(generated_context, target_id, config):
         config
     )
 
-
-def apply_retrieval_context_window(generated_context, config):
-    pass
+    return best_matching_passage, best_passage_label, best_passage_score
 
 
-def retrieve_relevant_passages(generated_context, target_id, num_passages, tokenizer):
-    config = get_config()
-    generated_context = apply_retrieval_context_window(generated_context)
-    unified_passage_retrieval(generated_context, candidate_passages, config)
+def apply_retrieval_context_window(generated_context, tokenizer, config):
+    tokens = tokenizer(generated_context).to("cuda:2")
+    tokens = tokens["input_ids"] # get only the encoded tokens
+    index = len(tokens)-1 # index of the citation, for generation always the last index
+    low = max(index-config["query_context"], 0)
+    high = index+1
+    context = tokenizer.decode(tokens[low:high])
+    context = context.replace(TOKENIZER_BEGIN_TOKEN, "")
+    return context
 
+
+def retrieve_relevant_passages(generated_context, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config):
+    try:
+        candidate_passages = get_candidate_passages(reference_id, retr_tokenizer, config)
+    except tarfile.ReadError:
+        return "<|tex parsing failed|>", "", 0.0
+
+    generated_context = apply_retrieval_context_window(generated_context, retr_tokenizer, config)
+
+    best_matching_passage, best_passage_label, best_passage_score = unified_passage_retrieval(generated_context, candidate_passages, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config)
+
+    return best_matching_passage, best_passage_label, best_passage_score

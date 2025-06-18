@@ -10,6 +10,7 @@ def reranking_and_scoring(
     generated_context, 
     document_labels,
     documents,
+    reference_id,
     reranker,
     rera_tokenizer,
     config
@@ -37,6 +38,8 @@ def reranking_and_scoring(
     if PASSAGES_PER_CALL > TOPK_RERA:
         print(f"[RERANKING] self-consistency batch size ({PASSAGES_PER_CALL}) cannot be larger that reranker topk ({TOPK_RERA}). Setting PASSAGES_PER_CALL={TOPK_RERA}")
         PASSAGES_PER_CALL = TOPK_RERA
+
+    best_matching_passage = None
 
     print() # for console progress report
 
@@ -83,7 +86,7 @@ def reranking_and_scoring(
                     add_generation_prompt=True
                 ))
 
-            llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to("cuda")
+            llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to("cuda:2")
             generated_encoded_tokens = reranker.generate(
                 **llm_call_input, 
                 max_new_tokens=128,
@@ -130,19 +133,19 @@ def reranking_and_scoring(
 
 
         # update eval data with the current batch
-        reranked_documents = evaluation_records["ScholarCopilot_Generation"]["reranked documents"]
+        reranked_documents = evaluation_records[f"reference_id-{reference_id}"]["reranked documents"]
         for label in batch_rera_scores:
             reranked_documents[label] = {
                 "section chunk": batch_rera_docs[label],
                 "reranking score": float(batch_rera_scores[label]),
             }
-        evaluation_records["ScholarCopilot_Generation"]["reranked documents"] = reranked_documents
+        evaluation_records[f"reference_id-{reference_id}"]["reranked documents"] = reranked_documents
 
         num_batch += 1
         
 
     # sort reranked docs
-    reranked_documents = evaluation_records["ScholarCopilot_Generation"]["reranked documents"]
+    reranked_documents = evaluation_records[f"reference_id-{reference_id}"]["reranked documents"]
     
     if NORMALIZE_SCORES: # min-max normalization
         scores = [float(reranked_documents[section_id]["reranking score"]) for section_id in reranked_documents]
@@ -151,14 +154,14 @@ def reranking_and_scoring(
             reranked_documents[section_id]["reranking score"] = scores[idx]
 
     reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
-    evaluation_records["ScholarCopilot_Generation"]["reranked documents"] = reranked_documents
+    evaluation_records[f"reference_id-{reference_id}"]["reranked documents"] = reranked_documents
 
 
     # obtain final ranking score s
     # s = (1-delta)*s_retr + delta*s_rera
     final_scores = {}
     # reranked_documents still exists, retrieved_documents does not
-    retrieved_documents = evaluation_records["ScholarCopilot_Generation"]["retrieved documents"]
+    retrieved_documents = evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"]
     for label in reranked_documents:
         doc = reranked_documents[label]["section chunk"]
         s_retr = float(retrieved_documents[label]["retrieval score"])
@@ -169,4 +172,13 @@ def reranking_and_scoring(
             "final ranking score": s
         }
     final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
-    evaluation_records["ScholarCopilot_Generation"]["final ranking"] = final_scores
+    evaluation_records[f"reference_id-{reference_id}"]["final ranking"] = final_scores
+
+    for label in final_scores:
+        best_matching_passage = final_scores[label]["section chunk"]
+        best_passage_label = label
+        best_passage_score = final_scores[label]["final ranking score"]
+        break
+    assert best_matching_passage != None
+
+    return best_matching_passage, best_passage_label, best_passage_score

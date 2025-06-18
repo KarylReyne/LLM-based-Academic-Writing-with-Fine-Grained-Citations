@@ -10,6 +10,7 @@ def retrieval(
     generated_context, 
     document_labels,
     documents,
+    reference_id,
     retriever,
     config
 ):
@@ -28,8 +29,8 @@ def retrieval(
         sys.stdout.write("\033[F")
         print(f"[RETRIEVAL] processing batch {num_batch}/{(len(documents)//BATCH_SIZE)+1}")
 
-        query_inputs = list(itertools.repeat(generated_context, BATCH_SIZE)))
         document_inputs = documents[i:i+BATCH_SIZE]
+        query_inputs = list(itertools.repeat(generated_context, len(document_inputs)))
 
         # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
         scores_for_each_llm_call = [] # num_llm_calls x batch_size
@@ -49,20 +50,20 @@ def retrieval(
             batch_sim_scores.append(mean_over_llm_calls)
 
         # update eval data with the current batch
-        retrieved_documents = evaluation_records["ScholarCopilot_Generation"]["retrieved documents"]
+        retrieved_documents = evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"]
         for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
             global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
             retrieved_documents[document_labels[global_batch_idx]] = {
                 "section chunk": documents[global_batch_idx],
                 "retrieval score": float(batch_sim_scores[j]),
             }
-        evaluation_records["ScholarCopilot_Generation"]["retrieved documents"] = retrieved_documents
+        evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"] = retrieved_documents
 
         num_batch += 1
 
 
     # retain only the top k retrieved documents
-    retrieved_documents = evaluation_records["ScholarCopilot_Generation"]["retrieved documents"]
+    retrieved_documents = evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"]
 
     if NORMALIZE_SCORES: # min-max normalization
         scores = [float(retrieved_documents[section_id]["retrieval score"]) for section_id in retrieved_documents]
@@ -71,4 +72,4 @@ def retrieval(
             retrieved_documents[section_id]["retrieval score"] = scores[idx]
 
     retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["retrieval score"], reverse=True)[:TOPK_RETR])
-    evaluation_records["ScholarCopilot_Generation"]["retrieved documents"] = retrieved_documents
+    evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"] = retrieved_documents

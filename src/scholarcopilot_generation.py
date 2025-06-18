@@ -5,6 +5,8 @@ import torch
 import faiss
 import time
 
+from passage_retrieval_interface import *
+
 
 def generate_citation(input_text):
     global index
@@ -41,7 +43,7 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def stream_generate(text, citations_data):
+def stream_generate(text, citations_data, retr_tokenizer, retriever, rera_tokenizer, reranker, config):
     sentence_num = 0
     enough = False
     current_text = text
@@ -66,10 +68,31 @@ def stream_generate(text, citations_data):
         retrieved_k_results = retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=1)
         reference, curr_index = llm_rerank(retrieved_k_results, meta_data)
         reference_id_list.append(curr_index)
-        current_text = current_text + reference
+
+        # --- BEGIN passage retrieval ---
+        generated_context = current_text
+        reference_id = curr_index
+        best_matching_passage, best_passage_label, best_passage_score = retrieve_relevant_passages(generated_context, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config)
+        best_matching_passage = best_matching_passage+"<|cite_end|>"
+        if best_matching_passage == "<|tex parsing failed|>":
+            best_matching_passage = reference # default to standart ScholarCopilot if parsing failed
+        print("best matching passage: ", best_matching_passage)
+        # --- END passage retrieval ---
+
+        # current_text = current_text + reference
+        current_text = current_text + best_matching_passage
+
         current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, device, current_text)
         display_text, citation_data_list = replace_citations(current_text, reference_id_list, citation_map_data)
+
+        # citations_data += citation_data_list
+        citation_dict = citation_data_list[0]
+        citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
+        citation_dict["passage_label"] = best_passage_label
+        citation_dict["passage_score"] = best_passage_score
+        citation_data_list[0] = citation_dict
         citations_data += citation_data_list
+
         curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
         # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
         for each in yield_list:
@@ -166,6 +189,11 @@ if __name__ == "__main__":
     print("index building finished")
 
 
+    config = get_config()
+    retr_tokenizer, retriever, rera_tokenizer, reranker = get_passage_retrieval_models(config)
+    print("passage retrieval models loaded")
+
+
     citations_data = []
     curr_search_candidates = []
 
@@ -175,8 +203,15 @@ if __name__ == "__main__":
 
     print("pre-generation text_input:", text_input)
 
-    gen = stream_generate(text_input, citations_data)
+    gen = stream_generate(text_input, citations_data, retr_tokenizer, retriever, rera_tokenizer, reranker, config)
     for out in gen:
         text_input, citations_data = out
     print("text_input:", text_input)
-    print("citations_data:", citations_data)
+    
+    save_results({
+        "given generation input": example_path,
+        "generated paper": text_input,
+        "citations_data": citations_data
+    }, config, mode="generation")
+
+

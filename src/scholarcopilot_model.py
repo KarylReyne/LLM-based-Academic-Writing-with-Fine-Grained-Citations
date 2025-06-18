@@ -41,7 +41,9 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
 def single_complete_step(model, tokenizer, device, input_text):
     print("completing sentence ...\n")
     inputs = tokenizer(input_text, return_tensors="pt").to(device)
-    if len(inputs.input_ids[0]) > 15000:
+    # if len(inputs.input_ids[0]) > 15000:
+    #     return input_text, None
+    if len(inputs.input_ids[0]) > 10000:
         return input_text, None
     stop_token_ids = tokenizer.convert_tokens_to_ids(['<|cite_start|>', '<|paper_end|>'])
     # print("stop_token_ids", stop_token_ids)
