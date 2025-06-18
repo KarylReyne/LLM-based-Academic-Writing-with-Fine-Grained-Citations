@@ -1,0 +1,11 @@
+from latex_parsing import CITATION_MASK
+
+
+# instructions (based on ReasonIR / BRIGHT)
+retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant passages that describe the cited topic\n<|embed|>\n"
+retrieval_instruction_document = f"<|embed|>\n"
+# retrieval_instruction_query = f""
+# retrieval_instruction_document = f""
+
+# reranking_instruction = lambda q, d: f"You are given a query with a citation marked by '{CITATION_MASK}' and a list of paragraphs. A paragraph is relevant if it describes or contains information about the cited topic. A paragraph is not relevant if it doesn't contain information about the cited topic, even if it mentions similar topics. Rank all paragraphs below based on how relevant to the query they are. Following the order of the passages below, your answer should be 'Relevance scores: X' where X is a list of numbers from 0-10 where each number is the score of the corresponding paragraph. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Here is the query: <start_query>{q}<end_query>Here are the paragraphs: {"".join([f"<start_paragraph-{i+1}>{p}<end_paragraph-{i+1}>" for i, p in enumerate(d)])} <start_example_answer>Relevance scores: [<score for paragraph-1>, <score for paragraph-2>, ...]<end_example_answer>"
+reranking_instruction = lambda q, d: f"Rank all paragraphs below based on how relevant to the query they are. Following the order of the passages below, your answer should be 'Relevance scores: X' where X is a list of numbers from 0-10 where each number is the score of the corresponding paragraph. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Output exactly {len(d)} {"score" if len(d)<2 else "scores"}. Here is the query: <start_query>{q}<end_query>Here are the paragraphs: {"".join([f"<start_paragraph-{i+1}>{p}<end_paragraph-{i+1}>" for i, p in enumerate(d)])} <start_example_answer>Relevance scores: [<score for paragraph-1>, <score for paragraph-2>, ...]<end_example_answer>"
