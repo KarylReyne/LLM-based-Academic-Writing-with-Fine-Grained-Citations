@@ -41,38 +41,41 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
 def single_complete_step(model, tokenizer, device, input_text):
     print("completing sentence ...\n")
     inputs = tokenizer(input_text, return_tensors="pt").to(device)
-    # if len(inputs.input_ids[0]) > 15000:
-    #     return input_text, None
-    if len(inputs.input_ids[0]) > 10000:
+    if len(inputs.input_ids[0]) > 15000:
         return input_text, None
     stop_token_ids = tokenizer.convert_tokens_to_ids(['<|cite_start|>', '<|paper_end|>'])
     # print("stop_token_ids", stop_token_ids)
     eos_token_id = stop_token_ids[0]
 
     max_new_tokens = 4096
-    with torch.no_grad():
-        output = model.generate(
-            inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            max_new_tokens=max_new_tokens,
-            do_sample=True,
-            top_p=0.95,
-            temperature=0.6,
-            eos_token_id=eos_token_id,
-            output_hidden_states=True,
-            return_dict_in_generate=True
-        )
-    generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
+    try: # terminate early if process runs out of memory
+        with torch.no_grad():
+            output = model.generate(
+                inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                top_p=0.95,
+                temperature=0.6,
+                eos_token_id=eos_token_id,
+                output_hidden_states=True,
+                return_dict_in_generate=True
+            )
+        
+        generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
 
-    new_input = tokenizer(generated_text, return_tensors="pt").to(device)
-    with torch.no_grad():
-        new_output = model(
-            new_input.input_ids,
-            attention_mask=new_input.attention_mask,
-            output_hidden_states=True,
-            return_dict=True
-        )
-    cite_rep = new_output.hidden_states[-1][:, -1, :]
+        new_input = tokenizer(generated_text, return_tensors="pt").to(device)
+        with torch.no_grad():
+            new_output = model(
+                new_input.input_ids,
+                attention_mask=new_input.attention_mask,
+                output_hidden_states=True,
+                return_dict=True
+            )
+        cite_rep = new_output.hidden_states[-1][:, -1, :]
+    except torch.OutOfMemoryError:
+            print(f"CUDA out of memory. Terminating generation early at length {len(inputs.input_ids[0])}/15000")
+            return input_text, None
 
     new_content = generated_text
     if "<|paper_end|>" in new_content:

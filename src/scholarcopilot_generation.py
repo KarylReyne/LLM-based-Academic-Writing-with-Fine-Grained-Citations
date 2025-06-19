@@ -4,6 +4,7 @@ from scholarcopilot_model import *
 import torch
 import faiss
 import time
+import tarfile
 
 from passage_retrieval_interface import *
 
@@ -72,11 +73,17 @@ def stream_generate(text, citations_data, retr_tokenizer, retriever, rera_tokeni
         # --- BEGIN passage retrieval ---
         generated_context = current_text
         reference_id = curr_index
-        best_matching_passage, best_passage_label, best_passage_score = retrieve_relevant_passages(generated_context, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config)
-        best_matching_passage = best_matching_passage+"<|cite_end|>"
-        if best_matching_passage == "<|tex parsing failed|>":
+        tex_parsing_failed = False
+        try:
+            best_matching_passage, best_passage_label, best_passage_score = retrieve_relevant_passages(
+                generated_context, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config
+            )
+            best_matching_passage = best_matching_passage+"<|cite_end|>"
+            print("best matching passage: ", best_matching_passage)
+        except tarfile.ReadError:
+            tex_parsing_failed = True
             best_matching_passage = reference # default to standart ScholarCopilot if parsing failed
-        print("best matching passage: ", best_matching_passage)
+            print("latex parsing failed, using reference: ", best_matching_passage)
         # --- END passage retrieval ---
 
         # current_text = current_text + reference
@@ -86,10 +93,18 @@ def stream_generate(text, citations_data, retr_tokenizer, retriever, rera_tokeni
         display_text, citation_data_list = replace_citations(current_text, reference_id_list, citation_map_data)
 
         # citations_data += citation_data_list
-        citation_dict = citation_data_list[0]
-        citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
-        citation_dict["passage_label"] = best_passage_label
-        citation_dict["passage_score"] = best_passage_score
+        ids = [d["paper_id"] for d in citation_data_list]
+        citation_index = ids.index(reference_id)
+        assert citation_index == len(citation_data_list)-1
+        citation_dict = citation_data_list[citation_index]
+        if tex_parsing_failed:
+            citation_dict["matched_passage"] = "<|tex_parsing_failed|>"
+            citation_dict["passage_label"] = "<|tex_parsing_failed|>"
+            citation_dict["passage_score"] = "<|tex_parsing_failed|>"
+        else:
+            citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
+            citation_dict["passage_label"] = best_passage_label
+            citation_dict["passage_score"] = best_passage_score
         citation_data_list[0] = citation_dict
         citations_data += citation_data_list
 

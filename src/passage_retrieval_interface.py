@@ -6,7 +6,6 @@ from torch import nn
 import numpy as np
 import itertools
 from datetime import datetime
-import tarfile
 
 from latex_parsing import *
 from passage_retrieval import retrieval
@@ -167,13 +166,16 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
 
 
 def retrieve_relevant_passages(generated_context, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config):
-    try:
-        candidate_passages = get_candidate_passages(reference_id, retr_tokenizer, config)
-    except tarfile.ReadError:
-        return "<|tex parsing failed|>", "", 0.0
-
+    candidate_passages = get_candidate_passages(reference_id, retr_tokenizer, config)
     generated_context = apply_retrieval_context_window(generated_context, retr_tokenizer, config)
-
-    best_matching_passage, best_passage_label, best_passage_score = unified_passage_retrieval(generated_context, candidate_passages, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config)
-
+    best_matching_passage, best_passage_label, best_passage_score = unified_passage_retrieval(
+        generated_context, 
+        candidate_passages, 
+        reference_id, 
+        retr_tokenizer, 
+        retriever, 
+        rera_tokenizer, 
+        reranker, 
+        config
+    )
     return best_matching_passage, best_passage_label, best_passage_score
