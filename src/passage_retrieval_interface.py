@@ -93,13 +93,16 @@ def get_passage_retrieval_models(config):
     }
 
 
-def get_candidate_passages(target_id, tokenizer, config):
+def get_candidate_passages(target_id, tokenizer, config, dont_keep_folder=False):
     target_doc_lines = None
     try:
         _, target_doc_lines = extract_full_latex_textbody(target_id)
     except AssertionError: # download if target not found
         download_from_arxiv(target_id)
         _, target_doc_lines = extract_full_latex_textbody(target_id)
+        # delete extracted archive
+        if dont_keep_folder:
+            shutil.rmtree(f"/data/{target_id}")
     assert target_doc_lines != None
     target_doc_sections = get_target_sections(target_doc_lines, tokenizer, config)
     return target_doc_sections
@@ -173,7 +176,7 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
 
 def retrieve_relevant_passages(generated_context, reference_id, passage_retrieval_models, config):
     candidate_passages = get_candidate_passages(
-        reference_id, passage_retrieval_models["retr_tokenizer"], config
+        reference_id, passage_retrieval_models["retr_tokenizer"], config, dont_keep_folder=True
     )
     generated_context = apply_retrieval_context_window(
         generated_context, passage_retrieval_models["retr_tokenizer"], config

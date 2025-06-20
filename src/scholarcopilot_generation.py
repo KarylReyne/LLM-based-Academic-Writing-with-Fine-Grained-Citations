@@ -80,7 +80,7 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
             )
             best_matching_passage = best_matching_passage+"<|cite_end|>"
             print("best matching passage: ", best_matching_passage)
-        except tarfile.ReadError or UnicodeDecodeError or InvalidLLMResponseError:
+        except tarfile.ReadError or UnicodeDecodeError or passage_reranking.InvalidLLMResponseError:
             tex_parsing_failed = True
             best_matching_passage = reference # default to standart ScholarCopilot if tex or llm response parsing failed
             print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)

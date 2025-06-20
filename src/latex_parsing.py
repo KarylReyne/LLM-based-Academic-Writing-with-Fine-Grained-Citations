@@ -10,6 +10,7 @@ from torch import nn
 from tqdm import tqdm
 from datetime import datetime
 import urllib, urllib.request
+import shutil
 
 
 ARXIV_MAX_RESULTS = 20
