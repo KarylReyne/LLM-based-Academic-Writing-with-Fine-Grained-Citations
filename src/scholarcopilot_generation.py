@@ -44,7 +44,7 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def stream_generate(text, citations_data, retr_tokenizer, retriever, rera_tokenizer, reranker, config):
+def stream_generate(text, citations_data, passage_retrieval_models, config):
     sentence_num = 0
     enough = False
     current_text = text
@@ -76,14 +76,14 @@ def stream_generate(text, citations_data, retr_tokenizer, retriever, rera_tokeni
         tex_parsing_failed = False
         try:
             best_matching_passage, best_passage_label, best_passage_score = retrieve_relevant_passages(
-                generated_context, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config
+                generated_context, reference_id, passage_retrieval_models, config
             )
             best_matching_passage = best_matching_passage+"<|cite_end|>"
             print("best matching passage: ", best_matching_passage)
-        except tarfile.ReadError:
+        except tarfile.ReadError or UnicodeDecodeError or InvalidLLMResponseError:
             tex_parsing_failed = True
-            best_matching_passage = reference # default to standart ScholarCopilot if parsing failed
-            print("latex parsing failed, using reference: ", best_matching_passage)
+            best_matching_passage = reference # default to standart ScholarCopilot if tex or llm response parsing failed
+            print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
         # --- END passage retrieval ---
 
         # current_text = current_text + reference
@@ -205,7 +205,7 @@ if __name__ == "__main__":
 
 
     config = get_config()
-    retr_tokenizer, retriever, rera_tokenizer, reranker = get_passage_retrieval_models(config)
+    passage_retrieval_models = get_passage_retrieval_models(config)
     print("passage retrieval models loaded")
 
 
@@ -218,9 +218,9 @@ if __name__ == "__main__":
 
     print("pre-generation text_input:", text_input)
 
-    gen = stream_generate(text_input, citations_data, retr_tokenizer, retriever, rera_tokenizer, reranker, config)
-    for out in gen:
-        text_input, citations_data = out
+    gen = stream_generate(text_input, citations_data, passage_retrieval_models, config)
+    for t in gen:
+        text_input, citations_data = t
     print("text_input:", text_input)
     
     save_results({

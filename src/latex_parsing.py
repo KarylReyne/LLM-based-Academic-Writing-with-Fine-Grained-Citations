@@ -252,7 +252,7 @@ def extract_full_latex_textbody(id):
     return " ".join(lines), lines
 
 
-def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expansion_method="left", query_context_size=128):
+def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, config):
     citing_sents = []
     citing_context = []
 
@@ -268,11 +268,11 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expans
                 citing_sents.append(masked_sent)
     except LookupError:
         nltk.download('punkt_tab')
-        citing_sents = identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expansion_method, query_context_size)
+        citing_sents = identify_citations_in_source_doc(source_doc, bib_id, tokenizer, config)
 
     # prepare tokens for query expansion
     tokenizer.add_special_tokens({"additional_special_tokens": [bib_id]}) # ensure that the tokenizer does not destroy the bib id
-    tokens = tokenizer(source_doc).to("cuda")
+    tokens = tokenizer(source_doc).to(config["retriever_device"])
     tokens = tokens["input_ids"] # get only the encoded tokens
     indices = [] # indices of each bib id in the source doc
     for i, e in enumerate(tokens):
@@ -281,8 +281,8 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expans
             indices.append(i)
 
     # get larger context if required
-    if query_expansion_method == "center":
-        w = int(np.floor(query_context_size/2)) # context window size
+    if config["query_expansion"] == "center":
+        w = int(np.floor(config["query_context"]/2)) # context window size
         for index in indices:
             low = max(index-w, 0)
             high = min(index+w, len(tokens)-1)
@@ -293,9 +293,9 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expans
 
         assert len(citing_sents) == len(citing_context)
 
-    elif query_expansion_method == "left":
+    elif config["query_expansion"] == "left":
         for index in indices:
-            low = max(index-query_context_size, 0)
+            low = max(index-config["query_context"], 0)
             high = index+1
             context = tokenizer.decode(tokens[low:high])
             context = context.replace(TOKENIZER_BEGIN_TOKEN, "")
@@ -305,7 +305,7 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expans
         assert len(citing_sents) == len(citing_context)
 
     else:
-        raise NotImplementedError(f"Query expansion method '{query_expansion_method}' is not implemented. Currently supported are 'center' and 'left'.")
+        raise NotImplementedError(f"Query expansion method '{config["query_expansion"]}' is not implemented. Currently supported are 'center' and 'left'.")
         
     return (citing_sents, citing_context)
 
@@ -313,9 +313,8 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, query_expans
 def get_target_sections(
     target_doc_lines, 
     tokenizer, 
-    section_labels=["\\begin{abstract}", "\\section", "\\subsection"], 
-    with_chunking=False,
-    chunk_size=512
+    config,
+    section_labels=["\\begin{abstract}", "\\section", "\\subsection"]
 ):
     
     def is_section_start(l):
@@ -336,15 +335,15 @@ def get_target_sections(
         if is_section_start(line):
             if in_section: # terminate the current section
 
-                if with_chunking: # chop section into chunks
+                if config["target_chunking"]: # chop section into chunks
                     current_section = current_section.split(LABEL_SEPARATOR)[1] # remove section label
-                    tokens = tokenizer(current_section).to("cuda")
+                    tokens = tokenizer(current_section).to(config["retriever_device"])
                     tokens = tokens["input_ids"] # get only the encoded tokens
 
                     chunk_idx = 0
-                    for i in range(0, len(tokens), chunk_size):
+                    for i in range(0, len(tokens), config["chunk_size"]):
                         chunk_label = f"{current_section_label}-{chunk_idx}"
-                        chunk = tokenizer.decode(tokens[i:i+chunk_size]).replace(TOKENIZER_BEGIN_TOKEN, "")
+                        chunk = tokenizer.decode(tokens[i:i+config["chunk_size"]]).replace(TOKENIZER_BEGIN_TOKEN, "")
                         sections.append(chunk_label+LABEL_SEPARATOR+chunk)
                         chunk_idx += 1
                 else:
@@ -365,7 +364,7 @@ def get_target_sections(
     return sections
 
 
-def get_source_citations(id, target_citation_record, tokenizer, with_chunking=False, chunk_size=512, query_expansion_method="left", query_context_size=128):
+def get_source_citations(id, target_citation_record, tokenizer, config):
     target_bib_id = target_citation_record["bib_id"]
     target_arxiv_id = target_citation_record["arxiv_id"]
 
@@ -379,7 +378,7 @@ def get_source_citations(id, target_citation_record, tokenizer, with_chunking=Fa
     assert target_doc_lines != None
 
     # list of (citing sentence, larger context centered at citation)
-    source_doc_citations = identify_citations_in_source_doc(source_doc, target_bib_id, tokenizer, query_expansion_method, query_context_size)
-    target_doc_sections = get_target_sections(target_doc_lines, tokenizer, with_chunking=with_chunking, chunk_size=chunk_size)
+    source_doc_citations = identify_citations_in_source_doc(source_doc, target_bib_id, tokenizer, config)
+    target_doc_sections = get_target_sections(target_doc_lines, tokenizer, config)
 
     return source_doc_citations, target_doc_sections

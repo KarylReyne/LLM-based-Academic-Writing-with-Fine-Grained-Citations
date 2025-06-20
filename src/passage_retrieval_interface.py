@@ -9,7 +9,7 @@ from datetime import datetime
 
 from latex_parsing import *
 from passage_retrieval import retrieval
-from passage_reranking import reranking_and_scoring
+from passage_reranking import reranking_and_scoring, InvalidLLMResponseError
 from passage_retrieval_instructions import *
 
 
@@ -73,18 +73,24 @@ def get_passage_retrieval_models(config):
         torch_dtype="auto", 
         trust_remote_code=True
     )
-    retriever = retriever.to("cuda:2")
+    retriever = retriever.to(config["retriever_device"])
     retriever.eval()
 
     # reranker model definition
     rera_tokenizer = AutoTokenizer.from_pretrained(config["reranker"])
     reranker = AutoModelForCausalLM.from_pretrained(
         config["reranker"], 
-        torch_dtype="auto", 
+        torch_dtype="auto",
         trust_remote_code=True
     )
-    reranker = reranker.to("cuda:2")
-    return retr_tokenizer, retriever, rera_tokenizer, reranker
+    reranker = reranker.to(config["reranker_device"])
+    reranker.eval()
+    return {
+        "retr_tokenizer": retr_tokenizer, 
+        "retriever": retriever, 
+        "rera_tokenizer": rera_tokenizer, 
+        "reranker": reranker
+    }
 
 
 def get_candidate_passages(target_id, tokenizer, config):
@@ -95,11 +101,11 @@ def get_candidate_passages(target_id, tokenizer, config):
         download_from_arxiv(target_id)
         _, target_doc_lines = extract_full_latex_textbody(target_id)
     assert target_doc_lines != None
-    target_doc_sections = get_target_sections(target_doc_lines, tokenizer, with_chunking=config["target_chunking"], chunk_size=config["chunk_size"])
+    target_doc_sections = get_target_sections(target_doc_lines, tokenizer, config)
     return target_doc_sections
 
 
-def unified_passage_retrieval(generated_context, target_doc_sections, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config):
+def unified_passage_retrieval(generated_context, target_doc_sections, reference_id, passage_retrieval_models, config):
     evaluation_records = {}
     evaluation_records[f"reference_id-{reference_id}"] = {
         "generated context": generated_context,
@@ -123,7 +129,7 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
         document_labels, 
         documents,
         reference_id,
-        retriever, 
+        passage_retrieval_models["retriever"], 
         config
     )
 
@@ -141,8 +147,8 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
         document_labels, 
         documents,
         reference_id,
-        reranker, 
-        rera_tokenizer, 
+        passage_retrieval_models["reranker"], 
+        passage_retrieval_models["rera_tokenizer"], 
         config
     )
 
@@ -165,17 +171,18 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
     return context
 
 
-def retrieve_relevant_passages(generated_context, reference_id, retr_tokenizer, retriever, rera_tokenizer, reranker, config):
-    candidate_passages = get_candidate_passages(reference_id, retr_tokenizer, config)
-    generated_context = apply_retrieval_context_window(generated_context, retr_tokenizer, config)
+def retrieve_relevant_passages(generated_context, reference_id, passage_retrieval_models, config):
+    candidate_passages = get_candidate_passages(
+        reference_id, passage_retrieval_models["retr_tokenizer"], config
+    )
+    generated_context = apply_retrieval_context_window(
+        generated_context, passage_retrieval_models["retr_tokenizer"], config
+    )
     best_matching_passage, best_passage_label, best_passage_score = unified_passage_retrieval(
         generated_context, 
         candidate_passages, 
         reference_id, 
-        retr_tokenizer, 
-        retriever, 
-        rera_tokenizer, 
-        reranker, 
+        passage_retrieval_models,
         config
     )
     return best_matching_passage, best_passage_label, best_passage_score
