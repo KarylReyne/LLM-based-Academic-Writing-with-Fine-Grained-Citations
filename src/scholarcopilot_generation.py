@@ -38,7 +38,9 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
         time.sleep(0.1)
     curr_prefix_length = len(curr_yield_text)
     while cite_start_hidden_state is not None and not enough:
-        retrieved_k_results = retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=1)
+        retrieved_k_results = retrieve_reference(
+            index, lookup_indices, cite_start_hidden_state, top_k=config["sc_retriever_topk"]
+        )
         references, reference_ids = llm_rerank(retrieved_k_results, meta_data)
 
         # --- BEGIN passage retrieval ---

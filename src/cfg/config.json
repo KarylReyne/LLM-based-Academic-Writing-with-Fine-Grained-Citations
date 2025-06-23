@@ -12,10 +12,11 @@
     "query_expansion": "left",
     "query_context": 128,
     "retrieve_over_multiple_documents": true,
-    "retriever_topk": 12,
-    "reranker_topk": 6,
+    "sc_retriever_topk": 3,
+    "retriever_topk": 20,
+    "reranker_topk": 12,
     "retr_batch_size": 6,
     "rera_sc_permutation_mode": "stb",
-    "rera_passages_per_call": 3,
+    "rera_passages_per_call": 4,
     "reranker_temperature": 0.6
 }
