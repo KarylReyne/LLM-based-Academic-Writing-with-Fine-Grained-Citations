@@ -11,6 +11,7 @@
     "chunk_size": 512,
     "query_expansion": "left",
     "query_context": 128,
+    "retrieve_over_multiple_documents": true,
     "retriever_topk": 12,
     "reranker_topk": 6,
     "retr_batch_size": 6,

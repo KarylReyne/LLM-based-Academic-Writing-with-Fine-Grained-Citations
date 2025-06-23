@@ -1,11 +1,13 @@
 import torch
 import json
 import os
+import sys
 from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
 from torch import nn
 import numpy as np
 import itertools
 from datetime import datetime
+import time
 
 from latex_parsing import *
 from passage_retrieval import retrieval
@@ -93,24 +95,25 @@ def get_passage_retrieval_models(config):
     }
 
 
-def get_candidate_passages(target_id, tokenizer, config, dont_keep_folder=False):
-    target_doc_lines = None
-    try:
-        _, target_doc_lines = extract_full_latex_textbody(target_id)
-    except AssertionError: # download if target not found
-        download_from_arxiv(target_id)
-        _, target_doc_lines = extract_full_latex_textbody(target_id)
-        # delete extracted archive
-        if dont_keep_folder:
-            shutil.rmtree(f"/data/{target_id}")
-    assert target_doc_lines != None
-    target_doc_sections = get_target_sections(target_doc_lines, tokenizer, config)
+def get_candidate_passages(target_ids, tokenizer, config):
+    target_doc_lines = [] # num_ids x num_lines
+    target_doc_ids = [] # num_ids x num_lines
+    for id in target_ids:
+        try:
+            _, lines = extract_full_latex_textbody(id)
+        except AssertionError: # download if target not found
+            download_from_arxiv(id)
+            _, lines = extract_full_latex_textbody(id)
+        for line in lines:
+            target_doc_lines.append(line)
+            target_doc_ids.append(id)
+    target_doc_sections = get_target_sections(target_doc_lines, target_doc_ids, tokenizer, config)
     return target_doc_sections
 
 
-def unified_passage_retrieval(generated_context, target_doc_sections, reference_id, passage_retrieval_models, config):
+def unified_passage_retrieval(generated_context, target_doc_sections, reference_ids, passage_retrieval_models, config):
     evaluation_records = {}
-    evaluation_records[f"reference_id-{reference_id}"] = {
+    evaluation_records[f"reference_ids-{reference_ids}"] = {
         "generated context": generated_context,
         "retrieved documents": {},
         "reranked documents": {},
@@ -131,7 +134,7 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
         generated_context, 
         document_labels, 
         documents,
-        reference_id,
+        reference_ids,
         passage_retrieval_models["retriever"], 
         config
     )
@@ -140,7 +143,7 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
     document_labels = []
     documents = []
 
-    for doc_label, doc_dict in evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"].items():
+    for doc_label, doc_dict in evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"].items():
         document_labels.append(doc_label)
         documents.append(doc_dict["section chunk"])
 
@@ -149,7 +152,7 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
         generated_context,
         document_labels, 
         documents,
-        reference_id,
+        reference_ids,
         passage_retrieval_models["reranker"], 
         passage_retrieval_models["rera_tokenizer"], 
         config
@@ -174,9 +177,9 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
     return context
 
 
-def retrieve_relevant_passages(generated_context, reference_id, passage_retrieval_models, config):
+def retrieve_relevant_passages(generated_context, reference_ids, passage_retrieval_models, config):
     candidate_passages = get_candidate_passages(
-        reference_id, passage_retrieval_models["retr_tokenizer"], config, dont_keep_folder=True
+        reference_ids, passage_retrieval_models["retr_tokenizer"], config,
     )
     generated_context = apply_retrieval_context_window(
         generated_context, passage_retrieval_models["retr_tokenizer"], config
@@ -184,8 +187,13 @@ def retrieve_relevant_passages(generated_context, reference_id, passage_retrieva
     best_matching_passage, best_passage_label, best_passage_score = unified_passage_retrieval(
         generated_context, 
         candidate_passages, 
-        reference_id, 
+        reference_ids, 
         passage_retrieval_models,
         config
     )
+    # delete extracted archive
+    dont_keep_folder = True
+    for id in reference_ids:
+        if dont_keep_folder and os.path.isdir(f'./data/{id}/'):
+            shutil.rmtree(f"./data/{id}/")
     return best_matching_passage, best_passage_label, best_passage_score

@@ -1,5 +1,6 @@
 import sys
 import statistics as stat
+import numpy as np
 import itertools
 from util import minmax_normalization
 from passage_retrieval_instructions import *
@@ -10,7 +11,7 @@ def retrieval(
     generated_context, 
     document_labels,
     documents,
-    reference_id,
+    reference_ids,
     retriever,
     config
 ):
@@ -50,20 +51,23 @@ def retrieval(
             batch_sim_scores.append(mean_over_llm_calls)
 
         # update eval data with the current batch
-        retrieved_documents = evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"]
+        retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
         for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
+            float_score = float(batch_sim_scores[j])
+            if np.isnan(float_score):
+                float_score = -1
             global_batch_idx = ((num_batch-1)*BATCH_SIZE)+j
             retrieved_documents[document_labels[global_batch_idx]] = {
                 "section chunk": documents[global_batch_idx],
-                "retrieval score": float(batch_sim_scores[j]),
+                "retrieval score": float_score,
             }
-        evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"] = retrieved_documents
+        evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"] = retrieved_documents
 
         num_batch += 1
 
 
     # retain only the top k retrieved documents
-    retrieved_documents = evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"]
+    retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
 
     if NORMALIZE_SCORES: # min-max normalization
         scores = [float(retrieved_documents[section_id]["retrieval score"]) for section_id in retrieved_documents]
@@ -72,4 +76,4 @@ def retrieval(
             retrieved_documents[section_id]["retrieval score"] = scores[idx]
 
     retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["retrieval score"], reverse=True)[:TOPK_RETR])
-    evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"] = retrieved_documents
+    evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"] = retrieved_documents

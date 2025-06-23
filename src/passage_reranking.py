@@ -11,7 +11,7 @@ def reranking_and_scoring(
     generated_context, 
     document_labels,
     documents,
-    reference_id,
+    reference_ids,
     reranker,
     rera_tokenizer,
     config
@@ -118,17 +118,17 @@ def reranking_and_scoring(
 
 
     # update eval data with the current batch
-    reranked_documents = evaluation_records[f"reference_id-{reference_id}"]["reranked documents"]
+    reranked_documents = evaluation_records[f"reference_ids-{reference_ids}"]["reranked documents"]
     for label in batch_rera_scores:
         reranked_documents[label] = {
             "section chunk": batch_rera_docs[label],
             "reranking score": float(batch_rera_scores[label]),
         }
-    evaluation_records[f"reference_id-{reference_id}"]["reranked documents"] = reranked_documents
+    evaluation_records[f"reference_ids-{reference_ids}"]["reranked documents"] = reranked_documents
         
 
     # sort reranked docs
-    reranked_documents = evaluation_records[f"reference_id-{reference_id}"]["reranked documents"]
+    reranked_documents = evaluation_records[f"reference_ids-{reference_ids}"]["reranked documents"]
     
     if NORMALIZE_SCORES: # min-max normalization
         scores = [float(reranked_documents[section_id]["reranking score"]) for section_id in reranked_documents]
@@ -137,14 +137,14 @@ def reranking_and_scoring(
             reranked_documents[section_id]["reranking score"] = scores[idx]
 
     reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
-    evaluation_records[f"reference_id-{reference_id}"]["reranked documents"] = reranked_documents
+    evaluation_records[f"reference_ids-{reference_ids}"]["reranked documents"] = reranked_documents
 
 
     # obtain final ranking score s
     # s = (1-delta)*s_retr + delta*s_rera
     final_scores = {}
     # reranked_documents still exists, retrieved_documents does not
-    retrieved_documents = evaluation_records[f"reference_id-{reference_id}"]["retrieved documents"]
+    retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
     for label in reranked_documents:
         doc = reranked_documents[label]["section chunk"]
         s_retr = float(retrieved_documents[label]["retrieval score"])
@@ -155,7 +155,7 @@ def reranking_and_scoring(
             "final ranking score": s
         }
     final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
-    evaluation_records[f"reference_id-{reference_id}"]["final ranking"] = final_scores
+    evaluation_records[f"reference_ids-{reference_ids}"]["final ranking"] = final_scores
 
     for label in final_scores:
         best_matching_passage = final_scores[label]["section chunk"]

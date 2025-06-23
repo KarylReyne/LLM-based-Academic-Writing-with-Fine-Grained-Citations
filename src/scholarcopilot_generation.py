@@ -9,34 +9,6 @@ import tarfile
 from passage_retrieval_interface import *
 
 
-def generate_citation(input_text):
-    global index
-    new_input_text = input_text + " <|cite_start|>"
-    new_input = tokenizer(new_input_text, return_tensors="pt").to(device)
-    with torch.no_grad():
-        new_output = model(
-            new_input.input_ids,
-            attention_mask=new_input.attention_mask,
-            output_hidden_states=True,
-            return_dict=True
-        )
-    cite_rep = new_output.hidden_states[-1][:, -1, :]
-    retrieved_k_results = retrieve_reference(index, lookup_indices, cite_rep, top_k=10)
-    searched_citations = []
-    for each in retrieved_k_results:
-        curr_index, distance = each
-        print("index", curr_index)
-        if curr_index not in meta_data:
-            print("index not found in meta_data", curr_index)
-            continue
-        paper_id = meta_data[curr_index]["paper_id"]
-        print("paper_id", paper_id)
-        citation_info = citation_map_data[paper_id]
-        print("generate_citation citation_info", citation_info)
-        searched_citations.append(citation_info)
-    return searched_citations
-
-
 def split_yield_list(input_text, prefix_length):
     prefix_text = input_text[:prefix_length]
     text = input_text[prefix_length:]
@@ -67,24 +39,28 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
     curr_prefix_length = len(curr_yield_text)
     while cite_start_hidden_state is not None and not enough:
         retrieved_k_results = retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=1)
-        reference, curr_index = llm_rerank(retrieved_k_results, meta_data)
-        reference_id_list.append(curr_index)
+        references, reference_ids = llm_rerank(retrieved_k_results, meta_data)
 
         # --- BEGIN passage retrieval ---
         generated_context = current_text
-        reference_id = curr_index
+        if not config["retrieve_over_multiple_documents"]:
+            references = [references[0]]
+            reference_ids = [reference_ids[0]]
         tex_parsing_failed = False
         try:
             best_matching_passage, best_passage_label, best_passage_score = retrieve_relevant_passages(
-                generated_context, reference_id, passage_retrieval_models, config
+                generated_context, reference_ids, passage_retrieval_models, config
             )
+            best_reference_id = best_passage_label.split("_")[0]
             best_matching_passage = best_matching_passage+"<|cite_end|>"
             print("best matching passage: ", best_matching_passage)
         except tarfile.ReadError or UnicodeDecodeError or passage_reranking.InvalidLLMResponseError:
             tex_parsing_failed = True
-            best_matching_passage = reference # default to standart ScholarCopilot if tex or llm response parsing failed
+            best_matching_passage = references[0] # default to standart ScholarCopilot if tex or llm response parsing failed
             print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
         # --- END passage retrieval ---
+
+        reference_id_list.append(best_reference_id)
 
         # current_text = current_text + reference
         current_text = current_text + best_matching_passage
@@ -94,7 +70,7 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
 
         # citations_data += citation_data_list
         ids = [d["paper_id"] for d in citation_data_list]
-        citation_index = ids.index(reference_id)
+        citation_index = ids.index(best_reference_id)
         assert citation_index == len(citation_data_list)-1
         citation_dict = citation_data_list[citation_index]
         if tex_parsing_failed:
@@ -122,62 +98,6 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
     citations_data += citation_data_list
     yield display_text, citations_data
     time.sleep(0.1)
-
-
-def format_citation(citation_key, url):
-    total_length = 150
-    citation_length = len(citation_key)
-    url_length = len(url)
-    if citation_length > 110:
-        citation_key = citation_key[:105] + "...  "
-        citation_length = 110
-    return citation_key + " " * (total_length - citation_length - url_length) + url
-
-
-def search_and_show_citations(input_text):
-    curr_citations_data = generate_citation(input_text)
-    curr_search_candidates = curr_citations_data
-    choices = []
-    for cit in curr_citations_data:
-        # print("cit.keys()", list(cit.keys()))
-        paper_id = cit["paper_id"]
-        citation_key = cit["citation_key"]
-        title = cit["title"].replace("\n", " ").replace("  ", " ")
-        url = f" (https://arxiv.org/abs/{paper_id})"
-        item = format_citation(citation_key + ": " + title, url)
-        # print("item", item)
-        choices.append(item)
-    return curr_search_candidates
-
-
-def insert_selected_citations(text, selected_citations, citations_data, curr_search_candidates):
-    if not selected_citations:
-        return text
-
-    selected_citations = [each.split(": ")[0] for each in selected_citations]
-    citations = ", ".join(selected_citations)
-    new_text = text + " \\cite{" + citations + "}"
-    for each_candidate in curr_search_candidates:
-        if each_candidate["citation_key"] in selected_citations:
-            citations_data.append(each_candidate)
-    return new_text
-
-
-def update_bibtex(citations_data):
-    # print("citations_data", citations_data)
-    if not citations_data:
-        return None  # 如果没有引用历史，返回None
-
-    bibtex_entries = []
-    for cit in citations_data:
-        if cit["bibtex"] not in bibtex_entries:
-            bibtex_entries.append(cit["bibtex"])
-    content = "\n\n".join(bibtex_entries)
-    return content
-
-
-def clear_cache(citations_data, curr_search_candidates):
-    return "", False, "", [], []
 
 
 def load_example(file_path=""):

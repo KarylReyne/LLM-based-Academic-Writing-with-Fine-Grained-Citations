@@ -152,11 +152,14 @@ def llm_rerank(retrieved_k_results, meta_data):
         titles.append(meta_data[curr_index]["title"])
         index_list.append(curr_index)
 
-    res = recall_results[0]
-    res = "(Reference:" + res
-    reference = res.replace("<|reference_start|>", "").replace("<|reference_end|>", "<|cite_end|>")
-    print("llm_rerank results", reference)
-    return reference, meta_data[index_list[0]]["paper_id"]
+    references = []
+    for reference in recall_results:
+        reference = "(Reference:" + reference
+        reference = reference.replace("<|reference_start|>", "").replace("<|reference_end|>", "<|cite_end|>")
+        references.append(reference)
+    print("llm_rerank reference", references[0])
+    reference_ids = [meta_data[index_list[i]]["paper_id"] for i in range(len(index_list))]
+    return references, reference_ids
 
 
 def replace_citations(input_text, reference_id_list, citation_map):

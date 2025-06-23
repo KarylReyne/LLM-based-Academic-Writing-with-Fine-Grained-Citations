@@ -312,7 +312,8 @@ def identify_citations_in_source_doc(source_doc, bib_id, tokenizer, config):
 
 
 def get_target_sections(
-    target_doc_lines, 
+    target_doc_lines,
+    target_doc_ids,
     tokenizer, 
     config,
     section_labels=["\\begin{abstract}", "\\section", "\\subsection"]
@@ -324,14 +325,17 @@ def get_target_sections(
             b = b or l.startswith(s)
         return b
     
+    assert len(target_doc_lines) == len(target_doc_ids)
 
     sections = []
 
     in_section = False
     current_section = ""
     current_section_label = None
-    for line in target_doc_lines:
+    for i in range(len(target_doc_lines)):
+        line = target_doc_lines[i]
         line = line.rstrip("\n")
+        id = target_doc_ids[i]
 
         if is_section_start(line):
             if in_section: # terminate the current section
@@ -343,7 +347,7 @@ def get_target_sections(
 
                     chunk_idx = 0
                     for i in range(0, len(tokens), config["chunk_size"]):
-                        chunk_label = f"{current_section_label}-{chunk_idx}"
+                        chunk_label = f"{id}_{current_section_label}-{chunk_idx}"
                         chunk = tokenizer.decode(tokens[i:i+config["chunk_size"]]).replace(TOKENIZER_BEGIN_TOKEN, "")
                         sections.append(chunk_label+LABEL_SEPARATOR+chunk)
                         chunk_idx += 1
