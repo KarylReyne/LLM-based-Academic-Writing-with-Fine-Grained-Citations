@@ -112,13 +112,16 @@ def load_example(file_path=""):
 
 
 if __name__ == "__main__":
-    model_path = "scholarcopilot_model_v1208/"
-    device = torch.device("cuda")
-    model, tokenizer = load_model(model_path, device)
+    # model_path = "scholarcopilot_model_v1208/"
+    # device = torch.device("cuda")
+    # model, tokenizer = load_model(model_path, device)
     
     meta_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     meta_data = load_meta_data(meta_data_path)
     print("meta_data size: ", len(meta_data))
+    if True:
+        create_fulltext_corpus_data(meta_data_path)
+        exit(0)
     
     citation_map_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     citation_map_data = load_citation_map_data(citation_map_data_path)
@@ -131,11 +134,6 @@ if __name__ == "__main__":
     config = get_config()
     passage_retrieval_models = get_passage_retrieval_models(config)
     print("passage retrieval models loaded")
-
-
-    if True:
-        create_fulltext_corpus_data(meta_data_path)
-        exit(0)
 
 
     citations_data = []
