@@ -28,7 +28,7 @@ def retrieval(
     for i in range(0, len(documents), BATCH_SIZE): # iterates sections, batched
 
         sys.stdout.write("\033[F")
-        print(f"[RETRIEVAL] processing batch {num_batch}/{(len(documents)//BATCH_SIZE)+1}")
+        print(f"[RETRIEVAL] retrieving {TOPK_RETR}/{len(documents)} passages - batch {num_batch}/{(len(documents)//BATCH_SIZE)+1}")
 
         document_inputs = documents[i:i+BATCH_SIZE]
         query_inputs = list(itertools.repeat(generated_context, len(document_inputs)))

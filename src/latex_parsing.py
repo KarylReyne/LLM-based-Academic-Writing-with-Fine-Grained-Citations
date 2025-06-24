@@ -37,9 +37,9 @@ def download_from_arxiv(id='1706.03762'):
     try:
         tar = tarfile.open(f"data/{id}.tar.gz")
         tar.extractall(f"data/{id}", filter="tar")
-    except tarfile.ReadError as e:
+    except tarfile.ReadError or UnicodeDecodeError:
         print(f"data/{id}.tar.gz could not be extracted successfully.")
-        raise e
+        raise TexParsingError
 
     # delete archive
     os.remove(f"data/{id}.tar.gz")
@@ -196,18 +196,29 @@ def get_bbl_path_from_arxiv_id(id):
 def locate_main_tex_file(id):
     path = f"data/{id}/"
     for _, _, files in os.walk(f"data/{id}"):
-        matches = [file for file in files if file.endswith(".tex")]
+        file_found = False
+        matches = [file for file in files if file.endswith(".tex") if len(file.split("/")) == 1] # filters tex files obtained from subdirectories
         for match in matches:
             match_lines = []
-            with open(f"data/{id}/{match}", "r") as tex:
-                for line in tex.readlines():
-                    if line.startswith("\\documentclass"):
-                        path += match
-                        break # lines loop
-        if path != f"data/{id}/": # found the main tex file
-            break # matches loop
-        else: # check the next tex file
-            continue
+            try:
+                with open(f"data/{id}/{match}", "r") as tex:
+                    for line in tex.readlines():
+                        match_lines.append(line)
+            except FileNotFoundError:
+                continue
+
+            for line in match_lines:
+                if line.startswith("\\documentclass"):
+                    path += match
+                    break # lines loop
+
+            if path != f"data/{id}/": # found the main tex file
+                file_found = True
+                break # matches loop
+            else: # check the next tex file
+                continue
+        if file_found:
+            break # os.walk
     try:
         assert path != f"data/{id}/"
     except AssertionError as e:
@@ -387,3 +398,8 @@ def get_source_citations(id, target_citation_record, tokenizer, config):
     target_doc_sections = get_target_sections(target_doc_lines, tokenizer, config)
 
     return source_doc_citations, target_doc_sections
+
+
+class TexParsingError(Exception):
+    """The tex file could not be parsed."""
+    pass

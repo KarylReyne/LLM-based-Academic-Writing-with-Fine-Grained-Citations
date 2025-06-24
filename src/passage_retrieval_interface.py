@@ -181,9 +181,10 @@ def retrieve_relevant_passages(generated_context, reference_ids, passage_retriev
     candidate_passages = get_candidate_passages(
         reference_ids, passage_retrieval_models["retr_tokenizer"], config,
     )
-    generated_context = apply_retrieval_context_window(
-        generated_context, passage_retrieval_models["retr_tokenizer"], config
-    )
+    if config["enable_query_context_window"]:
+        generated_context = apply_retrieval_context_window(
+            generated_context, passage_retrieval_models["retr_tokenizer"], config
+        )
     best_matching_passage, best_passage_label, best_passage_score = unified_passage_retrieval(
         generated_context, 
         candidate_passages, 

@@ -7,6 +7,7 @@ import time
 import tarfile
 
 from passage_retrieval_interface import *
+from latex_parsing import TexParsingError
 
 
 def split_yield_list(input_text, prefix_length):
@@ -56,9 +57,10 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
             best_reference_id = best_passage_label.split("_")[0]
             best_matching_passage = best_matching_passage+"<|cite_end|>"
             print("best matching passage: ", best_matching_passage)
-        except tarfile.ReadError or UnicodeDecodeError or passage_reranking.InvalidLLMResponseError:
+        except TexParsingError or passage_reranking.InvalidLLMResponseError:
             tex_parsing_failed = True
             best_matching_passage = references[0] # default to standart ScholarCopilot if tex or llm response parsing failed
+            best_reference_id = reference_ids[0]
             print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
         # --- END passage retrieval ---
 
@@ -73,7 +75,6 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
         # citations_data += citation_data_list
         ids = [d["paper_id"] for d in citation_data_list]
         citation_index = ids.index(best_reference_id)
-        assert citation_index == len(citation_data_list)-1
         citation_dict = citation_data_list[citation_index]
         if tex_parsing_failed:
             citation_dict["matched_passage"] = "<|tex_parsing_failed|>"
@@ -117,6 +118,7 @@ if __name__ == "__main__":
     
     meta_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     meta_data = load_meta_data(meta_data_path)
+    print("meta_data size: ", len(meta_data))
     
     citation_map_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     citation_map_data = load_citation_map_data(citation_map_data_path)
@@ -129,6 +131,11 @@ if __name__ == "__main__":
     config = get_config()
     passage_retrieval_models = get_passage_retrieval_models(config)
     print("passage retrieval models loaded")
+
+
+    if True:
+        create_fulltext_corpus_data(meta_data_path)
+        exit(0)
 
 
     citations_data = []

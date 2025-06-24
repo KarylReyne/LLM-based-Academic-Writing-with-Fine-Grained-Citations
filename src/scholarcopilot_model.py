@@ -9,6 +9,7 @@ import os
 import glob
 import re
 import time
+from latex_parsing import *
 
 
 def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
@@ -234,6 +235,40 @@ def load_meta_data(meta_data_path):
             if curr["corpus_id"] not in meta_data:
                 meta_data[curr["corpus_id"]] = curr
     print("corpus data loaded.")
+    return meta_data
+
+
+def create_fulltext_corpus_data(meta_data_path):
+    print("creating corpus data...")
+    meta_data = {}
+    misses = 0
+    total = 0
+    with open(meta_data_path, "r") as file:
+        for line in file.readlines():
+            curr = json.loads(line)
+            if curr["corpus_id"] not in meta_data:
+                meta_data[curr["corpus_id"]] = curr
+
+    new_meta_data = []
+    for corpus_id in meta_data:
+        curr = meta_data[corpus_id]
+        fulltext = ""
+        try:
+            id = curr["paper_id"]
+            download_from_arxiv(id)
+            fulltext, _ = extract_full_latex_textbody(id)
+            curr["fulltext"] = fulltext
+        except TexParsingError:
+            curr["fulltext"] = "<|tex_parsing_error|>"
+            misses += 1
+        new_meta_data.append(curr)
+        total += 1
+
+    new_path = meta_data_path.rstrip(.jsonl)+"_fulltext.jsonl"
+    with open(new_path, "w") as file:
+        file.writelines(new_meta_data)
+        
+    print(f"corpus data created - missing {misses}/{total} fulltext entries.")
     return meta_data
 
 
