@@ -7,7 +7,6 @@ import nltk
 import numpy as np
 from transformers import AutoModel, AutoTokenizer
 from torch import nn
-from tqdm import tqdm
 from datetime import datetime
 import urllib, urllib.request
 import shutil
@@ -23,9 +22,13 @@ def download_from_arxiv(id='1706.03762'):
     url = f'https://arxiv.org/src/{id}'
     response = requests.get(url)
 
+    # catch download failures
+    # if not os.path.isfile(f"data/{id}.tar.gz"):
+    #     raise TexParsingError
+    
     # download source archive
     with open(f"data/{id}.tar.gz", "wb") as handle:
-        for data in tqdm(response.iter_content(chunk_size=1024), unit="kB"):
+        for data in response.iter_content(chunk_size=1024):
             handle.write(data)
         handle.close()
     try:
@@ -36,10 +39,13 @@ def download_from_arxiv(id='1706.03762'):
     # extract archive
     try:
         tar = tarfile.open(f"data/{id}.tar.gz")
-        tar.extractall(f"data/{id}", filter="tar")
-    except tarfile.ReadError or UnicodeDecodeError:
+        tar.extractall(f"data/{id}")
+    except tarfile.ReadError as e:
         print(f"data/{id}.tar.gz could not be extracted successfully.")
-        raise TexParsingError
+        # delete archive
+        # os.remove(f"data/{id}.tar.gz")
+        # assert not os.path.isfile(f"data/{id}.tar.gz")
+        raise e #TexParsingError
 
     # delete archive
     os.remove(f"data/{id}.tar.gz")
@@ -201,7 +207,7 @@ def locate_main_tex_file(id):
         for match in matches:
             match_lines = []
             try:
-                with open(f"data/{id}/{match}", "r") as tex:
+                with open(f"data/{id}/{match}", "r", errors='ignore') as tex:
                     for line in tex.readlines():
                         match_lines.append(line)
             except FileNotFoundError:
@@ -222,16 +228,16 @@ def locate_main_tex_file(id):
     try:
         assert path != f"data/{id}/"
     except AssertionError as e:
-        print(f"Main tex file for document {id} not found!")
+        # print(f"Main tex file for document {id} not found!")
         raise e
     return path
 
 
 def extract_input_latex(path):
     lines = []
-    if not path.endswith(".tex"):
+    if len(path.split("/")[-1].split(".")) < 2: # aka no trailing file type
         path += ".tex"
-    with open(path, "r") as tex:
+    with open(path, "r", errors='ignore') as tex:
         for line in tex.readlines():
             if not line.startswith("\n"): # removes linebreaks
                 lines.append(line)
@@ -242,7 +248,7 @@ def extract_full_latex_textbody(id):
     path = locate_main_tex_file(id)
     lines = []
     collect_lines = False
-    with open(path, "r") as tex:
+    with open(path, "r", errors='ignore') as tex:
         for line in tex.readlines():
             
             if line.startswith("\\begin{document}"):
@@ -252,8 +258,14 @@ def extract_full_latex_textbody(id):
 
             if collect_lines and not line.startswith("\n"): # removes linebreaks
 
-                if line.startswith("\\input"): # handle latex \input
-                    input_file = line.split("{")[1].split("}")[0]
+                if line.startswith("\\input"): # handles latex \input
+                    try: # handles "\input{filename}"
+                        input_file = line.split("{")[1].split("}")[0]
+                    except IndexError: 
+                        try: # handles "\input filename"
+                            input_file = line.split(" ")[1].rstrip("\n")
+                        except IndexError: # skip this weird line
+                            continue
                     input_path = f"data/{id}/{input_file}"
                     input_lines = extract_input_latex(input_path)
                     for input_line in input_lines:

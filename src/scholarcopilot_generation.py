@@ -5,6 +5,7 @@ import torch
 import faiss
 import time
 import tarfile
+import passage_reranking
 
 from passage_retrieval_interface import *
 from latex_parsing import TexParsingError
@@ -84,7 +85,7 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
             citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
             citation_dict["passage_label"] = best_passage_label
             citation_dict["passage_score"] = best_passage_score
-        citation_data_list[0] = citation_dict
+        citation_data_list[citation_index] = citation_dict
         citations_data += citation_data_list
 
         curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
@@ -112,15 +113,19 @@ def load_example(file_path=""):
 
 
 if __name__ == "__main__":
-    # model_path = "scholarcopilot_model_v1208/"
-    # device = torch.device("cuda")
-    # model, tokenizer = load_model(model_path, device)
+    create_fulltext_dataset = True
+
+    if not create_fulltext_dataset:
+        model_path = "scholarcopilot_model_v1208/"
+        device = torch.device("cuda")
+        model, tokenizer = load_model(model_path, device)
     
     meta_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     meta_data = load_meta_data(meta_data_path)
     print("meta_data size: ", len(meta_data))
-    if True:
-        create_fulltext_corpus_data(meta_data_path)
+    if create_fulltext_dataset:
+        # create_fulltext_corpus_data(meta_data_path)
+        update_fulltext_corpus_data("scholarcopilot_data/corpus_data_arxiv_1215_fulltext.jsonl")
         exit(0)
     
     citation_map_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
