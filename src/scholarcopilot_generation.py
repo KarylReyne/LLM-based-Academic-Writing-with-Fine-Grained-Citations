@@ -113,7 +113,7 @@ def load_example(file_path=""):
 
 
 if __name__ == "__main__":
-    create_fulltext_dataset = True
+    create_fulltext_dataset = True # total fulltext: 49605
 
     if not create_fulltext_dataset:
         model_path = "scholarcopilot_model_v1208/"
