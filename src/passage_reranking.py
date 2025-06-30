@@ -164,7 +164,7 @@ def reranking_and_scoring(
         break
     assert best_matching_passage != None
 
-    return best_matching_passage, best_passage_label, best_passage_score
+    return best_matching_passage, best_passage_label, best_passage_score, final_scores
 
 
 class InvalidLLMResponseError(Exception):

@@ -367,6 +367,9 @@ def update_fulltext_corpus_data(meta_data_path, resume=True):
             with open(new_path, "w") as file:
                 json.dump(new_meta_data, file, ensure_ascii=True, indent=4)
             new_meta_data = {}
+
+        # wait to avoid captcha
+        time.sleep(1.5)
         
     print(f"corpus data updated - still missing {misses}/{total} fulltext entries.")
 

@@ -111,7 +111,7 @@ def get_candidate_passages(target_ids, tokenizer, config):
     return target_doc_sections
 
 
-def unified_passage_retrieval(generated_context, target_doc_sections, reference_ids, passage_retrieval_models, config):
+def unified_passage_retrieval(generated_context, reference_ids, passage_retrieval_models, config):
     evaluation_records = {}
     evaluation_records[f"reference_ids-{reference_ids}"] = {
         "generated context": generated_context,
@@ -120,11 +120,15 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
         "final ranking": {}
     }
 
+    candidate_passages = get_candidate_passages(
+        reference_ids, passage_retrieval_models["retr_tokenizer"], config,
+    )
+
     # --- RETRIEVAL ---
     # separate section labels and documents
     document_labels = []
     documents = []
-    for d in target_doc_sections:
+    for d in candidate_passages:
         split = d.split(LABEL_SEPARATOR)
         document_labels.append(split[0])
         documents.append(split[1])
@@ -147,7 +151,7 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
         document_labels.append(doc_label)
         documents.append(doc_dict["section chunk"])
 
-    best_matching_passage, best_passage_label, best_passage_score = reranking_and_scoring(
+    best_matching_passage, best_passage_label, best_passage_score, final_scores = reranking_and_scoring(
         evaluation_records, 
         generated_context,
         document_labels, 
@@ -163,7 +167,7 @@ def unified_passage_retrieval(generated_context, target_doc_sections, reference_
         config
     )
 
-    return best_matching_passage, best_passage_label, best_passage_score
+    return best_matching_passage, best_passage_label, best_passage_score, final_scores
 
 
 def apply_retrieval_context_window(generated_context, tokenizer, config):
@@ -178,16 +182,12 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
 
 
 def retrieve_relevant_passages(generated_context, reference_ids, passage_retrieval_models, config):
-    candidate_passages = get_candidate_passages(
-        reference_ids, passage_retrieval_models["retr_tokenizer"], config,
-    )
     if config["enable_query_context_window"]:
         generated_context = apply_retrieval_context_window(
             generated_context, passage_retrieval_models["retr_tokenizer"], config
         )
-    best_matching_passage, best_passage_label, best_passage_score = unified_passage_retrieval(
-        generated_context, 
-        candidate_passages, 
+    best_matching_passage, best_passage_label, best_passage_score, final_scores = unified_passage_retrieval(
+        generated_context,
         reference_ids, 
         passage_retrieval_models,
         config
@@ -197,4 +197,4 @@ def retrieve_relevant_passages(generated_context, reference_ids, passage_retriev
     for id in reference_ids:
         if dont_keep_folder and os.path.isdir(f'./data/{id}/'):
             shutil.rmtree(f"./data/{id}/")
-    return best_matching_passage, best_passage_label, best_passage_score
+    return best_matching_passage, best_passage_label, best_passage_score, final_scores

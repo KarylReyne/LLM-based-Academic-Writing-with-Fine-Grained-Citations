@@ -52,7 +52,7 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
             reference_ids = [reference_ids[0]]
         tex_parsing_failed = False
         try:
-            best_matching_passage, best_passage_label, best_passage_score = retrieve_relevant_passages(
+            best_matching_passage, best_passage_label, best_passage_score, _ = retrieve_relevant_passages(
                 generated_context, reference_ids, passage_retrieval_models, config
             )
             best_reference_id = best_passage_label.split("_")[0]

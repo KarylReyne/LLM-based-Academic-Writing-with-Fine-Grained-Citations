@@ -11,3 +11,12 @@ def minmax_normalization(x):
         else: 
             x_norm.append(0)
     return x_norm
+
+
+def recall_at_k(rankings, gold_ids, k=1):
+    assert len(rankings) == len(gold_ids), f"{len(rankings)}, {len(gold_ids)}"
+    hits = 0
+    for i in range(len(rankings)):
+        hits += gold_ids[i] in rankings[i][:k]
+    return float(hits/len(rankings))
+

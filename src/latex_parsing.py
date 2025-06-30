@@ -41,11 +41,11 @@ def download_from_arxiv(id='1706.03762'):
         tar = tarfile.open(f"data/{id}.tar.gz")
         tar.extractall(f"data/{id}")
     except tarfile.ReadError as e:
-        print(f"data/{id}.tar.gz could not be extracted successfully.")
+        # print(f"data/{id}.tar.gz could not be extracted successfully.")
         # delete archive
-        # os.remove(f"data/{id}.tar.gz")
-        # assert not os.path.isfile(f"data/{id}.tar.gz")
-        raise e #TexParsingError
+        os.remove(f"data/{id}.tar.gz")
+        assert not os.path.isfile(f"data/{id}.tar.gz")
+        raise TexParsingError
 
     # delete archive
     os.remove(f"data/{id}.tar.gz")
