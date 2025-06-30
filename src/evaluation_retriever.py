@@ -52,11 +52,15 @@ if __name__ == "__main__":
     target_bib_ids = [id for id in bib_to_paper_id]
 
     # zip
-    source_paper_ids = list(itertools.chain([list(itertools.repeat(id, len(target_bib_ids))) for id in source_paper_ids]))
+    source_paper_ids = list(itertools.chain.from_iterable([
+        list(itertools.repeat(id, len(target_bib_ids))) for id in source_paper_ids
+    ]))
     target_bib_ids = list(itertools.chain.from_iterable(itertools.repeat(target_bib_ids, len(source_paper_ids))))
     assert len(source_paper_ids) == len(target_bib_ids), f"{len(source_paper_ids)} != {len(target_bib_ids)}"
     zip_ids = zip(source_paper_ids, target_bib_ids)
     print(f"generated {len(zip_ids)} eval samples")
+
+    # TODO: this yields 2236154944 samples!!! - only use bib ids that appear in a given src doc !
 
     # rankings = [[high,...,low],...] for every src_id/tgt_id/ctx combination
     rankings = []
