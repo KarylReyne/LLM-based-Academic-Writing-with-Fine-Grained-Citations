@@ -121,7 +121,7 @@ def unified_passage_retrieval(generated_context, reference_ids, passage_retrieva
     }
 
     candidate_passages = get_candidate_passages(
-        reference_ids, passage_retrieval_models["retr_tokenizer"], config,
+        reference_ids, passage_retrieval_models["retr_tokenizer"], config
     )
 
     # --- RETRIEVAL ---

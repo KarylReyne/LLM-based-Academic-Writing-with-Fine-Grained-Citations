@@ -69,7 +69,7 @@ def get_next_block_lines(current_index, bib_list, block_label, current_lines=[])
     return current_lines
 
 
-def search_arxiv_for_citations_data(id, additional_citation_records=None, force_download=False):
+def search_arxiv_for_citations_data(id, additional_citation_records=None, force_download=False, save=False, delete_tex_files=True):
     path = get_bbl_path_from_arxiv_id(id)
     data_path = f"data/citations_data/cd_source-{id}.json"
 
@@ -183,14 +183,21 @@ def search_arxiv_for_citations_data(id, additional_citation_records=None, force_
             ids.append(additional_record[1]["arxiv_id"])
 
     # save citations_data to disk
-    with open(data_path, 'w', encoding='utf-8') as f:
-        json.dump(citations_data, f, ensure_ascii=False, indent=4)
+    if save:
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(citations_data, f, ensure_ascii=False, indent=4)
+
+    # delete tex files for id
+    if delete_tex_files and os.path.isdir(f'./data/{id}/'):
+        shutil.rmtree(f"./data/{id}/")
 
     return citations_data, ids
 
 
 def get_bbl_path_from_arxiv_id(id):
     path = f"data/{id}/"
+    if not os.path.exists(path):
+        download_from_arxiv(id)
     for _, _, files in os.walk(f"data/{id}"):
         matches = [file for file in files if file.endswith(".bbl")]
         assert len(matches) == 1

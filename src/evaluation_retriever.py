@@ -4,7 +4,7 @@ import itertools
 
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, retrieve_relevant_passages
 from util import recall_at_k
-from latex_parsing import identify_citations_in_source_doc
+from latex_parsing import identify_citations_in_source_doc, search_arxiv_for_citations_data
 
 
 def get_query_context(source_paper, passage_retrieval_models, config):
@@ -27,9 +27,11 @@ def load_dataset(dataset_path):
         fulltext = curr["fulltext"]
         if fulltext != "<|tex_parsing_error|>":
             bib_id = curr["bibtex"].split(",")[0].lstrip("@article{")
+            _, citations_data_ids = search_arxiv_for_citations_data(curr["paper_id"])
             dataset[curr["paper_id"]] = {
                 "fulltext" : fulltext,
-                "bib_id": bib_id
+                "bib_id": bib_id,
+                "citations_data_ids": citations_data_ids
             }
             bib_to_paper_id[bib_id] = curr["paper_id"] # reverse of dataset[paper_id]["bib_id"]
     return dataset, bib_to_paper_id
@@ -44,6 +46,7 @@ if __name__ == "__main__":
     source_paper_ids = []
     # dataset[paper_id] = {fulltext,bib_id}
     dataset, bib_to_paper_id = load_dataset("scholarcopilot_data/corpus_data_arxiv_1215_fulltext.jsonl")
+    print(dataset[:5])
     reference_ids = [id for id in dataset]
     print(f"loaded dataset with {len(dataset)} documents")
 
