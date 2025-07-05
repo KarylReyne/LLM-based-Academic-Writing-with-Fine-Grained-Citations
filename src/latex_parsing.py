@@ -200,8 +200,10 @@ def get_bbl_path_from_arxiv_id(id):
         download_from_arxiv(id)
     for _, _, files in os.walk(f"data/{id}"):
         matches = [file for file in files if file.endswith(".bbl")]
-        assert len(matches) == 1
-        path += matches[0]
+        if len(matches) == 1:
+            path += matches[0]
+        else: # try main tex file if no .bbl was file found
+            path = locate_main_tex_file(id)
         break
     return path
 

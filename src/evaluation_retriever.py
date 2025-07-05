@@ -37,33 +37,43 @@ def load_dataset(dataset_path):
     return dataset, bib_to_paper_id
 
 
+def target_is_cited(src_text, tgt_bib_id):
+    return src_text.replace("tgt_bib_id", "") != src_text
+
+
 if __name__ == "__main__":
     RECALL_K = 1
 
     config = get_config()
     passage_retrieval_models = get_passage_retrieval_models(config)
 
-    source_paper_ids = []
-    # dataset[paper_id] = {fulltext,bib_id}
-    dataset, bib_to_paper_id = load_dataset("scholarcopilot_data/corpus_data_arxiv_1215_fulltext.jsonl")
-    print(dataset[:5])
-    reference_ids = [id for id in dataset]
-    print(f"loaded dataset with {len(dataset)} documents")
+    # source_paper_ids = []
+    # # dataset[paper_id] = {fulltext,bib_id}
+    # dataset, bib_to_paper_id = load_dataset("scholarcopilot_data/corpus_data_arxiv_1215_fulltext.jsonl")
+    # print(dataset[:5])
+    # reference_ids = [id for id in dataset]
+    # print(f"loaded dataset with {len(dataset)} documents")
 
-    # TODO - WIP
-    source_paper_ids.append(reference_ids[0])
-    target_bib_ids = [id for id in bib_to_paper_id]
+    # # TODO - WIP
+    # init_source_paper_ids.append(reference_ids[0])
 
-    # zip
-    source_paper_ids = list(itertools.chain.from_iterable([
-        list(itertools.repeat(id, len(target_bib_ids))) for id in source_paper_ids
-    ]))
-    target_bib_ids = list(itertools.chain.from_iterable(itertools.repeat(target_bib_ids, len(source_paper_ids))))
-    assert len(source_paper_ids) == len(target_bib_ids), f"{len(source_paper_ids)} != {len(target_bib_ids)}"
-    zip_ids = zip(source_paper_ids, target_bib_ids)
-    print(f"generated {len(zip_ids)} eval samples")
+    # # zip
+    # source_paper_ids = []
+    # target_bib_ids = []
+    # count = 1
+    # for src_id in init_source_paper_ids:
+    #     src_text = dataset[src_id]["fulltext"]
+    #     for tgt_id in bib_to_paper_id:
+    #         sys.stdout.write("\033[F")
+    #         print(f"processing eval sample {count}/{len(init_source_paper_ids)*len(bib_to_paper_id)}")
+    #         if target_is_cited(src_text, tgt_bib_id):
+    #             source_paper_ids.append(src_id)
+    #             target_bib_ids.append(tgt_id)
+    # assert len(source_paper_ids) == len(target_bib_ids), f"{len(source_paper_ids)} != {len(target_bib_ids)}"
+    # zip_ids = zip(source_paper_ids, target_bib_ids)
+    # print(f"generated {len(zip_ids)} eval samples")
 
-    # TODO: this yields 2236154944 samples!!! - only use bib ids that appear in a given src doc !
+    # # TODO: this yields 2236154944 samples!!! - only use bib ids that appear in a given src doc !
 
     # rankings = [[high,...,low],...] for every src_id/tgt_id/ctx combination
     rankings = []

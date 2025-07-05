@@ -239,6 +239,138 @@ def load_meta_data(meta_data_path):
     return meta_data
 
 
+def create_fulltext_corpus_data(meta_data_path, resume=True):
+    print("creating corpus data...")
+    meta_data = {}
+    misses = 0
+    total = 0
+    with open(meta_data_path, "r") as file:
+        for line in file.readlines():
+            curr = json.loads(line)
+            if curr["corpus_id"] not in meta_data:
+                meta_data[curr["corpus_id"]] = curr
+
+    new_meta_data = {}
+    new_path = meta_data_path.rstrip(".jsonl")+"_fulltext.jsonl"
+
+    meta_data_items = list(meta_data.items())
+
+    print()
+    # resume if file already exists
+    if os.path.exists(new_path) and resume:
+        prev = {}
+        with open(new_path, "r") as file:
+            prev = json.load(file)
+        total = len(prev)
+        misses = len([k for k in prev if prev[k]["fulltext"] == "<|tex_parsing_error|>"])
+
+    for i in range(total, len(meta_data_items)):
+        corpus_id, curr = meta_data_items[i]
+        sys.stdout.write("\033[F")
+        print(f"id {total}/{len(meta_data)} ({misses} misses)")
+        fulltext = ""
+        try:
+            id = curr["paper_id"]
+            download_from_arxiv(id)
+            try:
+                fulltext, _ = extract_full_latex_textbody(id)
+            except AssertionError:
+                raise TexParsingError
+            curr["fulltext"] = fulltext
+        except TexParsingError: # does not only catch the TPE above!
+            curr["fulltext"] = "<|tex_parsing_error|>"
+            misses += 1
+        if os.path.isdir(f'./data/{id}/'):
+            shutil.rmtree(f"./data/{id}/")
+        new_meta_data[corpus_id] = curr
+        total += 1
+
+        # reset container to save memory
+        batch_size = 5000
+        if total % batch_size == 0:
+            if os.path.exists(new_path):
+                prev = {}
+                with open(new_path, "r") as file:
+                    prev = json.load(file)
+                prev_len = len(prev)
+                prev.update(new_meta_data)
+                assert len(prev) == (prev_len + batch_size)
+                new_meta_data = prev
+            with open(new_path, "w") as file:
+                json.dump(new_meta_data, file, ensure_ascii=True, indent=4)
+            new_meta_data = {}
+        
+    print(f"corpus data created - missing {misses}/{total} fulltext entries.")
+
+
+def update_fulltext_corpus_data(meta_data_path, resume=True):
+    print("updating fulltext corpus data...")
+    meta_data = {}
+    misses = 0
+    total = 0
+    with open(meta_data_path, "r") as file:
+        meta_data = json.load(file)
+
+    new_meta_data = {}
+    new_path = meta_data_path.rstrip(".jsonl")+"_fulltext_updated.jsonl"
+
+    meta_data_items = []
+    for k, v in meta_data.items():
+        if v["fulltext"] == "<|tex_parsing_error|>":
+            meta_data_items.append((k, v)) # entries to update
+        else: 
+            new_meta_data[k] = v # entries with fulltext already
+
+    already_updated = len(new_meta_data)
+
+    print()
+    # resume if file already exists
+    if os.path.exists(new_path) and resume:
+        prev = {}
+        with open(new_path, "r") as file:
+            prev = json.load(file)
+        total = len(prev)
+        misses = len([k for k in prev if prev[k]["fulltext"] == "<|tex_parsing_error|>"])
+
+    for i in range(total, len(meta_data_items)):
+        corpus_id, curr = meta_data_items[i]
+        sys.stdout.write("\033[F")
+        print(f"id {total}/{len(meta_data)} (total fulltext: {(total-misses)+already_updated})")
+        fulltext = ""
+        try:
+            id = curr["paper_id"]
+            download_from_arxiv(id)
+            try:
+                fulltext, _ = extract_full_latex_textbody(id)
+            except AssertionError:
+                raise TexParsingError
+            curr["fulltext"] = fulltext
+        except TexParsingError: # does not only catch the TPE above!
+            curr["fulltext"] = "<|tex_parsing_error|>"
+            misses += 1
+        if os.path.isdir(f'./data/{id}/'):
+            shutil.rmtree(f"./data/{id}/")
+        new_meta_data[corpus_id] = curr
+        total += 1
+
+        # reset container to save memory
+        batch_size = 5000
+        if total % batch_size == 0:
+            if os.path.exists(new_path):
+                prev = {}
+                with open(new_path, "r") as file:
+                    prev = json.load(file)
+                prev_len = len(prev)
+                prev.update(new_meta_data)
+                assert len(prev) == (prev_len + batch_size)
+                new_meta_data = prev
+            with open(new_path, "w") as file:
+                json.dump(new_meta_data, file, ensure_ascii=True, indent=4)
+            new_meta_data = {}
+        
+    print(f"corpus data updated - still missing {misses}/{total} fulltext entries.")
+
+
 def load_citation_map_data(citation_map_data_path):
     citation_map_data = {}
     with open(citation_map_data_path, "r") as fi:
