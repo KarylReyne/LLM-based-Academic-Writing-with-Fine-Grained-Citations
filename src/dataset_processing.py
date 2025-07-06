@@ -1,6 +1,7 @@
 import json
 import requests
 import urllib, urllib.request
+import sys
 
 
 def get_arxiv_id_from_citation(citation):
@@ -16,7 +17,7 @@ def get_arxiv_id_from_citation(citation):
             if substring.startswith("  "): # titles seem to always be preceded by "  "
                 title = substring.lstrip("  ")
                 break
-        title_for_url = title.replace(" ", "+").replace(":", "%3A").replace("\"", "%3F")
+        title_for_url = title.replace(" ", "+").replace(":", "%3A").replace("\"", "%3F").replace("<", "%3F")
         url = f'https://export.arxiv.org/api/query?search_query={title_for_url}&searchtype=title&start=0&max_results={ARXIV_MAX_RESULTS}'
         try: 
             data = urllib.request.urlopen(url) # sometimes returns 400
@@ -26,8 +27,8 @@ def get_arxiv_id_from_citation(citation):
             print(title)
             print(url)
             raise e
-        except IndexError:
-            # no search results returned
+        except IndexError or UnicodeDecodeError:
+            # no search results returned or decoding failed
             raise ArxivSearchFailedError
         for entry in xml:
             entry = entry.replace(">\n", ">SPLIT").split("SPLIT")
@@ -58,7 +59,7 @@ def get_arxiv_id_from_citation(citation):
             raise NoResultMatchedError
         
     assert arxiv_id != None, citation
-    # arxiv_id = arxiv_id.split("v")[0] # remove version
+    arxiv_id = arxiv_id.split("v")[0] # remove version
     return arxiv_id, id_type
 
 
@@ -75,43 +76,59 @@ if __name__ == "__main__":
     dataset = {}
     dataset_path = "data/documents_3.0.json"
 
-    DEBUG_LEN = 200
+    dataset_size = None
     with open(dataset_path, "r") as file:
+        dataset_size = 0
         for line in file:
             rec = json.loads(line)
             dataset[rec["arxiv_id"]] = rec
-            if len(dataset) >= DEBUG_LEN:
-                break
+            dataset_size += 1
+    print("dataset loaded.")
     
-    ids = []
-    ids_in_dataset = 0
-    num_extracted_ids = 0
-    num_searched_ids = 0
-    search_fails = 0
-    match_fails = 0
+    new_dataset_path = f"{dataset_path.rstrip('.json')}_with_ids.jsonl"
+    # ids = 0
+    # ids_in_dataset = 0
+    # num_extracted_ids = 0
+    # num_searched_ids = 0
+    # search_fails = 0
+    # match_fails = 0
+    print()
+    counter = 1
     for arxiv_id in dataset:
+        sys.stdout.write("\033[F")
+        print(f"processing sample {counter}/{dataset_size}")
+        if counter >= dataset_size:
+            break
         bib = dataset[arxiv_id]["bibliography"]
         for k in bib:
+            citation = bib[k]
             try:
-                id, id_type = get_arxiv_id_from_citation(bib[k])
-                ids.append(id)
-                try:
-                    _ = dataset[id]
-                    ids_in_dataset += 1
-                except KeyError:
-                    pass
-                if id_type == "extracted":
-                    num_extracted_ids += 1
-                elif id_type == "searched":
-                    num_searched_ids += 1
-            except ArxivSearchFailedError:
-                search_fails += 1
-            except NoResultMatchedError:
-                match_fails += 1
-    print(ids)
-    print(f"ids: {len(ids)}")
-    print(f"ids_in_dataset: {ids_in_dataset}")
-    print(f"num_extracted_ids: {num_extracted_ids}")
-    print(f"num_searched_ids: {num_searched_ids}")
-    print(f"search_fails: {search_fails}")
-    print(f"match_fails: {match_fails}")
+                retrieved_id, id_type = get_arxiv_id_from_citation(citation)
+                dataset[arxiv_id]["bibliography"][k] = {
+                    "citation": citation,
+                    "arxiv_id": retrieved_id
+                }
+            #     ids += 1
+            #     try:
+            #         tmp = dataset[retrieved_id]
+            #         ids_in_dataset += 1
+            #     except KeyError:
+            #         pass
+            #     if id_type == "extracted":
+            #         num_extracted_ids += 1
+            #     elif id_type == "searched":
+            #         num_searched_ids += 1
+            # except ArxivSearchFailedError:
+            #     search_fails += 1
+            # except NoResultMatchedError:
+            #     match_fails += 1
+        with open(new_dataset_path, "a") as file:
+            json.dump(dataset[arxiv_id], file)
+            file.write('\n')
+        counter += 1
+    # print(f"ids: {ids}")
+    # print(f"ids_in_dataset: {ids_in_dataset}")
+    # print(f"num_extracted_ids: {num_extracted_ids}")
+    # print(f"num_searched_ids: {num_searched_ids}")
+    # print(f"search_fails: {search_fails}")
+    # print(f"match_fails: {match_fails}")
