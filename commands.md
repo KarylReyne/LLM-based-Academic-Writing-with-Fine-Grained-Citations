@@ -17,3 +17,10 @@ srun --job-name "InteractiveJob" --partition=a100-galvani --ntasks=1 --nodes=1 -
 ## get architecture/driver info 
 nvidia-smi
 
+## tmux
+tmux ls <!-- list running jobs -->
+tmux new -s SESSION_NAME <!-- create job -->
+... <!-- run job (inside tmux terminal) -->
+CTRL+B+D <!-- detach job (can also close the terminal via vsc) -->
+tmux attach -t SESSION_NAME <!-- attach job -->
+exit <!-- exit job (inside tmux terminal) -->
