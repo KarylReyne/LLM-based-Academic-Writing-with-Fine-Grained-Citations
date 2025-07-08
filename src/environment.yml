@@ -10,3 +10,7 @@ dependencies:
   - transformers>=4.47.0 # req for ReasonIR
   - nltk
   - wget
+  - ijson
+  - faiss-cpu
+  - h5py
+  - peft
