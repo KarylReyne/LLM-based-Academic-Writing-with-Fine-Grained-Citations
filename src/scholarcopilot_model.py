@@ -11,6 +11,7 @@ import glob
 import re
 import time
 from latex_parsing import *
+import ijson
 
 
 def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
@@ -25,19 +26,20 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
 
     faiss.normalize_L2(cite_start_hidden_state)
 
-    # this retrieves whole papers by comparing the cite token embedding to the embedded corpus documents
+    # this retrieves papers by comparing the cite token embedding to the embedded corpus documents (title+abstract)
     distances, indices = index.search(cite_start_hidden_state, top_k)
-    retrieved_indices = []
+    retrieved_corpus_indices = []
 
     for i in indices[0]:
         each_index = str(lookup_indices[i], 'ascii')
         print("index is ", each_index)
-        retrieved_indices.append(each_index)
+        retrieved_corpus_indices.append(each_index)
 
-    print("retrieved_indices", retrieved_indices)
+    print("retrieved_corpus_indices", retrieved_corpus_indices)
     print("distances[0]", distances[0])
     print("***************Retrieve cost time: ", time.time() - start)
-    return list(zip(retrieved_indices, distances[0]))
+    assert len(retrieved_corpus_indices) == len(distances[0])
+    return list(zip(retrieved_corpus_indices, distances[0]))
 
 
 def single_complete_step(model, tokenizer, device, input_text):
@@ -141,30 +143,22 @@ def up_sample_cut(input_text, citation_list):
     return input_text
 
 
-def llm_rerank(retrieved_k_results, meta_data):
-    recall_results = []
-    titles = []
-    index_list = []
-    for each in retrieved_k_results:
-        curr_index, distance = each
-        if curr_index not in meta_data:
-            print("index not found in meta_data", curr_index)
-            continue
-        recall_results.append(meta_data[curr_index]["abstract"])
-        titles.append(meta_data[curr_index]["title"])
-        index_list.append(curr_index)
-
+def collect_retrieval_results(retrieved_k_results, retrieval_dataset):
     references = []
-    for reference in recall_results:
-        reference = "(Reference:" + reference
-        reference = reference.replace("<|reference_start|>", "").replace("<|reference_end|>", "<|cite_end|>")
-        references.append(reference)
-    print("llm_rerank reference", references[0])
-    reference_ids = [meta_data[index_list[i]]["paper_id"] for i in range(len(index_list))]
-    return references, reference_ids
+    distances = []
+    for each in retrieved_k_results:
+        curr_corpus_idx, distance = each
+        if curr_corpus_idx not in retrieval_dataset:
+            print(f"index {curr_corpus_idx} not found in retrieval_dataset")
+            continue
+        references.append(retrieval_dataset[curr_corpus_idx])
+        distances.append(distance)
+
+    print(f"best reference before passage retrieval: {references[0]["arxiv_id"]}")
+    return references, distances
 
 
-def replace_citations(input_text, reference_id_list, citation_map):
+def replace_citations(current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map):
     print("IN replace_citations\n")
     # Find all citations with pattern <|cite_start|>XXX<|cite_end|>
     pattern = r'<\|cite_start\|>(.*?)<\|cite_end\|>'
@@ -172,19 +166,26 @@ def replace_citations(input_text, reference_id_list, citation_map):
     citation_index = 0
     res_citation_data_list = []
     last_replacement = ""
-    # print("in replace_citations, reference_id_list", reference_id_list)
-    # Function to replace each match with corresponding reference id
 
+    # Function to replace each match with corresponding reference id
     def replace_match(match):
         nonlocal citation_index, res_citation_data_list, last_replacement
-        if citation_index < len(reference_id_list):
-            # print("reference_id_list[citation_index]", reference_id_list[citation_index])
-            citation_key = citation_map.get(reference_id_list[citation_index], None).get("citation_key", None)
-            citation_key = citation_key.replace(" ", "").strip(":")
-            citation_key = re.sub(r'\s+', '', citation_key)
+        if citation_index < len(unique_reference_id_list):
+            
+            arxiv_id = unique_reference_id_list[citation_index][0]
+            unique_id_suffix = unique_reference_id_list[citation_index][1]
+            corpus_id = arxiv_to_corpus_id_map[arxiv_id]
+
+            citation_key = f"arxivID-{arxiv_id}-{unique_id_suffix}"
             # print("citation_key", citation_key)
             replacement = "\\cite{" + citation_key + "}"
-            citation_data = citation_map.get(reference_id_list[citation_index], None)
+
+            citation_data = {
+                "corpus_id": corpus_id,
+                "arxiv_id": arxiv_id,
+                "title": retrieval_dataset[corpus_id]["title"],
+                "citation_key": citation_key
+            }
             # print("citation_data", citation_data)
             if last_replacement == replacement:
                 replacement = ""
@@ -196,16 +197,16 @@ def replace_citations(input_text, reference_id_list, citation_map):
         return match.group(0), res_citation_data_list  # Keep original if no more reference ids
 
     # Replace all citations
-    result = re.sub(pattern, replace_match, input_text)
+    result = re.sub(pattern, replace_match, current_text)
     result = result.replace("<|paper_start|> ", "").replace("<|cite_start|>", "")
     # print("res_citation_data_list", res_citation_data_list)
 
     return result, res_citation_data_list
 
 
-def post_process_output_text(res_text, reference_id_list, citation_map):
+def post_process_output_text(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map):
     # print("post_process_output_text, res_text", res_text)
-    output_text, citation_info_list = replace_citations(res_text, reference_id_list, citation_map)
+    output_text, citation_info_list = replace_citations(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map)
     # print("post_process_output_text, citation_info_list ", citation_info_list)
     output_text = output_text.replace("<|paper_start|> ", "").replace(" <|paper_end|>", " <|section_end|>")
     # output_text = output_text.replace("<|paper_start|> ", "")
@@ -227,30 +228,60 @@ def merge_consecutive_citations(text):
     return result
 
 
-def load_meta_data(meta_data_path):
-    print("loading corpus data...")
-    meta_data = {}
-    with open(meta_data_path, "r") as fi:
-        for line in fi.readlines():
-            curr = json.loads(line)
-            if curr["corpus_id"] not in meta_data:
-                meta_data[curr["corpus_id"]] = curr
-    print("corpus data loaded.")
-    return meta_data
+def load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, id_map):
+    print("loading retrieval dataset...")
+    retrieval_dataset = {}
+    print()
+    counter = 0
+    try:
+        with open(retrieval_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {counter}")
+                retrieval_dataset[item["corpus_id"]] = item
+                counter += 1
+    except FileNotFoundError:
+        with open(complete_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {counter}")
+                arxiv_id = item["arxiv_id"]
+                corpus_id = id_map[arxiv_id]
+                rec = {
+                    "corpus_id": corpus_id,
+                    "arxiv_id": arxiv_id,
+                    "title": item["title"], 
+                    "abstract": " ".join(item["abstract"]), 
+                    "sections": item["sections"]
+                }
+                retrieval_dataset[corpus_id] = rec
+                counter += 1
+                with open(retrieval_dataset_path, "a") as outfile:
+                    json.dump(rec, outfile)
+                    outfile.write("\n")
+    print("retrieval dataset loaded.")
+    return retrieval_dataset
 
 
-def load_citation_map_data(citation_map_data_path):
-    citation_map_data = {}
-    with open(citation_map_data_path, "r") as fi:
-        for line in fi:
-            curr = json.loads(line)
-            citation_key = curr["citation_key"].replace(" ", "").strip(":").replace(",", "")
-            citation_key = re.sub(r'\s+', '', citation_key)
-            curr["citation_key"] = citation_key
-
-            citation_map_data[curr.get("paper_id", curr.get("id", None))] = curr
-    print("citation_map_data loaded")
-    return citation_map_data
+def arxiv_to_corpus_id(path, processed_corpus_path):
+    print("loading arxiv_to_corpus_id map...")
+    id_map = {}
+    try:
+        with open(path, "r") as mapfile:
+            id_map = json.load(mapfile)
+    except FileNotFoundError:
+        counter = 0
+        print()
+        with open(processed_corpus_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {counter}")
+                id_map[item["arxiv_id"]] = item["corpus_id"]
+                counter += 1
+        with open(path, "w") as file:
+            json.dump(id_map, file, ensure_ascii=False, indent=4)
+    print("arxiv_to_corpus_id map loaded.")
+    return id_map
 
 
 def load_corpus_base(corpus_dir="../embedded_corpus/1128_shards/"):

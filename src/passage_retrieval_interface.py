@@ -9,7 +9,6 @@ import itertools
 from datetime import datetime
 import time
 
-from latex_parsing import *
 from passage_retrieval import retrieval
 from passage_reranking import reranking_and_scoring, InvalidLLMResponseError
 from passage_retrieval_instructions import *
@@ -95,24 +94,28 @@ def get_passage_retrieval_models(config):
     }
 
 
-def get_candidate_passages(target_ids, tokenizer, config):
-    target_doc_lines = [] # num_ids x num_lines
-    target_doc_ids = [] # num_ids x num_lines
-    for id in target_ids:
-        try:
-            _, lines = extract_full_latex_textbody(id)
-        except AssertionError: # download if target not found
-            download_from_arxiv(id)
-            _, lines = extract_full_latex_textbody(id)
-        for line in lines:
-            target_doc_lines.append(line)
-            target_doc_ids.append(id)
-    target_doc_sections = get_target_sections(target_doc_lines, target_doc_ids, tokenizer, config)
-    return target_doc_sections
+def get_candidate_passages(references, tokenizer, config):
+    candidate_passages = []
+    for rec in references:
+        for section in rec["sections"]:
+            section_label = f"{rec["arxiv_id"]}_{section["title"].lstrip(" ").replace(" ", "-")}"
+            text = " ".join(section["sentences"])
+            tokens = tokenizer(text).to(config["retriever_device"])
+            tokens = tokens["input_ids"] # get only the encoded tokens
+
+            passage_idx = 0
+            for i in range(0, len(tokens), config["passage_length"]):
+                passage_label = f"{section_label}-{passage_idx}"
+                passage = tokenizer.decode(tokens[i:i+config["passage_length"]]).replace(config["tokenizer_begin_token"], "")
+                candidate_passages.append(passage_label+config["label_sep_token"]+passage)
+                passage_idx += 1
+
+    return candidate_passages
 
 
-def unified_passage_retrieval(generated_context, reference_ids, passage_retrieval_models, config):
+def unified_passage_retrieval(generated_context, references, passage_retrieval_models, config):
     evaluation_records = {}
+    reference_ids = [d["arxiv_id"] for d in references]
     evaluation_records[f"reference_ids-{reference_ids}"] = {
         "generated context": generated_context,
         "retrieved documents": {},
@@ -121,7 +124,7 @@ def unified_passage_retrieval(generated_context, reference_ids, passage_retrieva
     }
 
     candidate_passages = get_candidate_passages(
-        reference_ids, passage_retrieval_models["retr_tokenizer"], config
+        references, passage_retrieval_models["retr_tokenizer"], config
     )
 
     # --- RETRIEVAL ---
@@ -129,7 +132,7 @@ def unified_passage_retrieval(generated_context, reference_ids, passage_retrieva
     document_labels = []
     documents = []
     for d in candidate_passages:
-        split = d.split(LABEL_SEPARATOR)
+        split = d.split(config["label_sep_token"])
         document_labels.append(split[0])
         documents.append(split[1])
 
@@ -177,24 +180,19 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
     low = max(index-config["query_context"], 0)
     high = index+1
     context = tokenizer.decode(tokens[low:high])
-    context = context.replace(TOKENIZER_BEGIN_TOKEN, "")
+    context = context.replace(config["tokenizer_begin_token"], "")
     return context
 
 
-def retrieve_relevant_passages(generated_context, reference_ids, passage_retrieval_models, config):
+def retrieve_relevant_passages(generated_context, references, passage_retrieval_models, config):
     if config["enable_query_context_window"]:
         generated_context = apply_retrieval_context_window(
             generated_context, passage_retrieval_models["retr_tokenizer"], config
         )
     best_matching_passage, best_passage_label, best_passage_score, final_scores = unified_passage_retrieval(
         generated_context,
-        reference_ids, 
+        references, 
         passage_retrieval_models,
         config
     )
-    # delete extracted archive
-    dont_keep_folder = True
-    for id in reference_ids:
-        if dont_keep_folder and os.path.isdir(f'./data/{id}/'):
-            shutil.rmtree(f"./data/{id}/")
     return best_matching_passage, best_passage_label, best_passage_score, final_scores

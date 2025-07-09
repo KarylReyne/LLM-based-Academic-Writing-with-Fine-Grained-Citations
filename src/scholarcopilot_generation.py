@@ -18,7 +18,7 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def stream_generate(text, citations_data, passage_retrieval_models, config):
+def stream_generate(text, retrieval_dataset, arxiv_to_corpus_id_map, citations_data, passage_retrieval_models, config):
     sentence_num = 0
     enough = False
     current_text = text
@@ -26,8 +26,10 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
     display_text = current_text.replace("<|paper_start|> ", "")
     curr_prefix_length = len(display_text)
     current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, device, current_text)
-    reference_id_list = []
-    display_text, citation_data_list = replace_citations(current_text, reference_id_list, citation_map_data)
+    unique_reference_id_list = [] # (arxiv_id, idx)
+    display_text, citation_data_list = replace_citations(
+        current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+    )
     citations_data += citation_data_list
     curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
     # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
@@ -43,48 +45,39 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
         retrieved_k_results = retrieve_reference(
             index, lookup_indices, cite_start_hidden_state, top_k=config["sc_retriever_topk"]
         )
-        references, reference_ids = llm_rerank(retrieved_k_results, meta_data)
+        references, distances = collect_retrieval_results(retrieved_k_results, retrieval_dataset)
 
         # --- BEGIN passage retrieval ---
-        generated_context = current_text
-        if not config["retrieve_over_multiple_documents"]:
-            references = [references[0]]
-            reference_ids = [reference_ids[0]]
-        tex_parsing_failed = False
         try:
             best_matching_passage, best_passage_label, best_passage_score, _ = retrieve_relevant_passages(
-                generated_context, reference_ids, passage_retrieval_models, config
+                current_text, references, passage_retrieval_models, config
             )
-            best_reference_id = best_passage_label.split("_")[0]
+            best_reference_arxiv_id = best_passage_label.split("_")[0]
             best_matching_passage = best_matching_passage+"<|cite_end|>"
             print("best matching passage: ", best_matching_passage)
-        except TexParsingError or passage_reranking.InvalidLLMResponseError:
-            tex_parsing_failed = True
-            best_matching_passage = references[0] # default to standart ScholarCopilot if tex or llm response parsing failed
-            best_reference_id = reference_ids[0]
+        except passage_reranking.InvalidLLMResponseError:
+            best_matching_passage = references[0]["abstract"]+"<|cite_end|>" # default to abstract if llm response parsing failed
+            best_reference_arxiv_id = references[0]["arxiv_id"]
             print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
+        print(f"best reference after passage retrieval: {best_reference_arxiv_id}")
         # --- END passage retrieval ---
 
-        reference_id_list.append(best_reference_id)
+        unique_id_suffix = len(unique_reference_id_list) # this resolves duplicate arxiv_ids in the list of references
+        unique_reference_id_list.append((best_reference_arxiv_id, unique_id_suffix)) # (arxiv_id, idx)
 
-        # current_text = current_text + reference
         current_text = current_text + best_matching_passage
 
         current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, device, current_text)
-        display_text, citation_data_list = replace_citations(current_text, reference_id_list, citation_map_data)
+        display_text, citation_data_list = replace_citations(
+            current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+        )
 
-        # citations_data += citation_data_list
-        ids = [d["paper_id"] for d in citation_data_list]
-        citation_index = ids.index(best_reference_id)
+        citation_keys = [d["citation_key"] for d in citation_data_list]
+        citation_index = citation_keys.index(f"arxivID-{best_reference_arxiv_id}-{unique_id_suffix}")
         citation_dict = citation_data_list[citation_index]
-        if tex_parsing_failed:
-            citation_dict["matched_passage"] = "<|tex_parsing_failed|>"
-            citation_dict["passage_label"] = "<|tex_parsing_failed|>"
-            citation_dict["passage_score"] = "<|tex_parsing_failed|>"
-        else:
-            citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
-            citation_dict["passage_label"] = best_passage_label
-            citation_dict["passage_score"] = best_passage_score
+        citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
+        citation_dict["passage_label"] = best_passage_label
+        citation_dict["passage_score"] = best_passage_score
         citation_data_list[citation_index] = citation_dict
         citations_data += citation_data_list
 
@@ -98,7 +91,9 @@ def stream_generate(text, citations_data, passage_retrieval_models, config):
             yield curr_yield_text, citations_data
             time.sleep(0.1)
         curr_prefix_length = len(curr_yield_text)
-    display_text, citation_data_list = post_process_output_text(display_text, reference_id_list, citation_map_data)
+    display_text, citation_data_list = post_process_output_text(
+        display_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+    )
     citations_data += citation_data_list
     yield display_text, citations_data
     time.sleep(0.1)
@@ -113,28 +108,21 @@ def load_example(file_path=""):
 
 
 if __name__ == "__main__":
-    create_fulltext_dataset = True # total fulltext: 49605
+    model_path = "scholarcopilot_model_v1208/"
+    device = torch.device("cuda")
+    model, tokenizer = load_model(model_path, device)
 
-    if not create_fulltext_dataset:
-        model_path = "scholarcopilot_model_v1208/"
-        device = torch.device("cuda")
-        model, tokenizer = load_model(model_path, device)
+    id_map_path = "data/arxiv_to_corpus_id_documents_3.0.json"
+    processed_corpus_path = "data/documents_3.0_processed_corpus.jsonl"
+    arxiv_to_corpus_id_map = arxiv_to_corpus_id(id_map_path, processed_corpus_path)
     
-    meta_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
-    meta_data = load_meta_data(meta_data_path)
-    print("meta_data size: ", len(meta_data))
-    if create_fulltext_dataset:
-        # create_fulltext_corpus_data(meta_data_path)
-        update_fulltext_corpus_data("scholarcopilot_data/corpus_data_arxiv_1215_fulltext.jsonl")
-        exit(0)
-    
-    citation_map_data_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
-    citation_map_data = load_citation_map_data(citation_map_data_path)
+    retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
+    complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
+    retrieval_dataset = load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, arxiv_to_corpus_id_map)
 
-    index_dir = "scholarcopilot_data/"
+    index_dir = "data/"
     index, lookup_indices = load_faiss_index(index_dir)
     print("index building finished")
-
 
     config = get_config()
     passage_retrieval_models = get_passage_retrieval_models(config)
@@ -150,7 +138,7 @@ if __name__ == "__main__":
 
     print("pre-generation text_input:", text_input)
 
-    gen = stream_generate(text_input, citations_data, passage_retrieval_models, config)
+    gen = stream_generate(text_input, retrieval_dataset, arxiv_to_corpus_id_map, citations_data, passage_retrieval_models, config)
     for t in gen:
         text_input, citations_data = t
     print("text_input:", text_input)
@@ -160,5 +148,10 @@ if __name__ == "__main__":
         "generated paper": text_input,
         "citations_data": citations_data
     }, config, mode="generation")
+
+    os.rename( # rename results file
+        f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records.json', 
+        f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json'
+    )
 
 

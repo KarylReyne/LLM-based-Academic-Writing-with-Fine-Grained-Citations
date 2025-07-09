@@ -18,7 +18,7 @@ def retrieval(
     BATCH_SIZE = config["retr_batch_size"]
     M_RETR = config["m_retrieval"]
     QUERY_CONTEXT_SIZE = config["query_context"]
-    CHUNK_SIZE = config["chunk_size"]
+    CHUNK_SIZE = config["passage_length"]
     TOPK_RETR = config["retriever_topk"]
     NORMALIZE_SCORES = config["ranking_score_normalization"]
 
@@ -28,7 +28,7 @@ def retrieval(
     for i in range(0, len(documents), BATCH_SIZE): # iterates sections, batched
 
         sys.stdout.write("\033[F")
-        print(f"[RETRIEVAL] retrieving {TOPK_RETR}/{len(documents)} passages - batch {num_batch}/{(len(documents)//BATCH_SIZE)+1}")
+        print(f"[RETRIEVAL] retrieving {TOPK_RETR} out of {len(documents)} passages - batch {num_batch}/{(len(documents)//BATCH_SIZE)+1}")
 
         document_inputs = documents[i:i+BATCH_SIZE]
         query_inputs = list(itertools.repeat(generated_context, len(document_inputs)))

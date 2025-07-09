@@ -89,8 +89,8 @@ def reranking_and_scoring(
                 sc_passages_scores = [float(score)*0.1 for score in response.split(", ")]
                 assert len(sc_passages_scores) == sc_passages_lengths[sc_passages_idx]
             except AssertionError as e:
-                print(f"[RERANKING] generated scores don't match current sc batch size: {len(sc_passages_scores)} != {sc_passages_lengths[sc_passages_idx]}")
-                print(responses[sc_passages_idx])
+                # print(f"[RERANKING] generated scores don't match current sc batch size: {len(sc_passages_scores)} != {sc_passages_lengths[sc_passages_idx]}")
+                # print(responses[sc_passages_idx])
                 raise InvalidLLMResponseError("reranker response could not be parsed successfully.")
             except Exception as e:
                 print(batch_reranking_input)

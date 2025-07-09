@@ -14,8 +14,8 @@ import shutil
 
 ARXIV_MAX_RESULTS = 20
 CITATION_MASK = "<CIT-MASK>"
-LABEL_SEPARATOR = "<LABEL-SEP>"
-TOKENIZER_BEGIN_TOKEN = "<|begin_of_text|>"
+# LABEL_SEPARATOR = "<LABEL-SEP>"
+# TOKENIZER_BEGIN_TOKEN = "<|begin_of_text|>"
 
 
 def download_from_arxiv(id='1706.03762'):
