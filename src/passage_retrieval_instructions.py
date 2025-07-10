@@ -1,8 +1,7 @@
-from latex_parsing import CITATION_MASK
 
 
 # instructions (based on ReasonIR / BRIGHT)
-retrieval_instruction_query = f"<|user|>\nGiven a query with a citation marked by '{CITATION_MASK}', retrieve relevant passages that describe the cited topic\n<|embed|>\n"
+retrieval_instruction_query = lambda m: f"<|user|>\nGiven a query with a citation marked by '{m}', retrieve relevant passages that describe the cited topic\n<|embed|>\n"
 retrieval_instruction_document = f"<|embed|>\n"
 # retrieval_instruction_query = f""
 # retrieval_instruction_document = f""

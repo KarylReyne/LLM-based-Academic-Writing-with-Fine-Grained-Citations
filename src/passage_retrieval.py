@@ -21,6 +21,7 @@ def retrieval(
     CHUNK_SIZE = config["passage_length"]
     TOPK_RETR = config["retriever_topk"]
     NORMALIZE_SCORES = config["ranking_score_normalization"]
+    CITATION_MASK_TOKEN = config["citation_mask_token"]
 
     print() # for console progress report
 
@@ -36,8 +37,18 @@ def retrieval(
         # score aggregation for simple self-consistency, see https://arxiv.org/abs/2505.12570 p.3 chapter 3
         scores_for_each_llm_call = [] # num_llm_calls x batch_size
         for _ in range(M_RETR): # iterates llm calls
-            query_embs = retriever.encode(query_inputs, instruction=retrieval_instruction_query, batch_size=BATCH_SIZE, max_length=QUERY_CONTEXT_SIZE)
-            doc_embs = retriever.encode(document_inputs, instruction=retrieval_instruction_document, batch_size=BATCH_SIZE, max_length=CHUNK_SIZE)
+            query_embs = retriever.encode(
+                query_inputs, 
+                instruction=retrieval_instruction_query(CITATION_MASK_TOKEN), 
+                batch_size=BATCH_SIZE, 
+                max_length=QUERY_CONTEXT_SIZE
+            )
+            doc_embs = retriever.encode(
+                document_inputs, 
+                instruction=retrieval_instruction_document, 
+                batch_size=BATCH_SIZE, 
+                max_length=CHUNK_SIZE
+            )
 
             llm_call_scores = []
             for j in range(len(query_inputs)): # iterates current batch

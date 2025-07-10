@@ -10,7 +10,6 @@ import sys
 import glob
 import re
 import time
-from latex_parsing import *
 import ijson
 
 
@@ -37,7 +36,7 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
 
     print("retrieved_corpus_indices", retrieved_corpus_indices)
     print("distances[0]", distances[0])
-    print("***************Retrieve cost time: ", time.time() - start)
+    print("***************Retrieval cost (time): ", time.time() - start)
     assert len(retrieved_corpus_indices) == len(distances[0])
     return list(zip(retrieved_corpus_indices, distances[0]))
 
@@ -180,7 +179,7 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
             # print("citation_key", citation_key)
             replacement = "\\cite{" + citation_key + "}"
 
-            citation_data = {
+            citation_data_entry = {
                 "corpus_id": corpus_id,
                 "arxiv_id": arxiv_id,
                 "title": retrieval_dataset[corpus_id]["title"],
@@ -190,7 +189,7 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
             if last_replacement == replacement:
                 replacement = ""
             else:
-                res_citation_data_list.append(citation_data)
+                res_citation_data_list.append(citation_data_entry)
                 last_replacement = replacement
             citation_index += 1
             return replacement
@@ -322,16 +321,16 @@ def load_faiss_index(index_dir):
     return index, lookup_indices
 
 
-def load_model(model_path, device):
-    config = AutoConfig.from_pretrained(model_path)
+def load_model(model_path, config):
+    model_config = AutoConfig.from_pretrained(model_path)
 
-    model = AutoModelForCausalLM.from_pretrained(model_path, config=config)
-    model.to(device)
+    model = AutoModelForCausalLM.from_pretrained(model_path, config=model_config)
+    model.to(config["scholarcopilot_device"])
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     special_tokens = ['<|paper_start|>', '<|paper_end|>', '<|cite_start|>', '<|cite_end|>', '<|reference_start|>',
-                      '<|reference_end|>']
+                      '<|reference_end|>', config["label_sep_token"], config["citation_mask_token"]]
     tokenizer.add_tokens(special_tokens)
     model.resize_token_embeddings(len(tokenizer))
     print("model loaded successfully")

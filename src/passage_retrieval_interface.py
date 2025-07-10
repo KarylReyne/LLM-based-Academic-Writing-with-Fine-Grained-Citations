@@ -67,8 +67,12 @@ def save_results(
 
 
 def get_passage_retrieval_models(config):
+    special_tokens = ['<|paper_start|>', '<|paper_end|>', '<|cite_start|>', '<|cite_end|>', '<|reference_start|>',
+                      '<|reference_end|>', config["label_sep_token"], config["citation_mask_token"]]
+
     # retrieval model definition
     retr_tokenizer = AutoTokenizer.from_pretrained(config["retriever"])
+    retr_tokenizer.add_tokens(special_tokens)
     retriever = AutoModel.from_pretrained(
         config["retriever"], 
         torch_dtype="auto", 
@@ -79,6 +83,7 @@ def get_passage_retrieval_models(config):
 
     # reranker model definition
     rera_tokenizer = AutoTokenizer.from_pretrained(config["reranker"])
+    rera_tokenizer.add_tokens(special_tokens)
     reranker = AutoModelForCausalLM.from_pretrained(
         config["reranker"], 
         torch_dtype="auto",
@@ -174,7 +179,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
 
 
 def apply_retrieval_context_window(generated_context, tokenizer, config):
-    tokens = tokenizer(generated_context).to("cuda:2")
+    tokens = tokenizer(generated_context).to(config["retriever_device"])
     tokens = tokens["input_ids"] # get only the encoded tokens
     index = len(tokens)-1 # index of the citation, for generation always the last index
     low = max(index-config["query_context"], 0)
