@@ -42,7 +42,7 @@ def save_results(
         results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         results["config"] = config
         results["instructions"] = {
-            "retr_query": retrieval_instruction_query,
+            "retr_query": retrieval_instruction_query(config["citation_mask_token"]),
             "retr_document": retrieval_instruction_document,
             "rera_scoring": reranking_instruction("", [])
         }
@@ -159,7 +159,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         document_labels.append(doc_label)
         documents.append(doc_dict["section chunk"])
 
-    best_matching_passage, best_passage_label, best_passage_score, final_scores = reranking_and_scoring(
+    ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores = reranking_and_scoring(
         evaluation_records, 
         generated_context,
         document_labels, 
@@ -175,7 +175,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         config
     )
 
-    return best_matching_passage, best_passage_label, best_passage_score, final_scores
+    return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
 
 
 def apply_retrieval_context_window(generated_context, tokenizer, config):
@@ -194,10 +194,10 @@ def retrieve_relevant_passages(generated_context, references, passage_retrieval_
         generated_context = apply_retrieval_context_window(
             generated_context, passage_retrieval_models["retr_tokenizer"], config
         )
-    best_matching_passage, best_passage_label, best_passage_score, final_scores = unified_passage_retrieval(
+    ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores = unified_passage_retrieval(
         generated_context,
         references, 
         passage_retrieval_models,
         config
     )
-    return best_matching_passage, best_passage_label, best_passage_score, final_scores
+    return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores

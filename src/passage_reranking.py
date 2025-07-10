@@ -31,7 +31,7 @@ def reranking_and_scoring(
         print(f"[RERANKING] self-consistency batch size ({PASSAGES_PER_CALL}) cannot be larger that reranker topk ({TOPK_RERA}). Setting PASSAGES_PER_CALL={TOPK_RERA}")
         PASSAGES_PER_CALL = TOPK_RERA
 
-    best_matching_passage = None
+    ranked_passages = None
 
     print() # for console progress report
 
@@ -158,13 +158,13 @@ def reranking_and_scoring(
     evaluation_records[f"reference_ids-{reference_ids}"]["final ranking"] = final_scores
 
     for label in final_scores:
-        best_matching_passage = final_scores[label]["section chunk"]
-        best_passage_label = label
-        best_passage_score = final_scores[label]["final ranking score"]
+        ranked_passages = final_scores[label]["section chunk"]
+        ranked_passage_labels = label
+        ranked_passage_scores = final_scores[label]["final ranking score"]
         break
-    assert best_matching_passage != None
+    assert ranked_passages != None
 
-    return best_matching_passage, best_passage_label, best_passage_score, final_scores
+    return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
 
 
 class InvalidLLMResponseError(Exception):

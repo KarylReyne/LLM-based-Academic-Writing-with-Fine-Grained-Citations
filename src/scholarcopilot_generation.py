@@ -16,17 +16,16 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def single_step_retrieval(text, retrieval_dataset, arxiv_to_corpus_id_map, citations_data, passage_retrieval_models, config):
+def single_step_retrieval(text, return_top_k, index, lookup_indices, model, tokenizer, config):
     sentence_num = 0
-    enough = False
     current_text = text
     current_text = preprocess_input_text(current_text)
     display_text = current_text.replace("<|paper_start|> ", "")
     curr_prefix_length = len(display_text)
-    current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, device, current_text)
+    current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text)
     unique_reference_id_list = [] # (arxiv_id, suffix)
-    display_text, citation_data_list = replace_citations(
-        current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+    display_text, _ = replace_citations(
+        current_text, unique_reference_id_list, None, None
     )
     curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
     # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
@@ -39,6 +38,36 @@ def single_step_retrieval(text, retrieval_dataset, arxiv_to_corpus_id_map, citat
         time.sleep(0.1)
     curr_prefix_length = len(curr_yield_text)
 
+    retrieved_k_results = retrieve_reference(
+        index, lookup_indices, cite_start_hidden_state, top_k=return_top_k
+    )
+    return retrieved_k_results
+
+
+def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config):
+    sentence_num = 0
+    enough = False
+    current_text = text
+    current_text = preprocess_input_text(current_text)
+    display_text = current_text.replace("<|paper_start|> ", "")
+    curr_prefix_length = len(display_text)
+    current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text)
+    unique_reference_id_list = [] # (arxiv_id, suffix)
+    display_text, new_citation_data = replace_citations(
+        current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+    )
+    citations_data += new_citation_data
+    curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
+    # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
+    for each in yield_list:
+        if "." in each and (each.endswith(".") or ".\n" in each):
+            sentence_num += 1
+            print("sentence_num: ", sentence_num, "each", each)
+        curr_yield_text += " " + each
+        yield curr_yield_text, citations_data
+        time.sleep(0.1)
+    curr_prefix_length = len(curr_yield_text)
+
     while cite_start_hidden_state is not None and not enough:
         retrieved_k_results = retrieve_reference(
             index, lookup_indices, cite_start_hidden_state, top_k=config["sc_retriever_topk"]
@@ -48,9 +77,12 @@ def single_step_retrieval(text, retrieval_dataset, arxiv_to_corpus_id_map, citat
         # --- BEGIN passage retrieval ---
         start = time.time()
         try:
-            best_matching_passage, best_passage_label, best_passage_score, _ = retrieve_relevant_passages(
+            ranked_passages, ranked_passage_labels, ranked_passage_scores, _ = retrieve_relevant_passages(
                 current_text, references, passage_retrieval_models, config
             )
+            best_matching_passage = ranked_passages[0]
+            best_passage_label = ranked_passage_labels[0]
+            best_passage_score = ranked_passage_scores[0]
             best_reference_arxiv_id = best_passage_label.split("_")[0]
             best_matching_passage = best_matching_passage+"<|cite_end|>"
             print("best matching passage: ", best_matching_passage)
@@ -67,14 +99,14 @@ def single_step_retrieval(text, retrieval_dataset, arxiv_to_corpus_id_map, citat
 
         current_text = current_text + best_matching_passage
 
-        current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, device, current_text)
-        display_text, citation_data_list = replace_citations(
+        current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text)
+        display_text, new_citation_data = replace_citations(
             current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
         )
 
         # get the data entry of the newly added citation
-        citation_index = len(unique_reference_id_list)
-        citation_dict = citation_data_list[citation_index]
+        citation_index = len(unique_reference_id_list)-1
+        citation_dict = new_citation_data[citation_index]
         # check that its the correct entry
         assert citation_dict["citation_key"] == f"arxivID-{best_reference_arxiv_id}-{unique_id_suffix}"
         # add passage retrieval result
@@ -82,7 +114,9 @@ def single_step_retrieval(text, retrieval_dataset, arxiv_to_corpus_id_map, citat
         citation_dict["passage_label"] = best_passage_label
         citation_dict["passage_score"] = best_passage_score
         # save modified data entry 
-        citation_data_list[citation_index] = citation_dict
+        new_citation_data[citation_index] = citation_dict
+
+        citations_data += new_citation_data
 
         curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
         # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
@@ -91,100 +125,15 @@ def single_step_retrieval(text, retrieval_dataset, arxiv_to_corpus_id_map, citat
                 sentence_num += 1
                 print("sentence_num: ", sentence_num, "each", each)
             curr_yield_text += " " + each
-            yield curr_yield_text, citations_data_list
+            yield curr_yield_text, citations_data
             time.sleep(0.1)
         curr_prefix_length = len(curr_yield_text)
 
-    display_text, citation_data_list = post_process_output_text(
+    display_text, new_citation_data = post_process_output_text(
         display_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
     )
-    yield display_text, citations_data_list
-    time.sleep(0.1)
-
-
-def stream_generate(text, retrieval_dataset, arxiv_to_corpus_id_map, citations_data, passage_retrieval_models, config):
-    sentence_num = 0
-    enough = False
-    current_text = text
-    current_text = preprocess_input_text(current_text)
-    display_text = current_text.replace("<|paper_start|> ", "")
-    curr_prefix_length = len(display_text)
-    current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, device, current_text)
-    unique_reference_id_list = [] # (arxiv_id, suffix)
-    display_text, citation_data_list = replace_citations(
-        current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
-    )
-    curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
-    # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
-    for each in yield_list:
-        if "." in each and (each.endswith(".") or ".\n" in each):
-            sentence_num += 1
-            print("sentence_num: ", sentence_num, "each", each)
-        curr_yield_text += " " + each
-        yield curr_yield_text, citations_data_list
-        time.sleep(0.1)
-    curr_prefix_length = len(curr_yield_text)
-
-    while cite_start_hidden_state is not None and not enough:
-        retrieved_k_results = retrieve_reference(
-            index, lookup_indices, cite_start_hidden_state, top_k=config["sc_retriever_topk"]
-        )
-        references, distances = collect_retrieval_results(retrieved_k_results, retrieval_dataset)
-
-        # --- BEGIN passage retrieval ---
-        start = time.time()
-        try:
-            best_matching_passage, best_passage_label, best_passage_score, _ = retrieve_relevant_passages(
-                current_text, references, passage_retrieval_models, config
-            )
-            best_reference_arxiv_id = best_passage_label.split("_")[0]
-            best_matching_passage = best_matching_passage+"<|cite_end|>"
-            print("best matching passage: ", best_matching_passage)
-        except passage_reranking.InvalidLLMResponseError:
-            best_matching_passage = references[0]["abstract"]+"<|cite_end|>" # default to abstract if llm response parsing failed
-            best_reference_arxiv_id = references[0]["arxiv_id"]
-            print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
-        print(f"best reference after passage retrieval: {best_reference_arxiv_id}")
-        print("***************Passage retrieval cost (time): ", time.time() - start)
-        # --- END passage retrieval ---
-
-        unique_id_suffix = len(unique_reference_id_list) # this resolves duplicate arxiv_ids in the list of references
-        unique_reference_id_list.append((best_reference_arxiv_id, unique_id_suffix)) # (arxiv_id, suffix)
-
-        current_text = current_text + best_matching_passage
-
-        current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, device, current_text)
-        display_text, citation_data_list = replace_citations(
-            current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
-        )
-
-        # get the data entry of the newly added citation
-        citation_index = len(unique_reference_id_list)
-        citation_dict = citation_data_list[citation_index]
-        # check that its the correct entry
-        assert citation_dict["citation_key"] == f"arxivID-{best_reference_arxiv_id}-{unique_id_suffix}"
-        # add passage retrieval result
-        citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
-        citation_dict["passage_label"] = best_passage_label
-        citation_dict["passage_score"] = best_passage_score
-        # save modified data entry 
-        citation_data_list[citation_index] = citation_dict
-
-        curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
-        # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
-        for each in yield_list:
-            if "." in each and (each.endswith(".") or ".\n" in each):
-                sentence_num += 1
-                print("sentence_num: ", sentence_num, "each", each)
-            curr_yield_text += " " + each
-            yield curr_yield_text, citations_data_list
-            time.sleep(0.1)
-        curr_prefix_length = len(curr_yield_text)
-
-    display_text, citation_data_list = post_process_output_text(
-        display_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
-    )
-    yield display_text, citations_data_list
+    citations_data += new_citation_data
+    yield display_text, citations_data
     time.sleep(0.1)
 
 
@@ -210,16 +159,14 @@ if __name__ == "__main__":
     arxiv_to_corpus_id_map = arxiv_to_corpus_id(id_map_path, processed_corpus_path)
     
     retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
-    complete_dataset_path = "data/documents_3.0_with_ids.jsonl"m
+    complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
     retrieval_dataset = load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, arxiv_to_corpus_id_map)
 
     index_dir = "data/"
     index, lookup_indices = load_faiss_index(index_dir)
     print("index building finished")
 
-
     citations_data = []
-    curr_search_candidates = []
 
     # starting left-side context for the generation model
     example_path = "scholarcopilot_examples/vlm2vec-example.txt"
@@ -228,7 +175,8 @@ if __name__ == "__main__":
     print("pre-generation text_input:", text_input)
 
     gen = stream_generate(
-        text_input, retrieval_dataset, arxiv_to_corpus_id_map, citations_data, passage_retrieval_models, config
+        text_input, citations_data, index, lookup_indices, model, tokenizer, # scholar copilot
+        retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config # passage retrieval
     )
     for t in gen:
         text_input, citations_data = t

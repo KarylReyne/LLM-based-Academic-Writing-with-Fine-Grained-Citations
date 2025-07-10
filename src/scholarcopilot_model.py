@@ -163,12 +163,12 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
     pattern = r'<\|cite_start\|>(.*?)<\|cite_end\|>'
     # Keep track of current citation index
     citation_index = 0
-    res_citation_data_list = []
+    new_citation_data = []
     last_replacement = ""
 
     # Function to replace each match with corresponding reference id
     def replace_match(match):
-        nonlocal citation_index, res_citation_data_list, last_replacement
+        nonlocal citation_index, new_citation_data, last_replacement
         if citation_index < len(unique_reference_id_list):
             
             arxiv_id = unique_reference_id_list[citation_index][0]
@@ -189,18 +189,19 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
             if last_replacement == replacement:
                 replacement = ""
             else:
-                res_citation_data_list.append(citation_data_entry)
+                if citation_index == len(unique_reference_id_list)-1 # the last entry is the new one
+                    new_citation_data.append(citation_data_entry)
                 last_replacement = replacement
             citation_index += 1
             return replacement
-        return match.group(0), res_citation_data_list  # Keep original if no more reference ids
+        return match.group(0), new_citation_data  # Keep original if no more reference ids
 
     # Replace all citations
     result = re.sub(pattern, replace_match, current_text)
     result = result.replace("<|paper_start|> ", "").replace("<|cite_start|>", "")
-    # print("res_citation_data_list", res_citation_data_list)
+    # print("new_citation_data", new_citation_data)
 
-    return result, res_citation_data_list
+    return result, new_citation_data
 
 
 def post_process_output_text(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map):
