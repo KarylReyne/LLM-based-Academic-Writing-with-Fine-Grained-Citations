@@ -68,6 +68,6 @@ class EncodeDataset(Dataset):
 
     def __getitem__(self, item) -> Tuple[str, str]:
         text = self.encode_data[item]
-        text_id = text.get("corpus_id", text.get("docs_id", text.get("paper_id", None)))
-        formated_text = text['abstract']
-        return text_id, formated_text
+        text_id = text["corpus_id"]
+        formatted_text = text["abstract"]
+        return text_id, formatted_text

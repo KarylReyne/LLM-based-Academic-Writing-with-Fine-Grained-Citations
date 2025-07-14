@@ -17,6 +17,7 @@ def recall_at_k(rankings, gold_ids, k=1):
     assert len(rankings) == len(gold_ids), f"{len(rankings)}, {len(gold_ids)}"
     hits = 0
     for i in range(len(rankings)):
-        hits += gold_ids[i] in rankings[i][:k]
+        if gold_ids[i] in rankings[i][:k]:
+            hits += 1 
     return float(hits/len(rankings))
 

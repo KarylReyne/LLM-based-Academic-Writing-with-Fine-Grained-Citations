@@ -1,15 +1,17 @@
 #!/bin/bash
 
-export GPUS_PER_NODE=8
-export NNODES=4
+export GPUS_PER_NODE=3
+export NNODES=1
 export NODE_RANK=${MLP_WORKER_RACK_RANK_INDEX:-${MLP_ROLE_INDEX:-${RANK:-0}}}
 export MASTER_ADDR=${MLP_WORKER_0_HOST:-${MASTER_ADDR:-127.0.0.1}}
 export MASTER_PORT=${MLP_WORKER_0_PORT:-${MASTER_PORT:-60000}}
 export WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+export TORCHELASTIC_ERROR_FILE="../scholarcopilot_sc_corpus_500k_errorfile"
 
 # conda activate scholar_copilot
 
-output_dir="../model_output/"
+output_dir="../scholarcopilot_sc_corpus_500k_model_output/"
+model_dir="../../scholarcopilot_model_v1208"
 
 torchrun --nproc_per_node $GPUS_PER_NODE \
  --master_addr $MASTER_ADDR \
@@ -19,10 +21,10 @@ torchrun --nproc_per_node $GPUS_PER_NODE \
  train.py \
  --deepspeed ds_zero3_config.json \
  --output_dir ${output_dir} \
- --model_name_or_path  \
+ --model_name_or_path ${model_dir} \
  --save_steps 200 \
  --dataset_name json \
- --dataset_path ../../train_data/scholar_copilot_train_data_500k.json \
+ --dataset_path ../../data_train/scholar_copilot_train_data_500k.json \
  --bf16 \
  --normalize \
  --temperature 0.01 \

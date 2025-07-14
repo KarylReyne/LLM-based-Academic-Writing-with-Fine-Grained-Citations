@@ -132,7 +132,11 @@ class ArxivLLM(nn.Module):
             train_args: TrainingArguments,
             **hf_kwargs,
     ):  
-        base_model = cls.TRANSFORMER_CLS.from_pretrained(model_args.model_name_or_path, attn_implementation="flash_attention_2", torch_dtype=torch.bfloat16)
+        base_model = cls.TRANSFORMER_CLS.from_pretrained(
+            model_args.model_name_or_path, 
+            # attn_implementation="flash_attention_2", 
+            torch_dtype=torch.bfloat16
+        )
         if base_model.config.pad_token_id is None:
             base_model.config.pad_token_id = 0
         if model_args.lora or model_args.lora_name_or_path:

@@ -14,7 +14,8 @@ def reranking_and_scoring(
     reference_ids,
     reranker,
     rera_tokenizer,
-    config
+    config,
+    silent=False
 ):
     PASSAGES_PER_CALL = config["rera_passages_per_call"]
     SC_PERMUTATION_MODE = config["rera_sc_permutation_mode"]
@@ -27,21 +28,23 @@ def reranking_and_scoring(
     if SC_PERMUTATION_MODE not in ["stb", "bts"]:
         raise NotImplementedError(f"self-consistency permutation mode {SC_PERMUTATION_MODE} is not implemented. Currently supported are: stb, bts")
 
-    if PASSAGES_PER_CALL > TOPK_RERA:
+    if PASSAGES_PER_CALL > TOPK_RERA and not silent:
         print(f"[RERANKING] self-consistency batch size ({PASSAGES_PER_CALL}) cannot be larger that reranker topk ({TOPK_RERA}). Setting PASSAGES_PER_CALL={TOPK_RERA}")
         PASSAGES_PER_CALL = TOPK_RERA
 
     ranked_passages = None
 
-    print() # for console progress report
+    if not silent:
+        print() # for console progress report
 
     zip_documents = list(zip(document_labels, documents))
 
     scores_for_each_llm_call = [] # num_llm_calls x batch_size, contains (label, document, score) triples
     for m in range(M_RERA): # iterates llm calls
 
-        sys.stdout.write("\033[F")
-        print(f"[RERANKING] reranking {len(documents)} passages - self-consistency call {m+1}/{M_RERA}")
+        if not silent:
+            sys.stdout.write("\033[F")
+            print(f"[RERANKING] reranking {len(documents)} passages - self-consistency call {m+1}/{M_RERA}")
 
         # shuffles before each llm call -> passage mixture of each batch is different across llm calls
         if SC_PERMUTATION_MODE == "stb":
@@ -89,8 +92,6 @@ def reranking_and_scoring(
                 sc_passages_scores = [float(score)*0.1 for score in response.split(", ")]
                 assert len(sc_passages_scores) == sc_passages_lengths[sc_passages_idx]
             except AssertionError as e:
-                # print(f"[RERANKING] generated scores don't match current sc batch size: {len(sc_passages_scores)} != {sc_passages_lengths[sc_passages_idx]}")
-                # print(responses[sc_passages_idx])
                 raise InvalidLLMResponseError("reranker response could not be parsed successfully.")
             except Exception as e:
                 print(batch_reranking_input)
@@ -157,12 +158,13 @@ def reranking_and_scoring(
     final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
     evaluation_records[f"reference_ids-{reference_ids}"]["final ranking"] = final_scores
 
+    ranked_passages = []
+    ranked_passage_labels = []
+    ranked_passage_scores = []
     for label in final_scores:
-        ranked_passages = final_scores[label]["section chunk"]
-        ranked_passage_labels = label
-        ranked_passage_scores = final_scores[label]["final ranking score"]
-        break
-    assert ranked_passages != None
+        ranked_passages.append(final_scores[label]["section chunk"])
+        ranked_passage_labels.append(label)
+        ranked_passage_scores.append(final_scores[label]["final ranking score"])
 
     return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
 

@@ -13,9 +13,10 @@ import time
 import ijson
 
 
-def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
+def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5, silent=False):
     start = time.time()
-    print("Retrieving reference")
+    if not silent:
+        print("Retrieving reference")
 
     if isinstance(cite_start_hidden_state, torch.Tensor):
         cite_start_hidden_state = cite_start_hidden_state.cpu().numpy()
@@ -31,44 +32,50 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5):
 
     for i in indices[0]:
         each_index = str(lookup_indices[i], 'ascii')
-        print("index is ", each_index)
         retrieved_corpus_indices.append(each_index)
-
-    print("retrieved_corpus_indices", retrieved_corpus_indices)
-    print("distances[0]", distances[0])
-    print("***************Retrieval cost (time): ", time.time() - start)
+    if not silent:
+        print("retrieved_corpus_indices", retrieved_corpus_indices)
+        print("distances[0]", distances[0])
+        print("***************Retrieval cost (time): ", time.time() - start)
     assert len(retrieved_corpus_indices) == len(distances[0])
     return list(zip(retrieved_corpus_indices, distances[0]))
 
 
-def single_complete_step(model, tokenizer, device, input_text):
-    print("completing sentence ...\n")
-    inputs = tokenizer(input_text, return_tensors="pt").to(device)
-    if len(inputs.input_ids[0]) > 15000:
-        return input_text, None
-    stop_token_ids = tokenizer.convert_tokens_to_ids(['<|cite_start|>', '<|paper_end|>'])
-    # print("stop_token_ids", stop_token_ids)
-    eos_token_id = stop_token_ids[0]
-
+def single_complete_step(model, tokenizer, device, input_text, silent=False, do_not_generate=False, ignore_end_token=False):
+    if not silent:
+        print("completing sentence ...\n")
+    
     max_new_tokens = 4096
     try: # terminate early if process runs out of memory
-        with torch.no_grad():
-            output = model.generate(
-                inputs.input_ids,
-                attention_mask=inputs.attention_mask,
-                max_new_tokens=max_new_tokens,
-                do_sample=True,
-                top_p=0.95,
-                temperature=0.6,
-                eos_token_id=eos_token_id,
-                output_hidden_states=True,
-                return_dict_in_generate=True
-            )
-        
-        generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
+        if not do_not_generate: # for generation
+            inputs = tokenizer(input_text, return_tensors="pt").to(device)
+
+            if len(inputs.input_ids[0]) > 15000:
+                return input_text, None
+
+            stop_token_ids = tokenizer.convert_tokens_to_ids(['<|cite_start|>', '<|paper_end|>'])
+            # print("stop_token_ids", stop_token_ids)
+            eos_token_id = stop_token_ids[0]
+
+            with torch.no_grad(): # generates until cite token
+                output = model.generate(
+                    inputs.input_ids,
+                    attention_mask=inputs.attention_mask,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=True,
+                    top_p=0.95,
+                    temperature=0.6,
+                    eos_token_id=eos_token_id,
+                    output_hidden_states=True,
+                    return_dict_in_generate=True
+                )
+            
+            generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
+        else: # for single step retrieval
+            generated_text = input_text#+" <|cite_start|>"
 
         new_input = tokenizer(generated_text, return_tensors="pt").to(device)
-        with torch.no_grad():
+        with torch.no_grad(): # generates cite token representation
             new_output = model(
                 new_input.input_ids,
                 attention_mask=new_input.attention_mask,
@@ -77,15 +84,30 @@ def single_complete_step(model, tokenizer, device, input_text):
             )
         cite_rep = new_output.hidden_states[-1][:, -1, :]
     except torch.OutOfMemoryError:
+        if not silent:
             print(f"CUDA out of memory. Terminating generation early at length {len(inputs.input_ids[0])}/15000")
-            return input_text, None
+        return input_text, None
 
     new_content = generated_text
-    if "<|paper_end|>" in new_content:
+    if "<|paper_end|>" in new_content and not ignore_end_token:
         end_index = new_content.index("<|paper_end|>")
         return generated_text[:end_index + len("<|paper_end|>")], None
 
     return new_content, cite_rep
+
+
+def single_step_retrieval(text, index, lookup_indices, model, tokenizer, config, silent=False):
+    current_text = preprocess_input_text(text)
+
+    current_text, cite_start_hidden_state = single_complete_step(
+        model, tokenizer, config["scholarcopilot_device"], current_text, 
+        silent=silent, do_not_generate=True, ignore_end_token=True
+    )
+
+    retrieved_k_results = retrieve_reference(
+        index, lookup_indices, cite_start_hidden_state, top_k=config["sc_retriever_topk"], silent=silent
+    )
+    return retrieved_k_results
 
 
 def clean_latex_text(input_text):
@@ -142,7 +164,7 @@ def up_sample_cut(input_text, citation_list):
     return input_text
 
 
-def collect_retrieval_results(retrieved_k_results, retrieval_dataset):
+def collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=False):
     references = []
     distances = []
     for each in retrieved_k_results:
@@ -152,13 +174,14 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset):
             continue
         references.append(retrieval_dataset[curr_corpus_idx])
         distances.append(distance)
-
-    print(f"best reference before passage retrieval: {references[0]["arxiv_id"]}")
+    if not silent:
+        print(f"best reference before passage retrieval: {references[0]["arxiv_id"]}")
     return references, distances
 
 
-def replace_citations(current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map):
-    print("IN replace_citations\n")
+def replace_citations(current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=False):
+    if not silent:
+        print("IN replace_citations\n")
     # Find all citations with pattern <|cite_start|>XXX<|cite_end|>
     pattern = r'<\|cite_start\|>(.*?)<\|cite_end\|>'
     # Keep track of current citation index
@@ -189,7 +212,7 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
             if last_replacement == replacement:
                 replacement = ""
             else:
-                if citation_index == len(unique_reference_id_list)-1 # the last entry is the new one
+                if citation_index == len(unique_reference_id_list)-1: # the last entry is the new one
                     new_citation_data.append(citation_data_entry)
                 last_replacement = replacement
             citation_index += 1
@@ -228,62 +251,6 @@ def merge_consecutive_citations(text):
     return result
 
 
-def load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, id_map):
-    print("loading retrieval dataset...")
-    retrieval_dataset = {}
-    print()
-    counter = 0
-    try:
-        with open(retrieval_dataset_path, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
-                sys.stdout.write("\033[F")
-                print(f"processing entry {counter}")
-                retrieval_dataset[item["corpus_id"]] = item
-                counter += 1
-    except FileNotFoundError:
-        with open(complete_dataset_path, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
-                sys.stdout.write("\033[F")
-                print(f"processing entry {counter}")
-                arxiv_id = item["arxiv_id"]
-                corpus_id = id_map[arxiv_id]
-                rec = {
-                    "corpus_id": corpus_id,
-                    "arxiv_id": arxiv_id,
-                    "title": item["title"], 
-                    "abstract": " ".join(item["abstract"]), 
-                    "sections": item["sections"]
-                }
-                retrieval_dataset[corpus_id] = rec
-                counter += 1
-                with open(retrieval_dataset_path, "a") as outfile:
-                    json.dump(rec, outfile)
-                    outfile.write("\n")
-    print("retrieval dataset loaded.")
-    return retrieval_dataset
-
-
-def arxiv_to_corpus_id(path, processed_corpus_path):
-    print("loading arxiv_to_corpus_id map...")
-    id_map = {}
-    try:
-        with open(path, "r") as mapfile:
-            id_map = json.load(mapfile)
-    except FileNotFoundError:
-        counter = 0
-        print()
-        with open(processed_corpus_path, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
-                sys.stdout.write("\033[F")
-                print(f"processing entry {counter}")
-                id_map[item["arxiv_id"]] = item["corpus_id"]
-                counter += 1
-        with open(path, "w") as file:
-            json.dump(id_map, file, ensure_ascii=False, indent=4)
-    print("arxiv_to_corpus_id map loaded.")
-    return id_map
-
-
 def load_corpus_base(corpus_dir="../embedded_corpus/1128_shards/"):
     encoded_list = []
     lookup_indices_list = []
@@ -315,9 +282,9 @@ def load_corpus_base(corpus_dir="../embedded_corpus/1128_shards/"):
         raise ValueError("No data was successfully loaded")
 
 
-def load_faiss_index(index_dir):
-    index = faiss.read_index(os.path.join(index_dir, 'index'))
-    with open(os.path.join(index_dir, 'lookup_indices.npy'), 'rb') as f:
+def load_faiss_index(index_dir, lookup_indices_dir):
+    index = faiss.read_index(index_dir)
+    with open(lookup_indices_dir, 'rb') as f:
         lookup_indices = np.load(f, allow_pickle=True)
     return index, lookup_indices
 
@@ -333,6 +300,7 @@ def load_model(model_path, config):
     special_tokens = ['<|paper_start|>', '<|paper_end|>', '<|cite_start|>', '<|cite_end|>', '<|reference_start|>',
                       '<|reference_end|>', config["label_sep_token"], config["citation_mask_token"]]
     tokenizer.add_tokens(special_tokens)
+
     model.resize_token_embeddings(len(tokenizer))
     print("model loaded successfully")
     return model, tokenizer

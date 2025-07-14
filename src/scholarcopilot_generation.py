@@ -16,34 +16,6 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def single_step_retrieval(text, return_top_k, index, lookup_indices, model, tokenizer, config):
-    sentence_num = 0
-    current_text = text
-    current_text = preprocess_input_text(current_text)
-    display_text = current_text.replace("<|paper_start|> ", "")
-    curr_prefix_length = len(display_text)
-    current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text)
-    unique_reference_id_list = [] # (arxiv_id, suffix)
-    display_text, _ = replace_citations(
-        current_text, unique_reference_id_list, None, None
-    )
-    curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
-    # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
-    for each in yield_list:
-        if "." in each and (each.endswith(".") or ".\n" in each):
-            sentence_num += 1
-            print("sentence_num: ", sentence_num, "each", each)
-        curr_yield_text += " " + each
-        yield curr_yield_text, citations_data_list
-        time.sleep(0.1)
-    curr_prefix_length = len(curr_yield_text)
-
-    retrieved_k_results = retrieve_reference(
-        index, lookup_indices, cite_start_hidden_state, top_k=return_top_k
-    )
-    return retrieved_k_results
-
-
 def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config):
     sentence_num = 0
     enough = False
@@ -104,9 +76,10 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
             current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
         )
 
+        citations_data += new_citation_data
+
         # get the data entry of the newly added citation
-        citation_index = len(unique_reference_id_list)-1
-        citation_dict = new_citation_data[citation_index]
+        citation_dict = citations_data[-1]
         # check that its the correct entry
         assert citation_dict["citation_key"] == f"arxivID-{best_reference_arxiv_id}-{unique_id_suffix}"
         # add passage retrieval result
@@ -114,9 +87,7 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
         citation_dict["passage_label"] = best_passage_label
         citation_dict["passage_score"] = best_passage_score
         # save modified data entry 
-        new_citation_data[citation_index] = citation_dict
-
-        citations_data += new_citation_data
+        citations_data[-1] = citation_dict
 
         curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
         # print("curr_yield_text, yield_list", curr_yield_text, yield_list)
@@ -162,8 +133,9 @@ if __name__ == "__main__":
     complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
     retrieval_dataset = load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, arxiv_to_corpus_id_map)
 
-    index_dir = "data/"
-    index, lookup_indices = load_faiss_index(index_dir)
+    index_dir = "data/index"
+    lookup_indices_dir = "data/lookup_indices.npy"
+    index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
     print("index building finished")
 
     citations_data = []
@@ -187,10 +159,5 @@ if __name__ == "__main__":
         "generated paper": text_input,
         "citations_data": citations_data
     }, config, mode="generation")
-
-    os.rename( # rename results file
-        f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records.json', 
-        f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json'
-    )
 
 

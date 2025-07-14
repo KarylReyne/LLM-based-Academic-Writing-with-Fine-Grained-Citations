@@ -25,11 +25,12 @@ def get_config():
 def save_results(
     evaluation_records,
     config,
-    mode="passage retrieval" # "passage retrieval" for saving passages, "generation" for saving generation output
+    mode="passage retrieval", # "passage retrieval", "generation", "eval_retrieval", "eval_generation"
+    save_passage_records=True
 ):
     results = None
     try:
-        with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records.json', 'r', encoding='utf-8') as f:
+        with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'r', encoding='utf-8') as f:
             results = json.load(f)
     except FileNotFoundError:
         if not os.path.exists(f'out/{datetime.now().strftime('%Y-%m-%d')}'):
@@ -38,7 +39,7 @@ def save_results(
     assert os.path.exists(f'out/{datetime.now().strftime('%Y-%m-%d')}')
     assert results != None
 
-    if mode == "passage retrieval":
+    if mode == "passage retrieval": # saves continuously at depth 2
         results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         results["config"] = config
         results["instructions"] = {
@@ -46,15 +47,17 @@ def save_results(
             "retr_document": retrieval_instruction_document,
             "rera_scoring": reranking_instruction("", [])
         }
-        for key in evaluation_records:
-            try:
-                results["records"][key] = evaluation_records[key]
-            except KeyError:
-                results["records"] = {}
-                results["records"][key] = evaluation_records[key]
+        if save_passage_records:
+            for key in evaluation_records:
+                try:
+                    results["passage_records"][key] = evaluation_records[key]
+                except KeyError:
+                    results["passage_records"] = {}
+                    results["passage_records"][key] = evaluation_records[key]
 
-    elif mode == "generation":
+    elif mode in ["generation", "eval_retrieval", "eval_generation"]: # saves once at depth 1
         results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        results["config"] = config
         for key in evaluation_records:
             results[key] = evaluation_records[key]
 
@@ -62,35 +65,53 @@ def save_results(
         raise NotImplementedError(f"mode '{mode}' is not implemented!")
 
 
-    with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/evaluation_records.json', 'w', encoding='utf-8') as f:
+    with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
+
+    if mode in ["generation", "eval_retrieval", "eval_generation"]:
+        os.rename( # rename results file for final save
+            f'out/{datetime.now().strftime('%Y-%m-%d')}/records.json',
+            f'out/{datetime.now().strftime('%Y-%m-%d')}/records_{mode}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json'
+        )
 
 
 def get_passage_retrieval_models(config):
     special_tokens = ['<|paper_start|>', '<|paper_end|>', '<|cite_start|>', '<|cite_end|>', '<|reference_start|>',
                       '<|reference_end|>', config["label_sep_token"], config["citation_mask_token"]]
 
-    # retrieval model definition
+    # tokenizers
     retr_tokenizer = AutoTokenizer.from_pretrained(config["retriever"])
-    retr_tokenizer.add_tokens(special_tokens)
+    rera_tokenizer = AutoTokenizer.from_pretrained(config["reranker"])
+    for tokenizer in [retr_tokenizer, rera_tokenizer]:
+        # tokenizer.padding_side = 'right'
+        tokenizer.add_tokens(special_tokens)
+        # if tokenizer.pad_token_id is None:
+        #     tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    # retrieval model definition
     retriever = AutoModel.from_pretrained(
         config["retriever"], 
-        torch_dtype="auto", 
-        trust_remote_code=True
+        # torch_dtype="auto", 
+        trust_remote_code=True,
+        # attn_implementation="flash_attention_2",
+        torch_dtype=torch.bfloat16
     )
     retriever = retriever.to(config["retriever_device"])
+    retriever.resize_token_embeddings(len(retr_tokenizer))
     retriever.eval()
 
     # reranker model definition
-    rera_tokenizer = AutoTokenizer.from_pretrained(config["reranker"])
-    rera_tokenizer.add_tokens(special_tokens)
     reranker = AutoModelForCausalLM.from_pretrained(
         config["reranker"], 
-        torch_dtype="auto",
-        trust_remote_code=True
+        # torch_dtype="auto",
+        trust_remote_code=True,
+        # attn_implementation="flash_attention_2",
+        torch_dtype=torch.bfloat16
     )
     reranker = reranker.to(config["reranker_device"])
+    reranker.resize_token_embeddings(len(rera_tokenizer))
     reranker.eval()
+
     return {
         "retr_tokenizer": retr_tokenizer, 
         "retriever": retriever, 
@@ -118,7 +139,7 @@ def get_candidate_passages(references, tokenizer, config):
     return candidate_passages
 
 
-def unified_passage_retrieval(generated_context, references, passage_retrieval_models, config):
+def unified_passage_retrieval(generated_context, references, passage_retrieval_models, config, silent=False, save_passage_records=True):
     evaluation_records = {}
     reference_ids = [d["arxiv_id"] for d in references]
     evaluation_records[f"reference_ids-{reference_ids}"] = {
@@ -128,10 +149,17 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         "final ranking": {}
     }
 
-    candidate_passages = get_candidate_passages(
-        references, passage_retrieval_models["retr_tokenizer"], config
-    )
+    # start = time.time()
+    b = "passages" in references[0] and not "sections" in references[0] # given prebuilt passages
+    if b:
+        candidate_passages = [p for r in references for p in r["passages"]]
+    else:
+        candidate_passages = get_candidate_passages(
+            references, passage_retrieval_models["retr_tokenizer"], config
+        )
+    # print("***************Build passages cost (time): ", time.time() - start)
 
+    # start = time.time()
     # --- RETRIEVAL ---
     # separate section labels and documents
     document_labels = []
@@ -147,10 +175,14 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         document_labels, 
         documents,
         reference_ids,
-        passage_retrieval_models["retriever"], 
-        config
+        passage_retrieval_models["retriever"],
+        passage_retrieval_models["retr_tokenizer"],
+        config,
+        silent=silent
     )
+    # print("***************Retrieval cost (time): ", time.time() - start)
 
+    # start = time.time()
     # --- RERANKING ---
     document_labels = []
     documents = []
@@ -167,12 +199,16 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         reference_ids,
         passage_retrieval_models["reranker"], 
         passage_retrieval_models["rera_tokenizer"], 
-        config
+        config,
+        silent=silent
     )
+    # print("***************Reranking cost (time): ", time.time() - start)
 
     save_results(
         evaluation_records,
-        config
+        config,
+        mode="passage retrieval",
+        save_passage_records=save_passage_records
     )
 
     return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
@@ -189,7 +225,7 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
     return context
 
 
-def retrieve_relevant_passages(generated_context, references, passage_retrieval_models, config):
+def retrieve_relevant_passages(generated_context, references, passage_retrieval_models, config, silent=False, save_passage_records=True):
     if config["enable_query_context_window"]:
         generated_context = apply_retrieval_context_window(
             generated_context, passage_retrieval_models["retr_tokenizer"], config
@@ -198,6 +234,8 @@ def retrieve_relevant_passages(generated_context, references, passage_retrieval_
         generated_context,
         references, 
         passage_retrieval_models,
-        config
+        config,
+        silent=silent,
+        save_passage_records=save_passage_records
     )
     return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
