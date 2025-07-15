@@ -1,15 +1,12 @@
 import numpy as np
 
 
-def minmax_normalization(x):
+def minmax_normalization(x, eps=1e-6):
     x_min = min(x)
     x_max = max(x)
     x_norm = []
     for e in x:
-        if x_max != 0:
-            x_norm.append((e-x_min)/(x_max-x_min))
-        else: 
-            x_norm.append(0)
+        x_norm.append((e-x_min)/(x_max-x_min+eps))
     return x_norm
 
 

@@ -5,6 +5,7 @@ import sys
 import ijson
 import time
 import random
+import numpy as np
 
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, retrieve_relevant_passages, save_results
 from passage_reranking import InvalidLLMResponseError
@@ -44,14 +45,7 @@ def rank_with_scholarcopilot_with_passageretrieval(context, retrieval_dataset, a
 # last sentence before the citation as the query. Recall@k is computed by comparing predicted
 # citations to the original ground-truth citations.
 if __name__ == "__main__":
-    RECALL_K = 10
-
     config = get_config()
-
-    if config["sc_retriever_topk"] < RECALL_K:
-        raise ValueError(f"ScholarCopilot top-k ({config["sc_retriever_topk"]}) cannot be smaller than recall k ({RECALL_K})")
-    if config["reranker_topk"] < RECALL_K:
-        raise ValueError(f"Reranking top-k ({config["reranker_topk"]}) cannot be smaller than recall k ({RECALL_K})")
 
     model_path = "scholarcopilot_model_v1208/"
     model, tokenizer = load_model(model_path, config)
@@ -86,17 +80,27 @@ if __name__ == "__main__":
             sys.stdout.write("\033[F")
             print(f"processing entry {count}")
             eval_dataset.append(item)
-    print(f"eval dataset loaded ({len(eval_dataset)})")
+            count += 1
+    print(f"eval dataset loaded")
 
+    eval_indices = np.arange(len(eval_dataset))
 
-    eval_indices = range(len(eval_dataset))
-    random.shuffle(eval_indices)
+    RECALL_K = 5
 
+    if config["sc_retriever_topk"] < RECALL_K:
+        raise ValueError(f"ScholarCopilot top-k ({config["sc_retriever_topk"]}) cannot be smaller than recall k ({RECALL_K})")
+    if config["reranker_topk"] < RECALL_K:
+        raise ValueError(f"Reranking top-k ({config["reranker_topk"]}) cannot be smaller than recall k ({RECALL_K})")
+
+    shuffled_samples = True
+
+    if shuffled_samples:
+        random.shuffle(eval_indices)
     
     sc_rankings = [] # len_dataset x recall_k
     sc_pr_rankings = [] # len_dataset x recall_k
     gold = [] # len_dataset x 1
-    max_samples = 10
+    max_samples = 5000
     samples = 0
     num_fails = 0
     print()
@@ -118,6 +122,7 @@ if __name__ == "__main__":
         ranking, fail = rank_with_scholarcopilot_with_passageretrieval(
             context, retrieval_dataset, arxiv_to_corpus_id_map, index, lookup_indices, model, tokenizer, config
         )
+        # exit()
         sc_pr_rankings.append(ranking)
         num_fails += fail
 
@@ -135,6 +140,7 @@ if __name__ == "__main__":
     save_results({
         "eval_dataset": eval_dataset_path,
         "num_samples": samples,
+        "shuffled_samples": shuffled_samples,
         f"ScholarCopilot recall@{RECALL_K}": sc_recall,
         f"ScholarCopilot with passage retrieval recall@{RECALL_K}": sc_pr_recall,
         "passage retrieval fails": num_fails

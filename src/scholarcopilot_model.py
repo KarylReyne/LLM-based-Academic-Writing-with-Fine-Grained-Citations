@@ -72,7 +72,7 @@ def single_complete_step(model, tokenizer, device, input_text, silent=False, do_
             
             generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
         else: # for single step retrieval
-            generated_text = input_text#+" <|cite_start|>"
+            generated_text = input_text
 
         new_input = tokenizer(generated_text, return_tensors="pt").to(device)
         with torch.no_grad(): # generates cite token representation

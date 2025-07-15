@@ -1,6 +1,7 @@
 import sys
 import statistics as stat
 import random
+import time
 from util import minmax_normalization
 from passage_retrieval_instructions import *
 
@@ -32,13 +33,14 @@ def reranking_and_scoring(
         print(f"[RERANKING] self-consistency batch size ({PASSAGES_PER_CALL}) cannot be larger that reranker topk ({TOPK_RERA}). Setting PASSAGES_PER_CALL={TOPK_RERA}")
         PASSAGES_PER_CALL = TOPK_RERA
 
-    ranked_passages = None
-
     if not silent:
         print() # for console progress report
 
     zip_documents = list(zip(document_labels, documents))
 
+    sc_batching_timecost = 0
+    generation_timecost = 0
+    response_parsing_timecost = 0
     scores_for_each_llm_call = [] # num_llm_calls x batch_size, contains (label, document, score) triples
     for m in range(M_RERA): # iterates llm calls
 
@@ -46,6 +48,7 @@ def reranking_and_scoring(
             sys.stdout.write("\033[F")
             print(f"[RERANKING] reranking {len(documents)} passages - self-consistency call {m+1}/{M_RERA}")
 
+        start = time.time()
         # shuffles before each llm call -> passage mixture of each batch is different across llm calls
         if SC_PERMUTATION_MODE == "stb":
             random.shuffle(zip_documents)
@@ -75,7 +78,9 @@ def reranking_and_scoring(
                 tokenize=False,
                 add_generation_prompt=True
             ))
+        sc_batching_timecost += time.time() - start
 
+        start = time.time()
         llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to("cuda:2")
         generated_encoded_tokens = reranker.generate(
             **llm_call_input, 
@@ -83,25 +88,34 @@ def reranking_and_scoring(
             temperature=RERA_TEMPERATURE
         )
         responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
+        generation_timecost += time.time() - start
 
+        start = time.time()
         batch_scores = []
         for sc_passages_idx in range(len(responses)): # iterates self-consistency batches
             try:
                 response = responses[sc_passages_idx].split("assistant\nRelevance scores: ")[1] # list only
                 response = response.lstrip("[").rstrip("]")
-                sc_passages_scores = [float(score)*0.1 for score in response.split(", ")]
+                if len(response.split(", ")) == sc_passages_lengths[sc_passages_idx]:
+                    split_str = ", "
+                else:
+                    split_str = "," # happens sometimes
+                sc_passages_scores = [float(score)*0.1 for score in response.split(split_str)]
                 assert len(sc_passages_scores) == sc_passages_lengths[sc_passages_idx]
             except AssertionError as e:
+                raise InvalidLLMResponseError("reranker response could not be parsed successfully. Likely not enough scores were generated.")
+            except Exception as e: # rarely happens
                 raise InvalidLLMResponseError("reranker response could not be parsed successfully.")
-            except Exception as e:
-                print(batch_reranking_input)
-                print(response)
-                raise e
             [batch_scores.append(s) for s in sc_passages_scores]
 
         scores_for_each_llm_call.append(zip(shuffled_batch_labels, shuffled_zip_documents, batch_scores))
-    
+        response_parsing_timecost += time.time() - start
 
+    # print("sc batching cost (time): ", sc_batching_timecost)
+    # print("generation cost (time): ", generation_timecost)
+    # print("response parsing cost (time): ", response_parsing_timecost)
+    
+    start = time.time()
     batch_rera_scores = {} # batch_rera_scores[label] = score 
     batch_rera_docs = {} # batch_rera_docs[label] = doc 
     for llm_call_data in scores_for_each_llm_call: # iterates llm calls
@@ -139,8 +153,9 @@ def reranking_and_scoring(
 
     reranked_documents = dict(sorted(reranked_documents.items(), key=lambda item: item[1]["reranking score"], reverse=True)[:TOPK_RERA])
     evaluation_records[f"reference_ids-{reference_ids}"]["reranked documents"] = reranked_documents
+    # print("normalization cost (time): ", time.time() - start)
 
-
+    start = time.time()
     # obtain final ranking score s
     # s = (1-delta)*s_retr + delta*s_rera
     final_scores = {}
@@ -157,6 +172,7 @@ def reranking_and_scoring(
         }
     final_scores = dict(sorted(final_scores.items(), key=lambda item: item[1]["final ranking score"], reverse=True))
     evaluation_records[f"reference_ids-{reference_ids}"]["final ranking"] = final_scores
+    # print("final scoring cost (time): ", time.time() - start)
 
     ranked_passages = []
     ranked_passage_labels = []

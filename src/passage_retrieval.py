@@ -30,6 +30,8 @@ def retrieval(
         print() # for console progress report
 
     num_batch = 1
+    encode_timecost = 0
+    save_timecost = 0
     for i in range(0, len(documents), BATCH_SIZE): # iterates sections, batched
         if not silent:
             sys.stdout.write("\033[F")
@@ -38,7 +40,7 @@ def retrieval(
         document_inputs = documents[i:i+BATCH_SIZE]
         query_inputs = list(itertools.repeat(generated_context, len(document_inputs)))
         
-        # start = time.time()
+        start = time.time()
         query_embs = retriever.encode(
             query_inputs, 
             instruction=retrieval_instruction_query(CITATION_MASK_TOKEN), 
@@ -51,9 +53,9 @@ def retrieval(
             batch_size=BATCH_SIZE, 
             max_length=CHUNK_SIZE
         )
-        # print("encoding cost (time): ", time.time() - start)
+        encode_timecost += time.time() - start
 
-        # start = time.time()
+        start = time.time()
         # update eval data with the current batch
         retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
         for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
@@ -68,11 +70,14 @@ def retrieval(
                 "retrieval score": s,
             }
         evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"] = retrieved_documents
-        # print("score saving cost (time): ", time.time() - start)
+        save_timecost += time.time() - start
 
         num_batch += 1
 
+    # print("encoding cost (time): ", encode_timecost)
+    # print("score saving cost (time): ", save_timecost)
 
+    start = time.time()
     # retain only the top k retrieved documents
     retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
 
@@ -84,4 +89,5 @@ def retrieval(
 
     retrieved_documents = dict(sorted(retrieved_documents.items(), key=lambda item: item[1]["retrieval score"], reverse=True)[:TOPK_RETR])
     evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"] = retrieved_documents
+    # print("normalization cost (time): ", time.time() - start)
     

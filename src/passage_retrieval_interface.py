@@ -94,6 +94,7 @@ def get_passage_retrieval_models(config):
         # torch_dtype="auto", 
         trust_remote_code=True,
         # attn_implementation="flash_attention_2",
+        attn_implementation="sdpa",
         torch_dtype=torch.bfloat16
     )
     retriever = retriever.to(config["retriever_device"])
@@ -106,6 +107,7 @@ def get_passage_retrieval_models(config):
         # torch_dtype="auto",
         trust_remote_code=True,
         # attn_implementation="flash_attention_2",
+        attn_implementation="sdpa",
         torch_dtype=torch.bfloat16
     )
     reranker = reranker.to(config["reranker_device"])
@@ -149,7 +151,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         "final ranking": {}
     }
 
-    # start = time.time()
+    start = time.time()
     b = "passages" in references[0] and not "sections" in references[0] # given prebuilt passages
     if b:
         candidate_passages = [p for r in references for p in r["passages"]]
@@ -159,7 +161,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         )
     # print("***************Build passages cost (time): ", time.time() - start)
 
-    # start = time.time()
+    start = time.time()
     # --- RETRIEVAL ---
     # separate section labels and documents
     document_labels = []
@@ -182,7 +184,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
     )
     # print("***************Retrieval cost (time): ", time.time() - start)
 
-    # start = time.time()
+    start = time.time()
     # --- RERANKING ---
     document_labels = []
     documents = []
