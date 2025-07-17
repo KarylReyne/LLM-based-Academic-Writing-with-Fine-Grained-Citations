@@ -1,5 +1,5 @@
 {
-    "last changed": "2025-07-15_23-59-56",
+    "last changed": "2025-07-17_19-39-56",
     "config": {
         "retriever": "reasonir_8b",
         "reranker": "qwen2.5_7b_instruct",
@@ -16,9 +16,9 @@
         "query_expansion": "left",
         "enable_query_context_window": true,
         "query_context": 256,
-        "sc_retriever_topk": 5,
-        "retriever_topk": 5,
-        "reranker_topk": 5,
+        "sc_retriever_topk": 10,
+        "retriever_topk": 20,
+        "reranker_topk": 10,
         "retr_batch_size": 32,
         "rera_sc_permutation_mode": "stb",
         "rera_passages_per_call": 5,

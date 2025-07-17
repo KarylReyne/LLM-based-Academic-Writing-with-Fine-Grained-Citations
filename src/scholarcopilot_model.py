@@ -41,38 +41,35 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5, 
     return list(zip(retrieved_corpus_indices, distances[0]))
 
 
-def single_complete_step(model, tokenizer, device, input_text, silent=False, do_not_generate=False, ignore_end_token=False):
+def single_complete_step(model, tokenizer, device, input_text, silent=False):
     if not silent:
         print("completing sentence ...\n")
     
     max_new_tokens = 4096
     try: # terminate early if process runs out of memory
-        if not do_not_generate: # for generation
-            inputs = tokenizer(input_text, return_tensors="pt").to(device)
+        inputs = tokenizer(input_text, return_tensors="pt").to(device)
 
-            if len(inputs.input_ids[0]) > 15000:
-                return input_text, None
+        if len(inputs.input_ids[0]) > 15000:
+            return input_text, None
 
-            stop_token_ids = tokenizer.convert_tokens_to_ids(['<|cite_start|>', '<|paper_end|>'])
-            # print("stop_token_ids", stop_token_ids)
-            eos_token_id = stop_token_ids[0]
+        stop_token_ids = tokenizer.convert_tokens_to_ids(['<|cite_start|>', '<|paper_end|>'])
+        # print("stop_token_ids", stop_token_ids)
+        eos_token_id = stop_token_ids[0]
 
-            with torch.no_grad(): # generates until cite token
-                output = model.generate(
-                    inputs.input_ids,
-                    attention_mask=inputs.attention_mask,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=True,
-                    top_p=0.95,
-                    temperature=0.6,
-                    eos_token_id=eos_token_id,
-                    output_hidden_states=True,
-                    return_dict_in_generate=True
-                )
-            
-            generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
-        else: # for single step retrieval
-            generated_text = input_text
+        with torch.no_grad(): # generates until cite token
+            output = model.generate(
+                inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                top_p=0.95,
+                temperature=0.6,
+                eos_token_id=eos_token_id,
+                output_hidden_states=True,
+                return_dict_in_generate=True
+            )
+        
+        generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
 
         new_input = tokenizer(generated_text, return_tensors="pt").to(device)
         with torch.no_grad(): # generates cite token representation
@@ -89,7 +86,7 @@ def single_complete_step(model, tokenizer, device, input_text, silent=False, do_
         return input_text, None
 
     new_content = generated_text
-    if "<|paper_end|>" in new_content and not ignore_end_token:
+    if "<|paper_end|>" in new_content:
         end_index = new_content.index("<|paper_end|>")
         return generated_text[:end_index + len("<|paper_end|>")], None
 
@@ -97,16 +94,18 @@ def single_complete_step(model, tokenizer, device, input_text, silent=False, do_
 
 
 def single_step_retrieval(text, index, lookup_indices, model, tokenizer, config, silent=False):
-    current_text = preprocess_input_text(text)
+    new_input_text = text + " <|cite_start|>"
+    new_input = tokenizer(new_input_text, return_tensors="pt").to(config["scholarcopilot_device"])
+    with torch.no_grad():
+        new_output = model(
+            new_input.input_ids,
+            attention_mask=new_input.attention_mask,
+            output_hidden_states=True,
+            return_dict=True
+        )
+    cite_rep = new_output.hidden_states[-1][:, -1, :]
+    retrieved_k_results = retrieve_reference(index, lookup_indices, cite_rep, top_k=config["sc_retriever_topk"], silent=silent)
 
-    current_text, cite_start_hidden_state = single_complete_step(
-        model, tokenizer, config["scholarcopilot_device"], current_text, 
-        silent=silent, do_not_generate=True, ignore_end_token=True
-    )
-
-    retrieved_k_results = retrieve_reference(
-        index, lookup_indices, cite_start_hidden_state, top_k=config["sc_retriever_topk"], silent=silent
-    )
     return retrieved_k_results
 
 
@@ -170,7 +169,8 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=Fal
     for each in retrieved_k_results:
         curr_corpus_idx, distance = each
         if curr_corpus_idx not in retrieval_dataset:
-            print(f"index {curr_corpus_idx} not found in retrieval_dataset")
+            if not silent:
+                print(f"index {curr_corpus_idx} not found in retrieval_dataset")
             continue
         references.append(retrieval_dataset[curr_corpus_idx])
         distances.append(distance)

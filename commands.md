@@ -24,3 +24,4 @@ tmux new -s SESSION_NAME <!-- create job -->
 CTRL+B+D <!-- detach job (can also close the terminal via vsc) -->
 tmux attach -t SESSION_NAME <!-- attach job -->
 exit <!-- exit job (inside tmux terminal) -->
+tmux kill-session -t SESSION_NAME <!-- terminate session -->

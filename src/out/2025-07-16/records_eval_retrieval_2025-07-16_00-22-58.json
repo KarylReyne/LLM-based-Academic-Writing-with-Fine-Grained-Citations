@@ -1,5 +1,5 @@
 {
-    "last changed": "2025-07-15_23-59-56",
+    "last changed": "2025-07-16_00-22-58",
     "config": {
         "retriever": "reasonir_8b",
         "reranker": "qwen2.5_7b_instruct",
@@ -28,5 +28,11 @@
         "retr_query": "<|user|>\nGiven a query with a citation marked by '<|CIT-MASK|>', retrieve relevant passages that describe the cited topic\n<|embed|>\n",
         "retr_document": "<|embed|>\n",
         "rera_scoring": "Rank all paragraphs below based on how relevant to the query they are. Following the order of the passages below, your answer should be 'Relevance scores: X' where X is a list of numbers from 0-10 where each number is the score of the corresponding paragraph. 0 means completely irrelevant, 10 means highly relevant and completely addresses the query. Don't output anything else. Output exactly 0 score. Here is the query: <start_query><end_query>Here are the paragraphs:  <start_example_answer>Relevance scores: [<score for paragraph-1>, <score for paragraph-2>, ...]<end_example_answer>"
-    }
+    },
+    "eval_dataset": "data/context_citation_pairs_256_documents_3.0.jsonl",
+    "num_samples": 2000,
+    "shuffled_samples": true,
+    "ScholarCopilot recall@5": 0.001,
+    "ScholarCopilot with passage retrieval recall@5": 0.0005,
+    "passage retrieval fails": 10
 }

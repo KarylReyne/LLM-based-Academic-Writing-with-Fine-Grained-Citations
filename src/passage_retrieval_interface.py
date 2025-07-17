@@ -114,6 +114,7 @@ def get_passage_retrieval_models(config):
     reranker.resize_token_embeddings(len(rera_tokenizer))
     reranker.eval()
 
+    print("passage retrieval models loaded")
     return {
         "retr_tokenizer": retr_tokenizer, 
         "retriever": retriever, 
@@ -217,13 +218,15 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
 
 
 def apply_retrieval_context_window(generated_context, tokenizer, config):
-    tokens = tokenizer(generated_context).to(config["retriever_device"])
-    tokens = tokens["input_ids"] # get only the encoded tokens
-    index = len(tokens)-1 # index of the citation, for generation always the last index
-    low = max(index-config["query_context"], 0)
-    high = index+1
-    context = tokenizer.decode(tokens[low:high])
-    context = context.replace(config["tokenizer_begin_token"], "")
+    context = generated_context
+    if config["enable_query_context_window"]:
+        tokens = tokenizer(generated_context).to(config["retriever_device"])
+        tokens = tokens["input_ids"] # get only the encoded tokens
+        index = len(tokens)-1 # index of the citation, for generation always the last index
+        low = max(index-config["query_context"], 0)
+        high = index+1
+        context = tokenizer.decode(tokens[low:high])
+        context = context.replace(config["tokenizer_begin_token"], "")
     return context
 
 

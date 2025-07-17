@@ -8,3 +8,5 @@
      - test different index.nprobe (higher => higher recall but slower) - was 
      - test different ef_search (higher => higher recall but slower) - was 
      - test different M (higher => higher accuracy but more memory) - was 
+
+reasonir skript: https://github.com/facebookresearch/ReasonIR/blob/main/evaluation/bright/retrievers.py#L711
