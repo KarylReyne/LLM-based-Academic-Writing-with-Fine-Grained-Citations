@@ -13,7 +13,7 @@ import time
 import ijson
 
 
-def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5, silent=False):
+def retrieve_reference(index, lookup_indices, cite_start_hidden_state, config, top_k=5, silent=False):
     start = time.time()
     if not silent:
         print("Retrieving reference")
@@ -26,6 +26,9 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5, 
 
     faiss.normalize_L2(cite_start_hidden_state)
 
+    # custom efSearch
+    index.hnsw.efSearch = config["hnsw_efSearch"]
+
     # this retrieves papers by comparing the cite token embedding to the embedded corpus documents (title+abstract)
     distances, indices = index.search(cite_start_hidden_state, top_k)
     retrieved_corpus_indices = []
@@ -37,7 +40,6 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, top_k=5, 
         print("retrieved_corpus_indices", retrieved_corpus_indices)
         print("distances[0]", distances[0])
         print("***************Retrieval cost (time): ", time.time() - start)
-    assert len(retrieved_corpus_indices) == len(distances[0])
     return list(zip(retrieved_corpus_indices, distances[0]))
 
 
@@ -104,7 +106,7 @@ def single_step_retrieval(text, index, lookup_indices, model, tokenizer, config,
             return_dict=True
         )
     cite_rep = new_output.hidden_states[-1][:, -1, :]
-    retrieved_k_results = retrieve_reference(index, lookup_indices, cite_rep, top_k=config["sc_retriever_topk"], silent=silent)
+    retrieved_k_results = retrieve_reference(index, lookup_indices, cite_rep, config, top_k=config["sc_retriever_topk"], silent=silent)
 
     return retrieved_k_results
 
@@ -176,6 +178,8 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=Fal
         distances.append(distance)
     if not silent:
         print(f"best reference before passage retrieval: {references[0]["arxiv_id"]}")
+    if len(references) < 1:
+        raise ScholarCopilotRetrievalError
     return references, distances
 
 
@@ -306,5 +310,7 @@ def load_model(model_path, config):
     return model, tokenizer
 
 
-
+class ScholarCopilotRetrievalError(Exception):
+    """Scholar Copilot did retrieve less than one reference."""
+    pass
 

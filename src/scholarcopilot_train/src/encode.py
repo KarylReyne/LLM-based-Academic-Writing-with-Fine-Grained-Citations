@@ -105,7 +105,9 @@ def main():
                 else:
                     model_output: EncoderOutput = model(passage=batch)
                     encoded.append(model_output.p_reps.cpu().detach().numpy())
-
+        print(batch_ids)
+        print(batch)
+        print(encoded)
     encoded = np.concatenate(encoded)
 
     with open(data_args.encode_output_path, 'wb') as f:

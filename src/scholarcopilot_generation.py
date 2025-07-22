@@ -42,7 +42,7 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
 
     while cite_start_hidden_state is not None and not enough:
         retrieved_k_results = retrieve_reference(
-            index, lookup_indices, cite_start_hidden_state, top_k=config["sc_retriever_topk"]
+            index, lookup_indices, cite_start_hidden_state, config, top_k=config["sc_retriever_topk"]
         )
         references, distances = collect_retrieval_results(retrieved_k_results, retrieval_dataset)
 

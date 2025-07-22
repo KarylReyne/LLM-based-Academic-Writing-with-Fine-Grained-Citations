@@ -9,9 +9,9 @@ import ast
 import numpy as np
 
 from evaluation_ranking_functions import rank_with_scholarcopilot, rank_with_scholarcopilot_with_passageretrieval
-from passage_retrieval_interface import get_config, get_passage_retrieval_models
-from scholarcopilot_model import load_model, load_faiss_index
-from dataset_loaders import scholarcopilot_arxiv_to_corpus_id, load_retrieval_dataset_from_sc_eval
+from passage_retrieval_interface import get_config, get_passage_retrieval_models, save_results
+from scholarcopilot_model import load_model, load_faiss_index, ScholarCopilotRetrievalError
+from dataset_loaders import arxiv_to_corpus_id, scholarcopilot_arxiv_to_corpus_id, load_retrieval_dataset_from_sc_eval, load_retrieval_dataset_for_sc_corpus_with_fulltext, load_retrieval_dataset, load_scholarcopilot_eval_dataset
 from util import recall_at_k
 
 
@@ -33,121 +33,97 @@ if __name__ == "__main__":
     sc_corpus_id_map_path = "data/arxiv_to_corpus_id_scholar_copilot_train_data_500k.json"
     sc_corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     sc_corpus_id_map = scholarcopilot_arxiv_to_corpus_id(sc_corpus_id_map_path, sc_corpus_path)
+
+    documents_id_map_path = "data/arxiv_to_corpus_id_documents_3.0.json"
+    processed_corpus_path = "data/documents_3.0_processed_corpus.jsonl"
+    documents_arxiv_to_corpus_id_map = arxiv_to_corpus_id(documents_id_map_path, processed_corpus_path)
     
-    retrieval_dataset_path = "data/retrieval_dataset_scholar_copilot_train_data_500k.jsonl"
-    complete_dataset_path = "data_train/scholar_copilot_train_data_500k.json"
-    retrieval_dataset = load_retrieval_dataset_from_sc_eval(retrieval_dataset_path, complete_dataset_path, sc_corpus_id_map, config)
+    # retrieval_dataset_path = "data/retrieval_dataset_scholar_copilot_train_data_500k.jsonl"
+    # complete_dataset_path = "data_train/scholar_copilot_train_data_500k.json"
+    # retrieval_dataset = load_retrieval_dataset_from_sc_eval(retrieval_dataset_path, complete_dataset_path, sc_corpus_id_map, config)
+
+    documents_retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
+    complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
+    documents_retrieval_dataset = load_retrieval_dataset(documents_retrieval_dataset_path, complete_dataset_path, documents_arxiv_to_corpus_id_map)
 
     index_dir = "scholarcopilot_data/index"
     lookup_indices_dir = "scholarcopilot_data/lookup_indices.npy"
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
     print("index building finished")
 
-    eval_dataset_path = f"data_train/scholar_copilot_eval_data_1k.json"
-    out_file = eval_dataset_path.replace(".json", "_eval_pairs.jsonl")
-    eval_dataset = []
-    count = 0
-    print()
-    try:
-        with open(out_file, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
-                sys.stdout.write("\033[F")
-                print(f"processing entry {count}")
-                eval_dataset.append(item)
-                count += 1
+    retrieval_dataset_path = "data/retrieval_dataset_scholar_copilot_corpus_with_fulltext.jsonl"
+    documents_retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
+    sc_retrieval_corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
+    retrieval_dataset = load_retrieval_dataset_for_sc_corpus_with_fulltext(
+        retrieval_dataset_path,
+        documents_retrieval_dataset,
+        sc_retrieval_corpus_path,
+        documents_arxiv_to_corpus_id_map,
+        config
+    )
 
-    except FileNotFoundError:
-        samples_list = None
-        with open(eval_dataset_path, "r") as file:
-            samples_list = json.load(file)
-
-        for sample in samples_list:
-            for citation_token in sample["bib_info"]:
-
-                split_list = sample["paper"].split(citation_token)
-                for i in range(len(split_list)-1):
-
-                    context = split_list[i]
-
-                    for token in sample["bib_info"]:
-                        context = context.replace(token, "<|mask|>")
-
-                    for possible_citation in sample["bib_info"][citation_token]:
-
-                        citation_corpus_id = possible_citation["citation_corpus_id"]
-                        if citation_corpus_id in sc_corpus_id_map:
-
-                            sys.stdout.write("\033[F")
-                            print(f"processing entry {count}")
-
-
-                            rec = {
-                                "context": context,
-                                "citation_corpus_id": possible_citation["citation_corpus_id"]
-                            }
-                            eval_dataset.append(rec)
-                            with open(out_file, "a") as outfile:
-                                json.dump(rec, outfile)
-                                outfile.write("\n")
-                            count += 1
-
-    print(f"eval dataset loaded")
-
-    eval_indices = np.arange(len(eval_dataset))
+    shuffle = True
+    sc_eval_dataset_path = f"data_train/scholar_copilot_eval_data_1k.json"
+    eval_dataset_path = sc_eval_dataset_path.replace(".json", "_eval_pairs.jsonl")
+    eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, config, shuffle=shuffle)
 
     RECALL_K = 5
 
     if config["sc_retriever_topk"] < RECALL_K:
         raise ValueError(f"ScholarCopilot top-k ({config["sc_retriever_topk"]}) cannot be smaller than recall k ({RECALL_K})")
-
-    shuffled_samples = True
-
-    if shuffled_samples:
-        random.shuffle(eval_indices)
     
     sc_rankings = [] # len_dataset x recall_k
     sc_pr_rankings = [] # len_dataset x recall_k
     gold = [] # len_dataset x 1
-    max_samples = 100
+    max_samples = 1000
     samples = 0
-    num_fails = 0
+    num_llm_fails = 0
+    retrieval_fails = 0
+    cum_num_qry_tokens = 0
     print()
     for i in eval_indices:
         sys.stdout.write("\033[F")
         print(f"processing entry {samples}")
 
-        item = eval_dataset[i]
+        try:
+            item = eval_dataset[i]
+            context = item["context"]
 
-        context = item["context"]
+            sc_ranking = rank_with_scholarcopilot(
+                context, index, lookup_indices, model, tokenizer, config
+            )
+            sc_pr_ranking, fail = rank_with_scholarcopilot_with_passageretrieval(
+                context, retrieval_dataset, sc_corpus_id_map, index, lookup_indices, model, tokenizer, passage_retrieval_models, config
+            )
 
-        gold.append(item["citation_corpus_id"])
+            # appending to the containers is delayed until all retrievals are done (because of the error handling)
+            gold.append(item["citation_corpus_id"])
+            sc_rankings.append(sc_ranking)
+            sc_pr_rankings.append(sc_pr_ranking)
+            num_llm_fails += fail
 
-        sc_rankings.append(rank_with_scholarcopilot(
-            context, index, lookup_indices, model, tokenizer, config
-        ))
+            samples += 1
+            if samples >= max_samples:
+                break
 
-        ranking, fail = rank_with_scholarcopilot_with_passageretrieval(
-            context, retrieval_dataset, sc_corpus_id_map, index, lookup_indices, model, tokenizer, passage_retrieval_models, config
-        )
-        sc_pr_rankings.append(ranking)
-        num_fails += fail
+        except ScholarCopilotRetrievalError: 
+            retrieval_fails += 1
+            continue # skip this sample entirely
 
-        samples += 1
-        if samples >= max_samples:
-            break
 
     sc_recall = recall_at_k(sc_rankings, gold, k=RECALL_K)
     sc_pr_recall = recall_at_k(sc_pr_rankings, gold, k=RECALL_K)
 
     print(f"---recall@{RECALL_K} after {max_samples} retrievals---")
     print(f"ScholarCopilot: {sc_recall}")
-    print(f"ScholarCopilot with passage retrieval: {sc_pr_recall} ({num_fails}/{samples} response failures)")
+    print(f"ScholarCopilot with passage retrieval: {sc_pr_recall} ({num_llm_fails}/{samples} response failures)")
 
     save_results({
         "eval_dataset": eval_dataset_path,
         "num_samples": samples,
-        "shuffled_samples": shuffled_samples,
+        "shuffled_samples": shuffle,
         f"ScholarCopilot recall@{RECALL_K}": sc_recall,
         f"ScholarCopilot with passage retrieval recall@{RECALL_K}": sc_pr_recall,
-        "passage retrieval fails": num_fails
+        "llm response fails": num_llm_fails,
+        "SC retrieval fails": retrieval_fails
     }, config, mode="eval_retrieval")

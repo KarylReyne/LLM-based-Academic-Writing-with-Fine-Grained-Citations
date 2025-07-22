@@ -81,7 +81,7 @@ def reranking_and_scoring(
         sc_batching_timecost += time.time() - start
 
         start = time.time()
-        llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to("cuda:2")
+        llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to(config["reranker_device"])
         generated_encoded_tokens = reranker.generate(
             **llm_call_input, 
             max_new_tokens=128,

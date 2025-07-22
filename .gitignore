@@ -27,7 +27,7 @@ src/ScholarCopilot/run_demo/.gradio/**
 src/scholarcopilot_data/**
 src/scholarcopilot_model_*/**
 src/reasonir_8b/**
-src/qwen2.5_7b_instruct/**
+src/qwen2.5_*/**
 
 src/archive/ScholarCopilot_unmodified/data/**
 src/archive/ScholarCopilot_unmodified/model_*/**

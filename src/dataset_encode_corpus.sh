@@ -21,5 +21,5 @@ CUDA_VISIBLE_DEVICES=$gpuid python -m encode \
   --dataset_path ${dataset_path} \
   --dataset_number_of_shards 1 \
   --dataset_shard_index ${s} \
-  --encode_output_path ${EMBEDDING_OUTPUT_DIR}/corpus.${s}.pkl
+  --encode_output_path ${EMBEDDING_OUTPUT_DIR}/corpus2.${s}.pkl
 done

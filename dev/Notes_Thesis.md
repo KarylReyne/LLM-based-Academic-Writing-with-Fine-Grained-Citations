@@ -1,3 +1,4 @@
  - REASONS has a very good introduction that makes many important observations
  - LLM rerankers have been shown to be effective on reasoning-intensive retrieval, see [BRIGHT](https://arxiv.org/abs/2407.12883)
  - ScholarCopilot only encodes the paper abstract for their paper retrieval corpus
+ - SC backbone has to be a generalist model -> can't take advantage of specialized models (for embedding/retrieval)

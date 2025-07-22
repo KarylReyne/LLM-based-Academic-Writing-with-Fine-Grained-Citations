@@ -2,7 +2,6 @@ import sys
 import statistics as stat
 import torch
 import numpy as np
-import itertools
 import time
 from util import minmax_normalization
 from passage_retrieval_instructions import *
@@ -26,6 +25,13 @@ def retrieval(
     NORMALIZE_SCORES = config["ranking_score_normalization"]
     CITATION_MASK_TOKEN = config["citation_mask_token"]
 
+    query_emb = retriever.encode(
+        generated_context, 
+        instruction=retrieval_instruction_query(CITATION_MASK_TOKEN), 
+        batch_size=1,
+        max_length=QUERY_CONTEXT_SIZE
+    )
+
     if not silent:
         print() # for console progress report
 
@@ -38,15 +44,8 @@ def retrieval(
             print(f"[RETRIEVAL] retrieving {TOPK_RETR} out of {len(documents)} passages - batch {num_batch}/{(len(documents)//BATCH_SIZE)+1}")
 
         document_inputs = documents[i:i+BATCH_SIZE]
-        query_inputs = list(itertools.repeat(generated_context, len(document_inputs)))
         
         start = time.time()
-        query_embs = retriever.encode(
-            query_inputs, 
-            instruction=retrieval_instruction_query(CITATION_MASK_TOKEN), 
-            batch_size=BATCH_SIZE, 
-            max_length=QUERY_CONTEXT_SIZE
-        )
         doc_embs = retriever.encode(
             document_inputs, 
             instruction=retrieval_instruction_document, 
@@ -58,9 +57,9 @@ def retrieval(
         start = time.time()
         # update eval data with the current batch
         retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
-        for j in range(len(query_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
+        for j in range(len(document_inputs)): # can't use BATCH_SIZE here bc the last batch might be shorter than BATCH_SIZE
 
-            s = query_embs[j] @ doc_embs[j] # mat. mult. aka dot product
+            s = query_emb @ doc_embs[j] # mat. mult. aka dot product
 
             if np.isnan(s):
                 s = -1

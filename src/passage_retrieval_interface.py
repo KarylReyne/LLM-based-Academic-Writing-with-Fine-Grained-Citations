@@ -231,10 +231,10 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
 
 
 def retrieve_relevant_passages(generated_context, references, passage_retrieval_models, config, silent=False, save_passage_records=True):
-    if config["enable_query_context_window"]:
+    if config["enable_query_context_window"]: # for evaluation, this is redundant, see evaluation_ranking_functions.py
         generated_context = apply_retrieval_context_window(
             generated_context, passage_retrieval_models["retr_tokenizer"], config
-        )
+        ) 
     ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores = unified_passage_retrieval(
         generated_context,
         references, 

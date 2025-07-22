@@ -25,3 +25,6 @@ CTRL+B+D <!-- detach job (can also close the terminal via vsc) -->
 tmux attach -t SESSION_NAME <!-- attach job -->
 exit <!-- exit job (inside tmux terminal) -->
 tmux kill-session -t SESSION_NAME <!-- terminate session -->
+
+## download huggingface model
+huggingface-cli download Qwen/Qwen2.5-3B --local-dir ../../qwen2.5_3b

@@ -153,6 +153,67 @@ def load_prebuilt_passages_dataset(retrieval_dataset_path, complete_dataset_path
     return retrieval_dataset
 
 
+def load_retrieval_dataset_for_sc_corpus_with_fulltext(
+    retrieval_dataset_path, # name of the new dataset
+    documents_retrieval_dataset, # documents 3.0 retrieval dataset
+    sc_retrieval_corpus_path, # scholarcopilot retrieval corpus path
+    documents_corpus_id_map, # documents 3.0 id map
+    config
+):
+    print("loading retrieval dataset...")
+    retrieval_dataset = {}
+    print()
+    counter = 0
+    match_counter = 0
+    try:
+        with open(retrieval_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {counter}")
+
+                retrieval_dataset[item["sc_corpus_id"]] = item
+                counter += 1
+
+    except FileNotFoundError:
+        print()
+        counter = 0
+        match_counter = 0
+        with open(sc_retrieval_corpus_path, "rb") as file: # scholarcopilot retrieval corpus
+            for item in ijson.items(file, "", multiple_values=True):
+                
+                sys.stdout.write("\033[F")
+                print(f"processing entry {match_counter}/{counter} (matched/total)")
+
+                sc_corpus_id = item["corpus_id"]
+                target_arxiv_id = item["paper_id"]
+
+                try: 
+                    docs_corpus_id = documents_corpus_id_map[target_arxiv_id] # arxiv_id in documents 3.0?
+                    docs_item = documents_retrieval_dataset[docs_corpus_id]
+                
+                    rec = {
+                        "sc_corpus_id": sc_corpus_id,
+                        "arxiv_id": target_arxiv_id,
+                        "title": docs_item["title"], 
+                        "abstract": docs_item["abstract"], 
+                        "sections": docs_item["sections"]
+                    }
+                    retrieval_dataset[sc_corpus_id] = rec
+
+                    match_counter += 1
+                    counter += 1
+
+                    with open(retrieval_dataset_path, "a") as outfile:
+                        json.dump(rec, outfile)
+                        outfile.write("\n")
+
+                except KeyError:
+                    counter += 1
+
+    print("retrieval dataset loaded.")
+    return retrieval_dataset
+
+
 def arxiv_to_corpus_id(path, processed_corpus_path):
     print("loading arxiv_to_corpus_id map...")
     id_map = {}
@@ -197,6 +258,10 @@ def scholarcopilot_arxiv_to_corpus_id(path, sc_corpus_path):
 
 def load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, tokenizer, config, shuffle=True, max_samples=None):
     print("loading evaluation dataset...")
+
+    if not eval_dataset_path.endswith("documents_3.0.jsonl"):
+        raise ValueError("load_eval_dataset only works for the documents_3.0 dataset!")
+
     eval_dataset = []
     try:
         counter = 0
@@ -212,12 +277,10 @@ def load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, tokenizer, conf
                         break
     except FileNotFoundError:
         LAST_SENTENCE_ONLY = eval_dataset_path.replace("last_sentence", "") != eval_dataset_path
+        INTRO_RELWORK_ONLY = eval_dataset_path.replace("intro+relwork", "") != eval_dataset_path
 
         input_file = "data/documents_3.0_with_ids.jsonl"
-        if LAST_SENTENCE_ONLY:
-            output_file = f"data/context_citation_pairs_last_sentence_documents_3.0.jsonl"
-        else:
-            output_file = f"data/context_citation_pairs_{config["query_context"]}_documents_3.0.jsonl"
+        output_file = eval_dataset_path
 
         print("\n")
         num_pairs = 0
@@ -231,12 +294,20 @@ def load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, tokenizer, conf
                 print(f"processed dataset entries: {counter}")
 
                 full_context = []
-                if not LAST_SENTENCE_ONLY:
-                    full_context = []
+                if LAST_SENTENCE_ONLY:
+                    pass                    
+                elif INTRO_RELWORK_ONLY:
+                    for s in item["sections"]:
+                        low_title = s["title"].lower()
+                        if low_title != low_title.replace("introduction", "") or low_title != low_title.replace("related work", ""):
+                            full_context.append(s["title"])
+                            [full_context.append(sent) for sent in s["sentences"]]
+                    full_context = " ".join(full_context) 
+                else:
                     for s in item["sections"]:
                         full_context.append(s["title"])
                         [full_context.append(sent) for sent in s["sentences"]]
-                    full_context = " ".join(full_context)
+                    full_context = " ".join(full_context) 
 
                 bib = item["bibliography"]
 
@@ -248,28 +319,31 @@ def load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, tokenizer, conf
                         source_arxiv_id = item["arxiv_id"]
                         entry_token = f"#ref{entry}#"
 
-                        lefthand_context = None
+                        lefthand_context = []
                         if LAST_SENTENCE_ONLY:
                             for s in item["sections"]:
-                                found = False
                                 for sent in s["sentences"]:
                                     split = sent.split(entry_token)
                                     if len(split) >= 2:
-                                        lefthand_context = split[0]
-                                        found = True
-                                        break # sent loop
-                                if found:
-                                    break # s loop
+                                        for ctx in split[:len(split)-1]:
+                                            lefthand_context.append(apply_retrieval_context_window(ctx, tokenizer, config))
+                        elif INTRO_RELWORK_ONLY:
+                            if len(full_context.split(entry_token)) >= 2: # bc not all bib entries are cited in intro+relwork
+                                split = full_context.split(entry_token)
+                                for ctx in split[:len(split)-1]:
+                                    lefthand_context.append(apply_retrieval_context_window(ctx, tokenizer, config))
                         else:
-                            lefthand_context = full_context.split(entry_token)[0]
-                            lefthand_context = apply_retrieval_context_window(lefthand_context, tokenizer, config)
+                            split = full_context.split(entry_token)
+                            for ctx in split[:len(split)-1]:
+                                lefthand_context.append(apply_retrieval_context_window(ctx, tokenizer, config))
 
-                        if lefthand_context != None:
+                        for ctx in lefthand_context:
                             # mask all citations in the context
                             for _entry in bib:
-                                lefthand_context = lefthand_context.replace(f"#ref{_entry}#", config["citation_mask_token"])
+                                ctx = ctx.replace(f"#ref{_entry}#", config["citation_mask_token"])
+
                             pair = {
-                                "context": lefthand_context,
+                                "context": ctx,
                                 "source_corpus_id": arxiv_to_corpus_id_map[source_arxiv_id],
                                 "target_corpus_id": arxiv_to_corpus_id_map[target_arxiv_id]
                             }
@@ -287,6 +361,60 @@ def load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, tokenizer, conf
                         pass # ignores targets that don't have an arxiv id
 
                 counter += 1
+
+    eval_indices = np.arange(len(eval_dataset))
+    if shuffle:
+        random.shuffle(eval_indices)
+    print(f"evaluation dataset loaded.")
+    return eval_dataset, eval_indices
+
+
+def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, config, shuffle=True):
+    eval_dataset = []
+    count = 0
+    print()
+    try:
+        with open(eval_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count}")
+                eval_dataset.append(item)
+                count += 1
+
+    except FileNotFoundError:
+        samples_list = None
+        with open(sc_eval_dataset_path, "r") as file:
+            samples_list = json.load(file)
+
+        for sample in samples_list:
+            for citation_token in sample["bib_info"]:
+
+                split_list = sample["paper"].split(citation_token)
+                for i in range(len(split_list)-1):
+
+                    context = split_list[i]
+
+                    for token in sample["bib_info"]:
+                        context = context.replace(token, config["citation_mask_token"])
+
+                    for possible_citation in sample["bib_info"][citation_token]:
+
+                        citation_corpus_id = possible_citation["citation_corpus_id"]
+                        if citation_corpus_id in sc_corpus_id_map:
+
+                            sys.stdout.write("\033[F")
+                            print(f"processing entry {count}")
+
+
+                            rec = {
+                                "context": context,
+                                "citation_corpus_id": possible_citation["citation_corpus_id"]
+                            }
+                            eval_dataset.append(rec)
+                            with open(out_file, "a") as outfile:
+                                json.dump(rec, outfile)
+                                outfile.write("\n")
+                            count += 1
 
     eval_indices = np.arange(len(eval_dataset))
     if shuffle:
