@@ -14,12 +14,13 @@
     "query_expansion": "left",
     "enable_query_context_window": true,
     "query_context": 128,
-    "sc_retriever_topk": 30,
-    "retriever_topk": 16,
+    "sc_retriever_topk": 5,
+    "enable_passage_retriever": false,
+    "retriever_topk": 15,
     "reranker_topk": 5,
     "retr_batch_size": 32,
     "rera_sc_permutation_mode": "stb",
-    "rera_passages_per_call": 4,
+    "rera_passages_per_call": 5,
     "reranker_temperature": 0.6,
     "hnsw_efSearch": 64
 }

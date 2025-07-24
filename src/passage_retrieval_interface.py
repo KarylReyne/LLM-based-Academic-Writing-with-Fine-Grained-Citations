@@ -172,28 +172,28 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         document_labels.append(split[0])
         documents.append(split[1])
 
-    retrieval(
-        evaluation_records,
-        generated_context, 
-        document_labels, 
-        documents,
-        reference_ids,
-        passage_retrieval_models["retriever"],
-        passage_retrieval_models["retr_tokenizer"],
-        config,
-        silent=silent
-    )
+    if config["enable_passage_retriever"]:
+        retrieval(
+            evaluation_records,
+            generated_context, 
+            document_labels, 
+            documents,
+            reference_ids,
+            passage_retrieval_models["retriever"],
+            passage_retrieval_models["retr_tokenizer"],
+            config,
+            silent=silent
+        )
+        
+        document_labels = []
+        documents = []
+        for doc_label, doc_dict in evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"].items():
+            document_labels.append(doc_label)
+            documents.append(doc_dict["section chunk"])
     # print("***************Retrieval cost (time): ", time.time() - start)
 
     start = time.time()
     # --- RERANKING ---
-    document_labels = []
-    documents = []
-
-    for doc_label, doc_dict in evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"].items():
-        document_labels.append(doc_label)
-        documents.append(doc_dict["section chunk"])
-
     ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores = reranking_and_scoring(
         evaluation_records, 
         generated_context,

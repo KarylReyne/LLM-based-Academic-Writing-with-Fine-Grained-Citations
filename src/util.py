@@ -18,3 +18,6 @@ def recall_at_k(rankings, gold_ids, k=1):
             hits += 1 
     return float(hits/len(rankings))
 
+
+def single_recall_at_k(rankings, gold, k=1):
+    return gold in rankings[:k]

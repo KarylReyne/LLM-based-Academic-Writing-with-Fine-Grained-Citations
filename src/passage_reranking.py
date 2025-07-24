@@ -160,12 +160,18 @@ def reranking_and_scoring(
     # s = (1-delta)*s_retr + delta*s_rera
     final_scores = {}
     # reranked_documents still exists, retrieved_documents does not
-    retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
+    if config["enable_passage_retriever"]:
+        retrieved_documents = evaluation_records[f"reference_ids-{reference_ids}"]["retrieved documents"]
     for label in reranked_documents:
         doc = reranked_documents[label]["section chunk"]
-        s_retr = float(retrieved_documents[label]["retrieval score"])
-        s_rera = float(reranked_documents[label]["reranking score"])
-        s = (1-DELTA)*s_retr + DELTA*s_rera
+
+        if config["enable_passage_retriever"]:
+            s_retr = float(retrieved_documents[label]["retrieval score"])
+            s_rera = float(reranked_documents[label]["reranking score"])
+            s = (1-DELTA)*s_retr + DELTA*s_rera
+        else: # just use the reranking score
+            s = float(reranked_documents[label]["reranking score"])
+
         final_scores[label] = {
             "section chunk": doc,
             "final ranking score": s
