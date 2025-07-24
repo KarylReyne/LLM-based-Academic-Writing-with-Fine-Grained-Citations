@@ -67,7 +67,7 @@ if __name__ == "__main__":
     eval_dataset_path = sc_eval_dataset_path.replace(".json", "_eval_pairs.jsonl")
     eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, config, shuffle=shuffle)
 
-    RECALL_K = 1
+    RECALL_K = 5
 
     if config["sc_retriever_topk"] < RECALL_K:
         raise ValueError(f"ScholarCopilot top-k ({config["sc_retriever_topk"]}) cannot be smaller than recall k ({RECALL_K})")
