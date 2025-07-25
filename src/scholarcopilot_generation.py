@@ -49,12 +49,12 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
         # --- BEGIN passage retrieval ---
         start = time.time()
         try:
-            ranked_passages, ranked_passage_labels, ranked_passage_scores, _ = retrieve_relevant_passages(
+            reranking_results = retrieve_relevant_passages(
                 current_text, references, passage_retrieval_models, config
             )
-            best_matching_passage = ranked_passages[0]
-            best_passage_label = ranked_passage_labels[0]
-            best_passage_score = ranked_passage_scores[0]
+            best_matching_passage = reranking_results["ranked_passages"][0]
+            best_passage_label = reranking_results["ranked_passage_labels"][0]
+            best_passage_score = reranking_results["ranked_passage_scores"][0]
             best_reference_arxiv_id = best_passage_label.split("_")[0]
             best_matching_passage = best_matching_passage+"<|cite_end|>"
             print("best matching passage: ", best_matching_passage)

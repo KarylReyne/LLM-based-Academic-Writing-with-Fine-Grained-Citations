@@ -194,7 +194,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
 
     start = time.time()
     # --- RERANKING ---
-    ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores = reranking_and_scoring(
+    reranking_results = reranking_and_scoring(
         evaluation_records, 
         generated_context,
         document_labels, 
@@ -214,7 +214,7 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
         save_passage_records=save_passage_records
     )
 
-    return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
+    return reranking_results
 
 
 def apply_retrieval_context_window(generated_context, tokenizer, config):
@@ -235,7 +235,7 @@ def retrieve_relevant_passages(generated_context, references, passage_retrieval_
         generated_context = apply_retrieval_context_window(
             generated_context, passage_retrieval_models["retr_tokenizer"], config
         ) 
-    ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores = unified_passage_retrieval(
+    reranking_results = unified_passage_retrieval(
         generated_context,
         references, 
         passage_retrieval_models,
@@ -243,4 +243,4 @@ def retrieve_relevant_passages(generated_context, references, passage_retrieval_
         silent=silent,
         save_passage_records=save_passage_records
     )
-    return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
+    return reranking_results

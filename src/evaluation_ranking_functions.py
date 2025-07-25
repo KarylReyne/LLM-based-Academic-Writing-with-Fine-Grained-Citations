@@ -17,13 +17,13 @@ def rank_with_passage_retrieval_from_sc_rankings(context, retrieved_k_results, r
     references, _ = collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=silence)
     response_failure = False
     try:
-        ranked_passages, ranked_passage_labels, ranked_passage_scores, _ = retrieve_relevant_passages(
+        reranking_results = retrieve_relevant_passages(
             context, references, passage_retrieval_models, config, silent=silence, save_passage_records=False
         )
-        ranked_corpus_ids = [arxiv_to_corpus_id_map[l.split("_")[0]] for l in ranked_passage_labels]
-        return ranked_corpus_ids, response_failure, ranked_passages, ranked_passage_labels, ranked_passage_scores
-    except InvalidLLMResponseError:
+        ranked_corpus_ids = [arxiv_to_corpus_id_map[l.split("_")[0]] for l in reranking_results["ranked_passage_labels"]]
+        return ranked_corpus_ids, response_failure, reranking_results, None
+    except InvalidLLMResponseError as err:
         ranked_corpus_ids = [t[0] for t in retrieved_k_results]
         response_failure = True
-        return ranked_corpus_ids, response_failure, None, None, None
+        return ranked_corpus_ids, response_failure, None, err.args
 

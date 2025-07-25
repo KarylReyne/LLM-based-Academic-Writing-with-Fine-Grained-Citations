@@ -369,7 +369,7 @@ def load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, tokenizer, conf
     return eval_dataset, eval_indices
 
 
-def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, config, shuffle=True):
+def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, config, shuffle=True):
     eval_dataset = []
     count = 0
     print()
@@ -398,20 +398,20 @@ def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, co
                         context = context.replace(token, config["citation_mask_token"])
 
                     for possible_citation in sample["bib_info"][citation_token]:
-
+                        
                         citation_corpus_id = possible_citation["citation_corpus_id"]
-                        if citation_corpus_id in sc_corpus_id_map:
+                        if citation_corpus_id in sc_arxiv_id_map:
 
                             sys.stdout.write("\033[F")
                             print(f"processing entry {count}")
 
-
                             rec = {
                                 "context": context,
-                                "citation_corpus_id": possible_citation["citation_corpus_id"]
+                                "source_arxiv_id": sample["paper_id"],
+                                "target_corpus_id": citation_corpus_id
                             }
                             eval_dataset.append(rec)
-                            with open(out_file, "a") as outfile:
+                            with open(eval_dataset_path, "a") as outfile:
                                 json.dump(rec, outfile)
                                 outfile.write("\n")
                             count += 1

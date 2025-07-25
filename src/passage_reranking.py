@@ -94,6 +94,7 @@ def reranking_and_scoring(
         batch_scores = []
         for sc_passages_idx in range(len(responses)): # iterates self-consistency batches
             try:
+                original_llm_chatlog = responses[sc_passages_idx]
                 response = responses[sc_passages_idx].split("assistant\nRelevance scores: ")[1] # list only
                 response = response.lstrip("[").rstrip("]")
                 if len(response.split(", ")) == sc_passages_lengths[sc_passages_idx]:
@@ -103,9 +104,9 @@ def reranking_and_scoring(
                 sc_passages_scores = [float(score)*0.1 for score in response.split(split_str)]
                 assert len(sc_passages_scores) == sc_passages_lengths[sc_passages_idx]
             except AssertionError as e:
-                raise InvalidLLMResponseError("reranker response could not be parsed successfully. Likely not enough scores were generated.")
+                raise InvalidLLMResponseError(f"reranker response could not be parsed successfully. Likely not enough scores were generated:\n{original_llm_chatlog}")
             except Exception as e: # rarely happens
-                raise InvalidLLMResponseError("reranker response could not be parsed successfully.")
+                raise InvalidLLMResponseError(f"reranker response could not be parsed successfully:\n{original_llm_chatlog}")
             [batch_scores.append(s) for s in sc_passages_scores]
 
         scores_for_each_llm_call.append(zip(shuffled_batch_labels, shuffled_zip_documents, batch_scores))
@@ -188,7 +189,12 @@ def reranking_and_scoring(
         ranked_passage_labels.append(label)
         ranked_passage_scores.append(final_scores[label]["final ranking score"])
 
-    return ranked_passages, ranked_passage_labels, ranked_passage_scores, final_scores
+    return {
+        "ranked_passages": ranked_passages, 
+        "ranked_passage_labels": ranked_passage_labels, 
+        "ranked_passage_scores": ranked_passage_scores, 
+        "final_scores": final_scores
+    }
 
 
 class InvalidLLMResponseError(Exception):

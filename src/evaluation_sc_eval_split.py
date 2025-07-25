@@ -33,6 +33,7 @@ if __name__ == "__main__":
     sc_corpus_id_map_path = "data/arxiv_to_corpus_id_scholar_copilot_train_data_500k.json"
     sc_corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     sc_corpus_id_map = scholarcopilot_arxiv_to_corpus_id(sc_corpus_id_map_path, sc_corpus_path)
+    sc_arxiv_id_map = {v: k for k, v in sc_corpus_id_map.items()}
 
     documents_id_map_path = "data/arxiv_to_corpus_id_documents_3.0.json"
     processed_corpus_path = "data/documents_3.0_processed_corpus.jsonl"
@@ -63,9 +64,9 @@ if __name__ == "__main__":
     )
 
     shuffle = True
+    eval_dataset_path = "data/eval_dataset_scholarcopilot_eval_data_1k_eval_pairs.jsonl"
     sc_eval_dataset_path = f"data_train/scholar_copilot_eval_data_1k.json"
-    eval_dataset_path = sc_eval_dataset_path.replace(".json", "_eval_pairs.jsonl")
-    eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, config, shuffle=shuffle)
+    eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, config, shuffle=shuffle)
 
     RECALL_K = 5
 
@@ -81,6 +82,7 @@ if __name__ == "__main__":
     retrieval_fails = 0
     overlap_of_successful_retrievals = 0
     pr_fail_records = {}
+    llm_response_fail_records = {}
     print()
     for i in eval_indices:
         sys.stdout.write("\033[F")
@@ -93,31 +95,42 @@ if __name__ == "__main__":
             sc_ranking, retrieved_k_results = rank_with_scholarcopilot(
                 context, index, lookup_indices, model, tokenizer, config
             )
-            sc_pr_ranking, fail, ranked_passages, ranked_passage_labels, ranked_passage_scores = rank_with_passage_retrieval_from_sc_rankings(
+            sc_pr_ranking, fail, reranking_results, error_msg = rank_with_passage_retrieval_from_sc_rankings(
                 context, retrieved_k_results, retrieval_dataset, sc_corpus_id_map, tokenizer, passage_retrieval_models, config
             )
 
             # appending to the containers is delayed until all retrievals are done (because of the error handling)
-            gold.append(item["citation_corpus_id"])
+            gold.append(item["target_corpus_id"])
             sc_rankings.append(sc_ranking)
             sc_pr_rankings.append(sc_pr_ranking)
             num_llm_fails += fail
 
             # determine overlap
-            bool_sc = single_recall_at_k(sc_ranking, item["citation_corpus_id"], RECALL_K)
-            bool_sc_pr = single_recall_at_k(sc_pr_ranking, item["citation_corpus_id"], RECALL_K)
+            bool_sc = single_recall_at_k(sc_ranking, item["target_corpus_id"], RECALL_K)
+            bool_sc_pr = single_recall_at_k(sc_pr_ranking, item["target_corpus_id"], RECALL_K)
             overlap_of_successful_retrievals += bool_sc and bool_sc_pr
 
             # collect pr failures
             if bool_sc and not bool_sc_pr:
                 rec = {
                     "sample context": context,
-                    "sample target": item["citation_corpus_id"],
-                    "ranked_passage_labels": ranked_passage_labels, 
-                    "ranked_passage_scores": ranked_passage_scores, 
-                    "ranked_passages": ranked_passages
+                    "sample source": item["source_arxiv_id"],
+                    "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
+                    "ranked_passage_labels": reranking_results["ranked_passage_labels"], 
+                    "ranked_passage_scores": reranking_results["ranked_passage_scores"], 
+                    "ranked_passages": reranking_results["ranked_passages"]
                 }
                 pr_fail_records[f"sample index {i}"] = rec
+
+            # collect failing llm responses
+            if error_msg != None:
+                rec = {
+                    "sample context": context,
+                    "sample source": item["source_arxiv_id"],
+                    "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
+                    "failing llm chat log": error_msg
+                }
+                llm_response_fail_records[f"sample index {i}"] = rec
 
             samples += 1
             if samples >= max_samples:
@@ -141,8 +154,9 @@ if __name__ == "__main__":
         "shuffled_samples": shuffle,
         f"ScholarCopilot recall@{RECALL_K}": sc_recall,
         f"ScholarCopilot with passage retrieval recall@{RECALL_K}": sc_pr_recall,
-        "overlap ratio of successful retrievals": overlap_of_successful_retrievals/samples,
+        "overlap ratio of successful retrievals": overlap_of_successful_retrievals/sc_pr_recall,
         "llm response fails": num_llm_fails,
         "SC retrieval fails": retrieval_fails,
-        "samples_where_only_pr_fails": pr_fail_records
+        "samples_where_only_pr_fails": pr_fail_records,
+        "llm response failure logs": llm_response_fail_records
     }, config, mode="eval_retrieval")
