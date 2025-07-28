@@ -4,7 +4,7 @@
     "scholarcopilot_device": "cuda:0",
     "retriever_device": "cuda:1",
     "reranker_device": "cuda:2",
-    "m_reranking": 5,
+    "m_reranking": 3,
     "final_score_delta": 0.5,
     "ranking_score_normalization": true,
     "passage_length": 512,
@@ -13,8 +13,8 @@
     "citation_mask_token": "<|CIT-MASK|>",
     "query_expansion": "left",
     "enable_query_context_window": true,
-    "query_context": 128,
-    "sc_retriever_topk": 5,
+    "query_context": 64,
+    "sc_retriever_topk": 10,
     "enable_passage_retriever": false,
     "retriever_topk": 15,
     "reranker_topk": 5,
@@ -22,5 +22,5 @@
     "rera_sc_permutation_mode": "stb",
     "rera_passages_per_call": 5,
     "reranker_temperature": 0.6,
-    "hnsw_efSearch": 64
+    "hnsw_efSearch": 32
 }

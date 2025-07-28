@@ -1,4 +1,5 @@
 import sys
+import traceback
 import statistics as stat
 import random
 import time
@@ -54,60 +55,71 @@ def reranking_and_scoring(
             random.shuffle(zip_documents)
 
         # create self-consistency batches
-        batch_reranking_input = [] # batch_size/PASSAGES_PER_CALL x 1
-        sc_passages_lengths = [] # for checking if enough scores are generated
+        selfconsist_batched_inputs = [] # sc_batch_size/PASSAGES_PER_CALL x 1
+        selfconsist_passages_lengths = [] # for checking if enough scores are generated
         shuffled_batch_labels = []
         shuffled_zip_documents = []
-        for sc_passages_idx in range(0, len(documents), PASSAGES_PER_CALL): # iterates self-consistency batches
+        for selfconsist_passages_idx in range(0, len(documents), PASSAGES_PER_CALL): # iterates self-consistency batches
 
-            sc_passages_documents = zip_documents[sc_passages_idx:sc_passages_idx+PASSAGES_PER_CALL]
-            sc_passages_lengths.append(len(sc_passages_documents))
+            selfconsist_passages_documents = None
+            terminate_after_this_batch = False
+            if len(documents)-(selfconsist_passages_idx+PASSAGES_PER_CALL) >= 3:
+                selfconsist_passages_documents = zip_documents[selfconsist_passages_idx:selfconsist_passages_idx+PASSAGES_PER_CALL]
+                selfconsist_passages_lengths.append(len(selfconsist_passages_documents))
+            else: # append the last batch if it has < 3 passages - this reduces llm parsing errors
+                selfconsist_passages_documents = zip_documents[selfconsist_passages_idx:len(documents)]
+                selfconsist_passages_lengths.append(len(selfconsist_passages_documents))
+                terminate_after_this_batch = True
 
             # shuffles after batching -> passage mixture of each batch is the same across llm calls
             if SC_PERMUTATION_MODE == "bts":
-                random.shuffle(sc_passages_documents)
+                random.shuffle(selfconsist_passages_documents)
             
-            for (l, d) in sc_passages_documents:
+            for (l, d) in selfconsist_passages_documents:
                 shuffled_batch_labels.append(l)
                 shuffled_zip_documents.append(d)
 
-            batch_reranking_input.append(rera_tokenizer.apply_chat_template([
+            selfconsist_batched_inputs.append(rera_tokenizer.apply_chat_template([
                     {"role": "system", "content": "You are a helpful assistant"}, # from ReasonIR p.19 fig.9
-                    {"role": "user", "content": reranking_instruction(generated_context, [d for (l, d) in sc_passages_documents])}
+                    {"role": "user", "content": reranking_instruction(generated_context, [d for (l, d) in selfconsist_passages_documents])}
                 ],
                 tokenize=False,
                 add_generation_prompt=True
             ))
+            if terminate_after_this_batch:
+                break
         sc_batching_timecost += time.time() - start
 
         start = time.time()
-        llm_call_input = rera_tokenizer(batch_reranking_input, return_tensors="pt", padding=True, padding_side="left").to(config["reranker_device"])
-        generated_encoded_tokens = reranker.generate(
-            **llm_call_input, 
-            max_new_tokens=128,
-            temperature=RERA_TEMPERATURE
-        )
-        responses = rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)
+        # feeding every batch into the model at once consimes more memory per gpu
+        # thats why the batches are looped here
+        responses = []
+        for batch_input in selfconsist_batched_inputs:
+            llm_call_input = rera_tokenizer([batch_input], return_tensors="pt", padding=True, padding_side="left").to(config["reranker_device"])
+            generated_encoded_tokens = reranker.generate(
+                **llm_call_input, 
+                max_new_tokens=128,
+                temperature=RERA_TEMPERATURE
+            )
+            responses.append(rera_tokenizer.batch_decode(generated_encoded_tokens, skip_special_tokens=True)[0])
         generation_timecost += time.time() - start
 
         start = time.time()
         batch_scores = []
-        for sc_passages_idx in range(len(responses)): # iterates self-consistency batches
+        for selfconsist_passages_idx in range(len(responses)): # iterates self-consistency batches
             try:
-                original_llm_chatlog = responses[sc_passages_idx]
-                response = responses[sc_passages_idx].split("assistant\nRelevance scores: ")[1] # list only
+                original_llm_chatlog = responses[selfconsist_passages_idx]
+                response = responses[selfconsist_passages_idx].split("assistant\n")[-1] # list only
                 response = response.lstrip("[").rstrip("]")
-                if len(response.split(", ")) == sc_passages_lengths[sc_passages_idx]:
+                if len(response.split(", ")) == selfconsist_passages_lengths[selfconsist_passages_idx]:
                     split_str = ", "
                 else:
                     split_str = "," # happens sometimes
-                sc_passages_scores = [float(score)*0.1 for score in response.split(split_str)]
-                assert len(sc_passages_scores) == sc_passages_lengths[sc_passages_idx]
-            except AssertionError as e:
-                raise InvalidLLMResponseError(f"reranker response could not be parsed successfully. Likely not enough scores were generated:\n{original_llm_chatlog}")
-            except Exception as e: # rarely happens
-                raise InvalidLLMResponseError(f"reranker response could not be parsed successfully:\n{original_llm_chatlog}")
-            [batch_scores.append(s) for s in sc_passages_scores]
+                selfconsist_passages_scores = [float(score)*0.1 for score in response.split(split_str)]
+                assert len(selfconsist_passages_scores) == selfconsist_passages_lengths[selfconsist_passages_idx]
+            except Exception as e:
+                raise InvalidLLMResponseError(f"reranker response could not be parsed successfully.\n\nLLM chatlog:{original_llm_chatlog}\n\nTraceback:{traceback.format_exc()}\n")
+            [batch_scores.append(s) for s in selfconsist_passages_scores]
 
         scores_for_each_llm_call.append(zip(shuffled_batch_labels, shuffled_zip_documents, batch_scores))
         response_parsing_timecost += time.time() - start
@@ -129,7 +141,10 @@ def reranking_and_scoring(
 
     for label in batch_rera_scores:
         scores = batch_rera_scores[label]
-        assert len(scores) == M_RERA # ensure that we have all the scores
+        try:
+            assert len(scores) == M_RERA # ensure that we have all the scores
+        except AssertionError:
+            raise InvalidLLMResponseError(f"something went wrong during score collection.\n\nllm_call_data:{llm_call_data}")
         batch_rera_scores[label] = stat.mean(scores)
 
 
