@@ -20,6 +20,7 @@ class TrainCollator:
         :param features: list of (query, passages) tuples
         :return: tokenized query_ids, passage_ids
         """
+
         all_papers = [f[0] for f in features]
         all_targets = []
         all_targets_idx = []
@@ -52,10 +53,11 @@ class TrainCollator:
         
         selected_cite_positions = []
         for i, cite_positions in enumerate(cite_start_positions):
-            # print("all_targets_idx[i]", all_targets_idx[i])
-            # print("cite_positions", cite_positions)
-            # print("all_targets_idx", all_targets_idx)
+            print("all_targets_idx[i]", all_targets_idx[i])
+            print("cite_positions", cite_positions)
+            print("all_targets_idx", all_targets_idx)
             selected_cite_positions.append([cite_positions[j] for j in all_targets_idx[i]])
+        raise ValueError()
         
         # prepare the label for the model based on input_ids
         # for token_id between <cite_start> and <cite_end>, the label is -100

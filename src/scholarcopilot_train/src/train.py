@@ -15,12 +15,9 @@ from collator import TrainCollator
 from arxivllm import ArxivLLM
 from trainer import TevatronTrainer as Trainer
 
-from torch.distributed.elastic.multiprocessing.errors import record
-
 logger = logging.getLogger(__name__)
 
 
-@record
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 

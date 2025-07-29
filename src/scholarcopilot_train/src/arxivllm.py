@@ -11,6 +11,8 @@ from peft import LoraConfig, TaskType, get_peft_model, PeftModel
 from transformers.file_utils import ModelOutput
 from arguments import ModelArguments, TevatronTrainingArguments as TrainingArguments
 
+from deepspeed.accelerator import get_accelerator
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,8 @@ class ArxivLLM(nn.Module):
             self.world_size = dist.get_world_size()
 
     def forward(self, query: Dict[str, Tensor] = None, passage: Dict[str, Tensor] = None):
+        get_accelerator().empty_cache() # added
+
         q_reps, gen_loss = self.encode_query(query) if query is not None else (None, None)
         p_reps = self.encode_passage(passage) if passage is not None else None
         loss = None
@@ -134,7 +138,7 @@ class ArxivLLM(nn.Module):
     ):  
         base_model = cls.TRANSFORMER_CLS.from_pretrained(
             model_args.model_name_or_path, 
-            # attn_implementation="flash_attention_2", 
+            # attn_implementation="flash_attention_2",
             torch_dtype=torch.bfloat16
         )
         if base_model.config.pad_token_id is None:
@@ -153,6 +157,7 @@ class ArxivLLM(nn.Module):
                     lora_alpha=model_args.lora_alpha,
                     lora_dropout=model_args.lora_dropout,
                     target_modules=model_args.lora_target_modules.split(','),
+                    use_rslora=model_args.lora_use_rslora,
                     inference_mode=False
                 )
                 lora_model = get_peft_model(base_model, lora_config)

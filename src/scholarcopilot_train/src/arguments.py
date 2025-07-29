@@ -34,7 +34,8 @@ class ModelArguments:
     )
 
     # for lora
-    lora: bool = field(default=False,
+    lora: bool = field(
+        default=False,
         metadata={"help": "do parameter-efficient fine-tuning with lora"}
     )
 
@@ -60,6 +61,11 @@ class ModelArguments:
     lora_target_modules: str = field(
         default="q_proj,k_proj,v_proj,o_proj,down_proj,up_proj,gate_proj",
         metadata={"help": "lora target modules"}
+    )
+
+    lora_use_rslora: bool = field(
+        default=False,
+        metadata={"help": "enable lora rank stabilization"}
     )
 
     # for Jax training

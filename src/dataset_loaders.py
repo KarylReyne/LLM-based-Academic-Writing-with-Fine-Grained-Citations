@@ -68,7 +68,7 @@ def load_retrieval_dataset_from_sc_eval(retrieval_dataset_path, complete_dataset
             arxiv_id = item["arxiv_id"].split("-")[0]
             corpus_id = sc_corpus_id_map[arxiv_id]
 
-            if complete_dataset_path == "data_train/scholar_copilot_train_data_500k.json":
+            if complete_dataset_path == "scholarcopilot_data/scholar_copilot_train_data_500k.json":
                 pattern = r'<\|cite_start\|>(.*?)<\|cite_end\|>'
                 sentences = re.sub(pattern, config["citation_mask_token"], item["paper"])
                 title = ""
@@ -77,7 +77,7 @@ def load_retrieval_dataset_from_sc_eval(retrieval_dataset_path, complete_dataset
                     "title": "",
                     "sentences": [sentences]
                 }]
-            elif complete_dataset_path == "data_train/scholar_copilot_eval_data_1k.json":
+            elif complete_dataset_path == "scholarcopilot_data/scholar_copilot_eval_data_1k.json":
                 title = item["title"]
                 abstract = item["abstract"]
                 sections = [{
@@ -421,3 +421,50 @@ def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc
         random.shuffle(eval_indices)
     print(f"evaluation dataset loaded.")
     return eval_dataset, eval_indices
+
+
+def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, sc_train_dataset_path):
+    print("loading training dataset...")
+    train_dataset = []
+    count = 0
+    print()
+
+    try:
+        with open(pr_train_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count}")
+                train_dataset.append(item)
+                count += 1
+    
+    except FileNotFoundError:
+        sc_train_dataset_list = []
+        with open(sc_train_dataset_path, "r") as file:
+            sc_train_dataset_list = json.load(file)
+        
+        # for entry in sc_train_dataset_list:
+        #     for key in entry:
+        #         print(f"\n{key}")
+        #         print(entry[key])
+        #     break
+
+        # paper_entry = sc_train_dataset_list[0]
+
+        # paper_text = paper_entry["paper"]
+        # split_list = paper_text.split("<|cite_start|>")
+        # cite_32 = split_list[32].split("<|cite_end|>")[0]
+
+        # print(cite_32)
+        print()
+
+        corpus = {}
+        with open("scholarcopilot_data/corpus_data_arxiv_1215.jsonl", "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count}")
+                corpus[item["corpus_id"]] = item
+                count += 1
+        count = 0
+
+        print(corpus["arxiv-303032"])
+        print(corpus["ss-833088"])

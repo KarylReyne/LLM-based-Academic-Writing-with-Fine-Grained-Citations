@@ -13,7 +13,7 @@
     "citation_mask_token": "<|CIT-MASK|>",
     "query_expansion": "left",
     "enable_query_context_window": true,
-    "query_context": 64,
+    "query_context": 128,
     "sc_retriever_topk": 10,
     "enable_passage_retriever": false,
     "retriever_topk": 15,

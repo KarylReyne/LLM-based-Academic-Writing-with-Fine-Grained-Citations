@@ -40,7 +40,7 @@ if __name__ == "__main__":
     documents_arxiv_to_corpus_id_map = arxiv_to_corpus_id(documents_id_map_path, processed_corpus_path)
     
     # retrieval_dataset_path = "data/retrieval_dataset_scholar_copilot_train_data_500k.jsonl"
-    # complete_dataset_path = "data_train/scholar_copilot_train_data_500k.json"
+    # complete_dataset_path = "scholarcopilot_data/scholar_copilot_train_data_500k.json"
     # retrieval_dataset = load_retrieval_dataset_from_sc_eval(retrieval_dataset_path, complete_dataset_path, sc_corpus_id_map, config)
 
     # documents_retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     shuffle = True
     eval_dataset_path = "data/eval_dataset_scholarcopilot_eval_data_1k_eval_pairs.jsonl"
-    sc_eval_dataset_path = f"data_train/scholar_copilot_eval_data_1k.json"
+    sc_eval_dataset_path = f"scholarcopilot_data/scholar_copilot_eval_data_1k.json"
     eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, config, shuffle=shuffle)
 
     RECALL_K = 5
