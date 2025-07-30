@@ -456,22 +456,65 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_dataset_pat
 
         print("building train dataset...\n")        
         count = 0
+        skipped = 0
         for arxiv_id in corpus:
             sys.stdout.write("\033[F")
-            print(f"processing entry {count}")
+            print(f"processing entry {count} ({skipped} skipped)")
 
             item = corpus[arxiv_id]
+            bib = item["bibliography"]
 
             replaceable_citations = []
-            for k, v in item["bibliography"].items():
+            for k, v in bib.items():
                 if "arxiv_id" in v:
                     if v["arxiv_id"] in corpus: # guarantees that the paper is retrievable
                         replaceable_citations.append(k)
-            rnd_indices = np.arange(len(replaceable_citations))
-            random.shuffle(rnd_indices)
+            random_indices = np.arange(len(replaceable_citations))
+            random.shuffle(random_indices)
 
-            # TODO
+            num_targets = 4 # same as SC
+            if len(random_indices) < num_targets:
+                skipped += 1
+                continue
 
-            paper = item["fulltext"]
             targets = []
             targets_idx = []
+            for i in random_indices:
+                target_citation_id = bib[replaceable_citations[i]]["arxiv_id"]
+                # SC
+                # target = corpus[target_citation_id]["title"]+":"
+                # target += " ".join(corpus[target_citation_id]["abstract"]).lstrip(" Abstract")
+                # PR
+                ctx = item["fulltext"]
+                target = get_passage_from_context(ctx, target_citation_id) # TODO
+
+                target = f"<|reference_start|> {target} <|reference_end|>"
+                targets.append(target)
+                targets_idx.append(int(i))
+                if len(targets) >= num_targets:
+                    break
+
+            paper = item["fulltext"]
+            for key in replaceable_citations:
+                if "arxiv_id" in bib[key]:
+                    target_id = bib[key]["arxiv_id"]
+                    # SC
+                    # insert = " ".join(corpus[target_id]["abstract"])
+                    # PR
+                    # TODO
+                    insert = f"<|cite_start|> (Reference: {insert}) <|cite_end|>"
+                    paper = paper.replace(f"#ref{key}#", insert)
+
+            rec = {
+                "paper": paper,
+                "targets": targets,
+                "targets_idx": targets_idx
+            }
+            # print(rec)
+            # exit()
+            with open(pr_train_dataset_path, "a") as outfile:
+                json.dump(rec, outfile)
+                outfile.write("\n")
+            count += 1
+                
+            

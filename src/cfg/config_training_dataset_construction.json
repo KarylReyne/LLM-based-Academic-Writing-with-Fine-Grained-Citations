@@ -15,7 +15,7 @@
     "enable_query_context_window": true,
     "query_context": 128,
     "sc_retriever_topk": 10,
-    "enable_passage_retriever": false,
+    "enable_passage_retriever": true,
     "retriever_topk": 15,
     "reranker_topk": 1,
     "retr_batch_size": 32,
