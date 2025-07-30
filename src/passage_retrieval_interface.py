@@ -14,9 +14,9 @@ from passage_reranking import reranking_and_scoring, InvalidLLMResponseError
 from passage_retrieval_instructions import *
 
 
-def get_config():
+def get_config(path='cfg/config.json'):
     config = None
-    with open('cfg/config.json', 'r', encoding='utf-8') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert config != None
     return config

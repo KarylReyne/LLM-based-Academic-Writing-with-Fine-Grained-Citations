@@ -17,13 +17,13 @@ class TrainCollator:
     def __call__(self, features: List[Tuple[str, List[str]]]):
         """
         Collate function for training.
-        :param features: list of (query, passages) tuples
+        :param features: list of (paper, passages, passages_idx) triples
         :return: tokenized query_ids, passage_ids
         """
 
-        all_papers = [f[0] for f in features]
-        all_targets = []
-        all_targets_idx = []
+        all_papers = [f[0] for f in features] # num_papers x len_paper
+        all_targets = [] # num_papers x 4
+        all_targets_idx = [] # num_papers x 4, index of each target in the list of all citations in the paper
         for f in features:
             all_targets.extend(f[1])
             all_targets_idx.append(f[2])
@@ -46,23 +46,22 @@ class TrainCollator:
             add_special_tokens=True,
         )
         
-        # get the positions of special token <cite_start>, there a not same number of <cite_start> in each paper
-        cite_start_positions = []
+        # get the positions of each <cite_start> token (not only the targets) in the paper
+        # there is a different number of <cite_start> tokens in each paper!
+        cite_start_positions = [] # num_papers x num_cite_tokens_in_paper
         for i, tokenized_paper in enumerate(papers_tokenized['input_ids']):
             cite_start_positions.append([j for j, x in enumerate(tokenized_paper) if x == self.tokenizer.convert_tokens_to_ids('<|cite_start|>')])
         
-        selected_cite_positions = []
+        # get the positions of each targets' <cite_start> token in the paper
+        targets_cite_start_positions = [] # num_papers x 4
         for i, cite_positions in enumerate(cite_start_positions):
-            print("all_targets_idx[i]", all_targets_idx[i])
-            print("cite_positions", cite_positions)
-            print("all_targets_idx", all_targets_idx)
-            selected_cite_positions.append([cite_positions[j] for j in all_targets_idx[i]])
-        raise ValueError()
+            targets_cite_start_positions.append([cite_positions[j] for j in all_targets_idx[i]])
         
         # prepare the label for the model based on input_ids
         # for token_id between <cite_start> and <cite_end>, the label is -100
         # all other labels are the token_id itself
-        labels = []
+        # -> 'masks' each citation in the paper
+        labels = [] # num_papers x len_paper
         for i, tokenized_paper in enumerate(papers_tokenized['input_ids']):
             label = []
             is_ignore = False
@@ -83,11 +82,11 @@ class TrainCollator:
         # convert everything to tensor
         papers_tokenized = {k: torch.tensor(v) for k, v in papers_tokenized.items()}
         targets_tokenized = {k: torch.tensor(v) for k, v in targets_tokenized.items()}
-        # labels and selected_cite_positions are lists of lists with equal length so we can convert them to tensor directly
+        # labels and targets_cite_start_positions are lists of lists with equal length so we can convert them to tensor directly
         labels = torch.tensor(labels)
-        selected_cite_positions = torch.tensor(selected_cite_positions)
+        targets_cite_start_positions = torch.tensor(targets_cite_start_positions)
         papers_tokenized['labels'] = labels
-        papers_tokenized['selected_cite_positions'] = selected_cite_positions
+        papers_tokenized['targets_cite_start_positions'] = targets_cite_start_positions
         return papers_tokenized, targets_tokenized
 
 

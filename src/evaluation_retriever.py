@@ -40,10 +40,6 @@ if __name__ == "__main__":
     complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
     retrieval_dataset = load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, arxiv_to_corpus_id_map)
 
-    # retrieval_dataset_path = "data/prebuilt_passages_retrieval_dataset_documents_3.0.jsonl"
-    # complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
-    # retrieval_dataset = load_prebuilt_passages_dataset(retrieval_dataset_path, complete_dataset_path, arxiv_to_corpus_id_map, passage_retrieval_models["retr_tokenizer"], config)
-
     index_dir = "data/index"
     lookup_indices_dir = "data/lookup_indices.npy"
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)

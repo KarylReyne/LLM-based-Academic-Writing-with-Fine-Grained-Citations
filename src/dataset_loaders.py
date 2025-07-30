@@ -423,7 +423,7 @@ def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc
     return eval_dataset, eval_indices
 
 
-def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, sc_train_dataset_path):
+def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_dataset_path, get_passage_from_context):
     print("loading training dataset...")
     train_dataset = []
     count = 0
@@ -438,33 +438,40 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, sc_train_dataset
                 count += 1
     
     except FileNotFoundError:
-        sc_train_dataset_list = []
-        with open(sc_train_dataset_path, "r") as file:
-            sc_train_dataset_list = json.load(file)
-        
-        # for entry in sc_train_dataset_list:
-        #     for key in entry:
-        #         print(f"\n{key}")
-        #         print(entry[key])
-        #     break
-
-        # paper_entry = sc_train_dataset_list[0]
-
-        # paper_text = paper_entry["paper"]
-        # split_list = paper_text.split("<|cite_start|>")
-        # cite_32 = split_list[32].split("<|cite_end|>")[0]
-
-        # print(cite_32)
-        print()
-
         corpus = {}
-        with open("scholarcopilot_data/corpus_data_arxiv_1215.jsonl", "rb") as file:
+        with open(docs_dataset_path, "rb") as file:
             for item in ijson.items(file, "", multiple_values=True):
                 sys.stdout.write("\033[F")
-                print(f"processing entry {count}")
-                corpus[item["corpus_id"]] = item
-                count += 1
-        count = 0
+                print(f"processing corpus entry {count}")
+                
+                fulltext = item["title"]
+                fulltext += " ".join(item["abstract"])
+                for section in item["sections"]:
+                    fulltext += section["title"]
+                    fulltext += " ".join(section["sentences"])
+                item["fulltext"] = fulltext 
 
-        print(corpus["arxiv-303032"])
-        print(corpus["ss-833088"])
+                corpus[item["arxiv_id"]] = item
+                count += 1
+
+        print("building train dataset...\n")        
+        count = 0
+        for arxiv_id in corpus:
+            sys.stdout.write("\033[F")
+            print(f"processing entry {count}")
+
+            item = corpus[arxiv_id]
+
+            replaceable_citations = []
+            for k, v in item["bibliography"].items():
+                if "arxiv_id" in v:
+                    if v["arxiv_id"] in corpus: # guarantees that the paper is retrievable
+                        replaceable_citations.append(k)
+            rnd_indices = np.arange(len(replaceable_citations))
+            random.shuffle(rnd_indices)
+
+            # TODO
+
+            paper = item["fulltext"]
+            targets = []
+            targets_idx = []

@@ -37,8 +37,8 @@ class ArxivLLM(nn.Module):
         super().__init__()
         self.config = encoder.config
         self.encoder = encoder
-        self.pooling = pooling # not used here
-        self.normalize = normalize # not used here
+        self.pooling = pooling
+        self.normalize = normalize
         self.temperature = temperature
         self.cross_entropy = nn.CrossEntropyLoss(reduction='mean')
         self.is_ddp = dist.is_initialized()
@@ -77,6 +77,22 @@ class ArxivLLM(nn.Module):
             p_reps=p_reps,
         )
 
+    def encode_query(self, qry):
+        input_ids = qry['input_ids']
+        attention_mask = qry['attention_mask']
+        labels = qry['labels']
+        targets_cite_start_positions = qry['targets_cite_start_positions']
+        output = self.encoder(input_ids=input_ids, attention_mask=attention_mask, labels=labels, return_dict=True, output_hidden_states=True)
+        last_hidden_state = output.hidden_states[-1]
+        # for each query, there are 4 cite_token in the input, we will extract the last layer hidden states of the cite_token.
+        # each query will have 4 representations
+        
+        # get the representation corresponding to the targets_cite_start_positions
+        reps = last_hidden_state[torch.arange(last_hidden_state.shape[0], device=last_hidden_state.device)[:, None], targets_cite_start_positions]
+        reps = reps.view(-1, reps.size(-1))
+        reps = torch.nn.functional.normalize(reps, p=2, dim=-1)
+        return reps, output.loss
+
     def encode_passage(self, psg):
         output = self.encoder(**psg, return_dict=True, output_hidden_states=True)
         last_hidden_state = output.hidden_states[-1]
@@ -86,26 +102,6 @@ class ArxivLLM(nn.Module):
         reps = last_hidden_state[torch.arange(batch_size, device=last_hidden_state.device), sequence_lengths]
         reps = torch.nn.functional.normalize(reps, p=2, dim=-1)
         return reps
-
-
-    def encode_query(self, qry):
-        input_ids = qry['input_ids']
-        attention_mask = qry['attention_mask']
-        labels = qry['labels']
-        selected_cite_positions = qry['selected_cite_positions']
-        output = self.encoder(input_ids=input_ids, attention_mask=attention_mask, labels=labels, return_dict=True, output_hidden_states=True)
-        last_hidden_state = output.hidden_states[-1]
-        # for each query, there are 4 cite_token in the input, we will extract the last layer hidden states of the cite_token.
-        # each query will have 4 representations
-        # cite_token_idx = qry['input_ids'].eq(self.encoder.config.cite_token_id).nonzero(as_tuple=True)[1] # (batch_size, 4)
-        # reps = last_hidden_state[torch.arange(last_hidden_state.shape[0], device=last_hidden_state.device)[:, None], cite_token_idx] # (batch_size, 4, hidden_size)
-        # reshape to (batch_size * 4, hidden_size)
-        
-        # get the representation corresponding to the selected_cite_positions
-        reps = last_hidden_state[torch.arange(last_hidden_state.shape[0], device=last_hidden_state.device)[:, None], selected_cite_positions]
-        reps = reps.view(-1, reps.size(-1))
-        reps = torch.nn.functional.normalize(reps, p=2, dim=-1)
-        return reps, output.loss
 
     def compute_similarity(self, q_reps, p_reps):
         return torch.matmul(q_reps, p_reps.transpose(0, 1))
