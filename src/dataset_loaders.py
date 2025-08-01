@@ -423,7 +423,20 @@ def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc
     return eval_dataset, eval_indices
 
 
-def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_dataset_path, get_passage_from_context):
+def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_dataset_path, docs_dataset_path, get_passage_from_context, tokenizer, config):
+
+    def _get_passages_from_fulltext(fulltext, target_id, tokenizer, config):
+        tokens = tokenizer(fulltext).to(config["scholarcopilot_device"])
+        tokens = tokens["input_ids"] # get only the encoded tokens
+        passages = []
+        passage_idx = 0
+        for i in range(0, len(tokens), config["passage_length"]):
+            passage = tokenizer.decode(tokens[i:i+config["passage_length"]]).replace(config["tokenizer_begin_token"], "")
+            psg_label = f"{target_id}_{passage_idx}" # without the section title bc it is not available !!!
+            passages.append(psg_label+config["label_sep_token"]+passage)
+            passage_idx += 1
+        return passages
+
     print("loading training dataset...")
     train_dataset = []
     count = 0
@@ -439,82 +452,105 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_dataset_pat
     
     except FileNotFoundError:
         corpus = {}
-        with open(docs_dataset_path, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
-                sys.stdout.write("\033[F")
-                print(f"processing corpus entry {count}")
-                
-                fulltext = item["title"]
-                fulltext += " ".join(item["abstract"])
-                for section in item["sections"]:
-                    fulltext += section["title"]
-                    fulltext += " ".join(section["sentences"])
-                item["fulltext"] = fulltext 
+        try:
+            with open(docs_fulltext_dataset_path, "rb") as file:
+                for item in ijson.items(file, "", multiple_values=True):
+                    sys.stdout.write("\033[F")
+                    print(f"processing corpus entry {count}")
 
-                corpus[item["arxiv_id"]] = item
-                count += 1
+                    corpus[item["arxiv_id"]] = {
+                        "fulltext": item["fulltext"]
+                    }
+                    count += 1
+
+
+        except FileNotFoundError: # create a smaller, more manageable dataset
+            with open(docs_dataset_path, "rb") as file:
+                for item in ijson.items(file, "", multiple_values=True):
+                    sys.stdout.write("\033[F")
+                    print(f"processing corpus entry {count}")
+                    
+                    fulltext = item["title"]
+                    fulltext += " ".join(item["abstract"])
+                    for section in item["sections"]:
+                        fulltext += section["title"]
+                        fulltext += " ".join(section["sentences"])
+                    
+                    new_item = {
+                        "arxiv_id": item["arxiv_id"],
+                        "fulltext": fulltext,
+                        "bibliography": item["bibliography"]
+                    }
+
+                    corpus[item["arxiv_id"]] = {
+                        "fulltext": item["fulltext"]
+                    }
+
+                    with open(docs_fulltext_dataset_path, "a") as outfile:
+                        json.dump(new_item, outfile)
+                        outfile.write("\n")
+                    count += 1
 
         print("building train dataset...\n")        
         count = 0
         skipped = 0
-        for arxiv_id in corpus:
-            sys.stdout.write("\033[F")
-            print(f"processing entry {count} ({skipped} skipped)")
+        with open(docs_fulltext_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
 
-            item = corpus[arxiv_id]
-            bib = item["bibliography"]
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count} ({skipped} skipped)")
 
-            replaceable_citations = []
-            for k, v in bib.items():
-                if "arxiv_id" in v:
-                    if v["arxiv_id"] in corpus: # guarantees that the paper is retrievable
-                        replaceable_citations.append(k)
-            random_indices = np.arange(len(replaceable_citations))
-            random.shuffle(random_indices)
+                bib = item["bibliography"]
+                replaceable_citations = []
+                for k, v in bib.items():
+                    if "arxiv_id" in v:
+                        if v["arxiv_id"] in corpus: # guarantees that the paper is retrievable
+                            replaceable_citations.append(k)
 
-            num_targets = 4 # same as SC
-            if len(random_indices) < num_targets:
-                skipped += 1
-                continue
+                all_targets = []
 
-            targets = []
-            targets_idx = []
-            for i in random_indices:
-                target_citation_id = bib[replaceable_citations[i]]["arxiv_id"]
-                # SC
-                # target = corpus[target_citation_id]["title"]+":"
-                # target += " ".join(corpus[target_citation_id]["abstract"]).lstrip(" Abstract")
-                # PR
-                ctx = item["fulltext"]
-                target = get_passage_from_context(ctx, target_citation_id) # TODO
-
-                target = f"<|reference_start|> {target} <|reference_end|>"
-                targets.append(target)
-                targets_idx.append(int(i))
-                if len(targets) >= num_targets:
-                    break
-
-            paper = item["fulltext"]
-            for key in replaceable_citations:
-                if "arxiv_id" in bib[key]:
+                paper = item["fulltext"]
+                for key in replaceable_citations:
                     target_id = bib[key]["arxiv_id"]
                     # SC
-                    # insert = " ".join(corpus[target_id]["abstract"])
+                    # target = corpus[target_id]["title"]+":"
+                    # target += " ".join(corpus[target_id]["abstract"]).lstrip(" Abstract")
                     # PR
-                    # TODO
-                    insert = f"<|cite_start|> (Reference: {insert}) <|cite_end|>"
-                    paper = paper.replace(f"#ref{key}#", insert)
+                    target = get_passage_from_context(
+                        paper.split(f"#ref{key}#")[0], 
+                        [{"arxiv_id": "","passages": _get_passages_from_fulltext(
+                            corpus[target_id]["fulltext"], target_id, tokenizer, config
+                        )}]
+                    )
+                    all_targets.append(target)
+                    target = f"<|cite_start|> (Reference: {target}) <|cite_end|>"
+                    paper = paper.replace(f"#ref{key}#", target)
 
-            rec = {
-                "paper": paper,
-                "targets": targets,
-                "targets_idx": targets_idx
-            }
-            # print(rec)
-            # exit()
-            with open(pr_train_dataset_path, "a") as outfile:
-                json.dump(rec, outfile)
-                outfile.write("\n")
-            count += 1
+                random_indices = np.arange(len(replaceable_citations))
+                random.shuffle(random_indices)
+                num_targets = 4 # same as SC
+                if len(random_indices) < num_targets:
+                    skipped += 1
+                    continue
+
+                targets = []
+                targets_idx = []
+                for i in random_indices:
+                    target = all_targets[i]
+                    target = f"<|reference_start|> {target} <|reference_end|>"
+                    targets.append(target)
+                    targets_idx.append(int(i))
+                    if len(targets) >= num_targets:
+                        break
+
+                rec = {
+                    "paper": paper,
+                    "targets": targets,
+                    "targets_idx": targets_idx
+                }
+                with open(pr_train_dataset_path, "a") as outfile:
+                    json.dump(rec, outfile)
+                    outfile.write("\n")
+                count += 1
                 
             
