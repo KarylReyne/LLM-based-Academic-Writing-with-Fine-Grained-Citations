@@ -19,7 +19,7 @@
 scontrol show job $SLURM_JOB_ID
 pwd
 nvidia-smi # only if you requested gpus
-squeue -u "gwb204" -o"%.10i %.10P %.10u %.2t %.10M %.6D %C %n"
+squeue -u "gwb204" -o"%.10i %.15P %.10u %.2t %.10M %.6D %C %n"
 
 # Setup Phase
 # add possibly other setup code here, e.g.

@@ -4,8 +4,10 @@ import json
 import re
 import random
 import numpy as np
+from tqdm import tqdm
 
 from passage_retrieval_interface import apply_retrieval_context_window
+from sigterm_catcher import SIGTERMCatcher
 
 
 def load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, id_map):
@@ -458,9 +460,7 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                     sys.stdout.write("\033[F")
                     print(f"processing corpus entry {count}")
 
-                    corpus[item["arxiv_id"]] = {
-                        "fulltext": item["fulltext"]
-                    }
+                    corpus[item["arxiv_id"]] = item
                     count += 1
 
 
@@ -482,9 +482,7 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                         "bibliography": item["bibliography"]
                     }
 
-                    corpus[item["arxiv_id"]] = {
-                        "fulltext": item["fulltext"]
-                    }
+                    corpus[item["arxiv_id"]] = new_item
 
                     with open(docs_fulltext_dataset_path, "a") as outfile:
                         json.dump(new_item, outfile)
@@ -492,65 +490,94 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                     count += 1
 
         print("building train dataset...\n")        
-        count = 0
-        skipped = 0
-        with open(docs_fulltext_dataset_path, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
+        catcher = SIGTERMCatcher()
+        while not catcher.was_killed:
 
-                sys.stdout.write("\033[F")
-                print(f"processing entry {count} ({skipped} skipped)")
+            count = 0
+            skipped = 0
+            for arxiv_id in tqdm(corpus):
+                try:
+                    item = corpus[arxiv_id]
 
-                bib = item["bibliography"]
-                replaceable_citations = []
-                for k, v in bib.items():
-                    if "arxiv_id" in v:
-                        if v["arxiv_id"] in corpus: # guarantees that the paper is retrievable
-                            replaceable_citations.append(k)
+                    sys.stdout.write("\033[F")
+                    print(f"processing entry {count} ({skipped} skipped)")
+                    
+                    # num citations for training the retriever per paper
+                    # same as SC
+                    num_targets = 4 
+                    # how many citations are preserved in the fulltext paper
+                    # affects generator training
+                    # cuts down processing time per paper considerably
+                    max_paper_refs = 10*num_targets
+                    assert max_paper_refs >= num_targets
 
-                all_targets = []
+                    # picks citations to use for training randomly
+                    bib = item["bibliography"]
+                    bib_items = list(bib.items())
+                    bib_items_indices = np.arange(len(bib_items))
+                    random.shuffle(bib_items_indices)
+                    
+                    replaceable_citations = []
+                    for i in bib_items_indices:
+                        k, v = bib_items[i]
+                        if "arxiv_id" in v:
+                            if v["arxiv_id"] in corpus: # guarantees that the paper is retrievable
+                                replaceable_citations.append(k)
+                                if len(replaceable_citations) >= max_paper_refs:
+                                    break
 
-                paper = item["fulltext"]
-                for key in replaceable_citations:
-                    target_id = bib[key]["arxiv_id"]
-                    # SC
-                    # target = corpus[target_id]["title"]+":"
-                    # target += " ".join(corpus[target_id]["abstract"]).lstrip(" Abstract")
-                    # PR
-                    target = get_passage_from_context(
-                        paper.split(f"#ref{key}#")[0], 
-                        [{"arxiv_id": "","passages": _get_passages_from_fulltext(
-                            corpus[target_id]["fulltext"], target_id, tokenizer, config
-                        )}]
-                    )
-                    all_targets.append(target)
-                    target = f"<|cite_start|> (Reference: {target}) <|cite_end|>"
-                    paper = paper.replace(f"#ref{key}#", target)
+                    all_targets = []
 
-                random_indices = np.arange(len(replaceable_citations))
-                random.shuffle(random_indices)
-                num_targets = 4 # same as SC
-                if len(random_indices) < num_targets:
+                    paper = item["fulltext"]
+                    for key in replaceable_citations:
+                        target_id = bib[key]["arxiv_id"]
+                        # SC
+                        # target = corpus[target_id]["title"]+":"
+                        # target += " ".join(corpus[target_id]["abstract"]).lstrip(" Abstract")
+                        # PR
+                        target = get_passage_from_context(
+                            paper.split(f"#ref{key}#")[0], 
+                            [{
+                                "arxiv_id": "",
+                                "passages": _get_passages_from_fulltext(
+                                corpus[target_id]["fulltext"], target_id, tokenizer, config
+                            )}]
+                        )
+                        all_targets.append(target)
+                        target = f"<|cite_start|> (Reference: {target}) <|cite_end|>"
+                        paper = paper.replace(f"#ref{key}#", target)
+
+                    random_indices = np.arange(len(replaceable_citations))
+                    random.shuffle(random_indices)
+                    if len(random_indices) < num_targets:
+                        raise ValueError(f"not enough replaceable_citations ({len(replaceable_citations)}) for the given num_targets ({num_targets})")
+
+                    targets = []
+                    targets_idx = []
+                    for i in random_indices:
+                        target = all_targets[i]
+                        target = f"<|reference_start|> {target} <|reference_end|>"
+                        targets.append(target)
+                        targets_idx.append(int(i))
+                        if len(targets) >= num_targets:
+                            break
+
+                    rec = {
+                        "paper": paper,
+                        "targets": targets,
+                        "targets_idx": targets_idx
+                    }
+                    with open(pr_train_dataset_path, "a") as outfile:
+                        json.dump(rec, outfile)
+                        outfile.write("\n")
+                    count += 1
+
+                except Exception as e:
+                    print(f"Failure due to {type(e)}: {e.args}\n")
                     skipped += 1
                     continue
 
-                targets = []
-                targets_idx = []
-                for i in random_indices:
-                    target = all_targets[i]
-                    target = f"<|reference_start|> {target} <|reference_end|>"
-                    targets.append(target)
-                    targets_idx.append(int(i))
-                    if len(targets) >= num_targets:
-                        break
-
-                rec = {
-                    "paper": paper,
-                    "targets": targets,
-                    "targets_idx": targets_idx
-                }
-                with open(pr_train_dataset_path, "a") as outfile:
-                    json.dump(rec, outfile)
-                    outfile.write("\n")
-                count += 1
-                
+        # caught SIGKILL
+        print("caught SIGKILL")
+        exit()
             

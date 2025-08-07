@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 
+
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
@@ -84,6 +85,7 @@ def main():
     #     'reference_end': '<|reference_end|>',
     # }
     tokenizer.add_tokens(['<|paper_start|>', '<|paper_end|>', '<|cite_start|>', '<|cite_end|>', '<|reference_start|>', '<|reference_end|>'])
+
 
     model = ArxivLLM.build(
         model_args,

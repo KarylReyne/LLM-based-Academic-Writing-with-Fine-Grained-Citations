@@ -7,7 +7,7 @@ import time
 import random
 import numpy as np
 
-from evaluation_ranking_functions import rank_with_scholarcopilot, rank_with_scholarcopilot_with_passageretrieval
+from evaluation_ranking_functions import rank_with_scholarcopilot, rank_with_passage_retrieval_from_sc_rankings
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, save_results
 from scholarcopilot_model import load_model, load_faiss_index
 from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset, load_prebuilt_passages_dataset, load_eval_dataset
@@ -22,9 +22,6 @@ from util import recall_at_k
 # last sentence before the citation as the query. Recall@k is computed by comparing predicted
 # citations to the original ground-truth citations.
 if __name__ == "__main__":
-    RECALL_K = 10
-    shuffled_samples = True
-
     config = get_config()
 
     model_path = "scholarcopilot_model_v1208/"
@@ -45,11 +42,12 @@ if __name__ == "__main__":
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
     print("index building finished")
     
-    # eval_dataset_path = f"data/context_citation_pairs_{config["query_context"]}_documents_3.0.jsonl"
+    # eval_dataset_path = f"data/context_citation_pairs_256_documents_3.0.jsonl"
     # eval_dataset_path = f"data/context_citation_pairs_last_sentence_documents_3.0.jsonl"
     eval_dataset_path = f"data/context_citation_pairs_intro+relwork_documents_3.0.jsonl"
-    # eval_dataset_path = f"data/context_citation_pairs_intro+relwork_first1M_documents_3.0.jsonl"
-    eval_dataset, eval_indices = load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, passage_retrieval_models["retr_tokenizer"], config, shuffle=shuffled_samples, max_samples=10000)
+    eval_dataset, eval_indices = load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, passage_retrieval_models["retr_tokenizer"], config, shuffle=True, max_samples=10000)
+
+    RECALL_K = 5
 
     if config["sc_retriever_topk"] < RECALL_K:
         raise ValueError(f"ScholarCopilot top-k ({config["sc_retriever_topk"]}) cannot be smaller than recall k ({RECALL_K})")
@@ -69,37 +67,76 @@ if __name__ == "__main__":
 
         item = eval_dataset[i]
 
-        context = item["context"]
-        gold.append(item["target_corpus_id"])
+        try:
+            context = item["context"]
+            gold.append(item["target_corpus_id"])
 
-        debug_context = retrieval_dataset[item["target_corpus_id"]]["abstract"]+" <|cite_start|>" # should yield sim=1.0
+            sc_ranking, retrieved_k_results = rank_with_scholarcopilot(
+                context, index, lookup_indices, model, tokenizer, config
+            )
+            sc_pr_ranking, fail, reranking_results, error_msg = rank_with_passage_retrieval_from_sc_rankings(
+                context, retrieved_k_results, retrieval_dataset, sc_corpus_id_map, tokenizer, passage_retrieval_models, config
+            )
 
-        sc_rankings.append(rank_with_scholarcopilot(
-            debug_context, index, lookup_indices, model, tokenizer, config
-        ))
+            # appending to the containers is delayed until all retrievals are done (because of the error handling)
+            gold.append(item["target_corpus_id"])
+            sc_rankings.append(sc_ranking)
+            sc_pr_rankings.append(sc_pr_ranking)
+            num_llm_fails += fail
 
-        ranking, fail = rank_with_scholarcopilot_with_passageretrieval(
-            context, retrieval_dataset, arxiv_to_corpus_id_map, index, lookup_indices, model, tokenizer, passage_retrieval_models, config
-        )
-        sc_pr_rankings.append(ranking)
-        num_fails += fail
+            # determine overlap
+            bool_sc = single_recall_at_k(sc_ranking, item["target_corpus_id"], RECALL_K)
+            bool_sc_pr = single_recall_at_k(sc_pr_ranking, item["target_corpus_id"], RECALL_K)
+            overlap_of_successful_retrievals += bool_sc and bool_sc_pr
 
-        samples += 1
-        if samples >= max_samples:
-            break
+            # collect pr failures
+            if bool_sc and not bool_sc_pr:
+                rec = {
+                    "sample context": context,
+                    "sample source": item["source_arxiv_id"],
+                    "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
+                    "ranked_passage_labels": reranking_results["ranked_passage_labels"], 
+                    "ranked_passage_scores": reranking_results["ranked_passage_scores"], 
+                    "ranked_passages": reranking_results["ranked_passages"]
+                }
+                pr_fail_records[f"sample index {i}"] = rec
+
+            # collect failing llm responses
+            if error_msg != None:
+                rec = {
+                    "sample context": context,
+                    "sample source": item["source_arxiv_id"],
+                    "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
+                    "failing llm chat log": error_msg
+                }
+                llm_response_fail_records[f"sample index {i}"] = rec
+
+            samples += 1
+            if samples >= max_samples:
+                break
+
+        except ScholarCopilotRetrievalError: 
+            retrieval_fails += 1
+            continue # skip this sample entirely
+
 
     sc_recall = recall_at_k(sc_rankings, gold, k=RECALL_K)
     sc_pr_recall = recall_at_k(sc_pr_rankings, gold, k=RECALL_K)
 
     print(f"---recall@{RECALL_K} after {max_samples} retrievals---")
     print(f"ScholarCopilot: {sc_recall}")
-    print(f"ScholarCopilot with passage retrieval: {sc_pr_recall} ({num_fails}/{samples} response failures)")
+    print(f"ScholarCopilot with passage retrieval: {sc_pr_recall} ({num_llm_fails}/{samples} response failures)")
 
     save_results({
         "eval_dataset": eval_dataset_path,
         "num_samples": samples,
-        "shuffled_samples": shuffled_samples,
+        "shuffled_samples": shuffle,
         f"ScholarCopilot recall@{RECALL_K}": sc_recall,
         f"ScholarCopilot with passage retrieval recall@{RECALL_K}": sc_pr_recall,
-        "passage retrieval fails": num_fails
+        "overlap ratio of successful retrievals": (overlap_of_successful_retrievals/samples)/sc_pr_recall,
+        "unsuccessful rerankings given successful SC retrieval": (len(pr_fail_records)/samples)/sc_recall,
+        "llm response fails": num_llm_fails,
+        "SC retrieval fails": retrieval_fails,
+        "samples_where_only_pr_fails": pr_fail_records,
+        "llm response failure logs": llm_response_fail_records
     }, config, mode="eval_retrieval")

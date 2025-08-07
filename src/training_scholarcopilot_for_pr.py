@@ -7,18 +7,18 @@ from dataset_loaders import load_pr_train_set_for_scholarcopilot
 
 
 if __name__ == "__main__":
-    config = get_config("cfg/config_training_dataset_construction.json")
+    config = get_config("cfg/config_training_dataset_construction_slim.json")
 
     model_path = "scholarcopilot_model_v1208/"
     model, tokenizer = load_model(model_path, config)
 
     passage_retrieval_models = get_passage_retrieval_models(config)
     
-    pr_train_dataset_path = "data/training_dataset_-_sc_for_passage_retrieval.jsonl"
+    pr_train_dataset_path = "data/training_dataset_-_sc_for_passage_retrieval_slim.jsonl"
     docs_dataset_path = "data/documents_3.0_with_ids.jsonl"
     docs_fulltext_dataset_path = "data/documents_3.0_with_ids_only_fulltext.jsonl"
     get_passage_from_context = lambda ctx, refs: retrieve_relevant_passages(
-        apply_retrieval_context_window(ctx, tokenizer, config), 
+        ctx, 
         refs,
         passage_retrieval_models, 
         config, 

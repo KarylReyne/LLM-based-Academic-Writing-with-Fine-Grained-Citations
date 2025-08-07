@@ -40,7 +40,16 @@ class TevatronTrainer(Trainer):
 
     def compute_loss(self, model, inputs, num_items_in_batch=None):
         query, passage = inputs
-        return model(query=query, passage=passage).loss
+        output = None
+        try:
+            output = model(query=query, passage=passage).loss
+        except torch.OutOfMemoryError as e:
+            print(len(query["input_ids"]))
+            print(len(passage["input_ids"]))
+            output = torch.Tensor(0.0, device=query.device, dtype=query.dtype)
+            output.requires_grad = True
+            raise e
+        return output
 
     def training_step(self, *args):
         return super(TevatronTrainer, self).training_step(*args) / self._dist_loss_scale_factor

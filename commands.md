@@ -26,5 +26,9 @@ tmux attach -t SESSION_NAME <!-- attach job -->
 exit <!-- exit job (inside tmux terminal) -->
 tmux kill-session -t SESSION_NAME <!-- terminate session -->
 
+## gpustat
+gpustat -a <!-- discrete -->
+gpustat -i <!-- continuous -->
+
 ## download huggingface model
 huggingface-cli download Qwen/Qwen2.5-3B --local-dir ../../qwen2.5_3b

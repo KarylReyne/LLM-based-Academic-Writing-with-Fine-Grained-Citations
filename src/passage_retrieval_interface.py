@@ -95,7 +95,7 @@ def get_passage_retrieval_models(config):
         trust_remote_code=True,
         # attn_implementation="flash_attention_2",
         attn_implementation="sdpa",
-        torch_dtype=torch.bfloat16
+        torch_dtype=torch.float16
     )
     retriever = retriever.to(config["retriever_device"])
     retriever.resize_token_embeddings(len(retr_tokenizer))

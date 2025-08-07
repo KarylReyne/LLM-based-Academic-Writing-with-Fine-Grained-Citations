@@ -1,8 +1,254 @@
-W0801 16:59:36.348000 1720518 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] 
-W0801 16:59:36.348000 1720518 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
-W0801 16:59:36.348000 1720518 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0801 16:59:36.348000 1720518 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
-W0801 16:59:36.511000 991718 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] 
-W0801 16:59:36.511000 991718 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
-W0801 16:59:36.511000 991718 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0801 16:59:36.511000 991718 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+I0802 10:29:14.815000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:649] Using nproc_per_node=8.
+I0802 10:29:14.853000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:649] Using nproc_per_node=8.
+W0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] 
+W0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+W0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] Starting elastic_operator with launch configs:
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   entrypoint       : train.py
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   min_nodes        : 2
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_nodes        : 2
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   nproc_per_node   : 8
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   run_id           : none
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_backend     : c10d
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_endpoint    : 127.0.0.1
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_configs     : {'timeout': 900}
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_restarts     : 0
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   monitor_interval : 0.1
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   log_dir          : /scratch_local/gwb204-1637403/tmp/torchelastic_cx1q1a1n
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   metrics_cfg      : {}
+I0802 10:29:14.816000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] 
+I0802 10:29:14.831000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:860] [default] starting workers for entrypoint: python3.13
+I0802 10:29:14.831000 3436451 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:677] [default] Rendezvous'ing worker group
+W0802 10:29:14.854000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] 
+W0802 10:29:14.854000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+W0802 10:29:14.854000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0802 10:29:14.854000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] Starting elastic_operator with launch configs:
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   entrypoint       : train.py
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   min_nodes        : 2
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_nodes        : 2
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   nproc_per_node   : 8
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   run_id           : none
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_backend     : c10d
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_endpoint    : 127.0.0.1
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_configs     : {'timeout': 900}
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_restarts     : 0
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   monitor_interval : 0.1
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   log_dir          : /scratch_local/gwb204-1637403/tmp/torchelastic_6ve88ec9
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   metrics_cfg      : {}
+I0802 10:29:14.855000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] 
+I0802 10:29:14.869000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:860] [default] starting workers for entrypoint: python3.13
+I0802 10:29:14.869000 291403 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:677] [default] Rendezvous'ing worker group
+[E802 10:37:26.275195787 socket.cpp:1019] [c10d] The client socket has timed out after 900000ms while trying to connect to (127.0.0.1, 60000).
+[W802 10:37:26.279791722 TCPStore.cpp:343] [c10d] TCP client failed to connect/validate to host 127.0.0.1:60000 - retrying (try=0, timeout=900000ms, delay=64253ms): The client socket has timed out after 900000ms while trying to connect to (127.0.0.1, 60000).
+Exception raised from throwTimeoutError at /pytorch/torch/csrc/distributed/c10d/socket.cpp:1021 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x98 (0x7f5a38a7c5e8 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x5ba8afe (0x7f5a7cb9fafe in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #2: <unknown function> + 0x1369113 (0x7f5a78360113 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #3: <unknown function> + 0x5bf5691 (0x7f5a7cbec691 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #4: <unknown function> + 0x5bf5849 (0x7f5a7cbec849 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #5: <unknown function> + 0x5bf5c01 (0x7f5a7cbecc01 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #6: <unknown function> + 0x5ba3deb (0x7f5a7cb9adeb in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #7: c10d::TCPStore::TCPStore(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, c10d::TCPStoreOptions const&) + 0x4b5 (0x7f5a7cb9d6f5 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #8: <unknown function> + 0xc07fc5 (0x7f5a8befcfc5 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #9: <unknown function> + 0xc3a254 (0x7f5a8bf2f254 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #10: <unknown function> + 0x38158d (0x7f5a8b67658d in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #11: <unknown function> + 0x1d19cc (0x564fc17ac9cc in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #12: _PyObject_MakeTpCall + 0x36c (0x564fc17898fc in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #13: <unknown function> + 0x202450 (0x564fc17dd450 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #14: <unknown function> + 0x27a67b (0x564fc185567b in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #15: <unknown function> + 0x1e2a81 (0x564fc17bda81 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #16: <unknown function> + 0x1aeb46 (0x564fc1789b46 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #17: <unknown function> + 0x37f60b (0x7f5a8b67460b in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #18: _PyObject_MakeTpCall + 0x36c (0x564fc17898fc in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #19: <unknown function> + 0xa4d3b (0x564fc167fd3b in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #20: <unknown function> + 0x26bb96 (0x564fc1846b96 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #21: <unknown function> + 0x2bb83c (0x564fc189683c in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #22: <unknown function> + 0x27a605 (0x564fc1855605 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #23: <unknown function> + 0x9e426 (0x564fc1679426 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #24: PyEval_EvalCode + 0xa1 (0x564fc18487c1 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #25: <unknown function> + 0x2aca90 (0x564fc1887a90 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #26: <unknown function> + 0x2aa49c (0x564fc188549c in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #27: <unknown function> + 0x2a7436 (0x564fc1882436 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #28: <unknown function> + 0x2a7088 (0x564fc1882088 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #29: <unknown function> + 0x2a6e7c (0x564fc1881e7c in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #30: Py_RunMain + 0x32e (0x564fc188008e in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #31: Py_BytesMain + 0x37 (0x564fc18346c7 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #32: __libc_start_main + 0xe5 (0x7f5aa12ded85 in /lib64/libc.so.6)
+frame #33: <unknown function> + 0x258abe (0x564fc1833abe in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+
+[E802 10:37:50.412082722 socket.cpp:1019] [c10d] The client socket has timed out after 900000ms while trying to connect to (127.0.0.1, 60000).
+[W802 10:37:50.417209053 TCPStore.cpp:343] [c10d] TCP client failed to connect/validate to host 127.0.0.1:60000 - retrying (try=0, timeout=900000ms, delay=75331ms): The client socket has timed out after 900000ms while trying to connect to (127.0.0.1, 60000).
+Exception raised from throwTimeoutError at /pytorch/torch/csrc/distributed/c10d/socket.cpp:1021 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x98 (0x7f24b75fa5e8 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x5ba8afe (0x7f24fb71dafe in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #2: <unknown function> + 0x1369113 (0x7f24f6ede113 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #3: <unknown function> + 0x5bf5691 (0x7f24fb76a691 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #4: <unknown function> + 0x5bf5849 (0x7f24fb76a849 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #5: <unknown function> + 0x5bf5c01 (0x7f24fb76ac01 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #6: <unknown function> + 0x5ba3deb (0x7f24fb718deb in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #7: c10d::TCPStore::TCPStore(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, c10d::TCPStoreOptions const&) + 0x4b5 (0x7f24fb71b6f5 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_cpu.so)
+frame #8: <unknown function> + 0xc07fc5 (0x7f250aa7afc5 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #9: <unknown function> + 0xc3a254 (0x7f250aaad254 in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #10: <unknown function> + 0x38158d (0x7f250a1f458d in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #11: <unknown function> + 0x1d19cc (0x55d1fbbc09cc in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #12: _PyObject_MakeTpCall + 0x36c (0x55d1fbb9d8fc in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #13: <unknown function> + 0x202450 (0x55d1fbbf1450 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #14: <unknown function> + 0x27a67b (0x55d1fbc6967b in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #15: <unknown function> + 0x1e2a81 (0x55d1fbbd1a81 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #16: <unknown function> + 0x1aeb46 (0x55d1fbb9db46 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #17: <unknown function> + 0x37f60b (0x7f250a1f260b in /home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/lib/libtorch_python.so)
+frame #18: _PyObject_MakeTpCall + 0x36c (0x55d1fbb9d8fc in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #19: <unknown function> + 0xa4d3b (0x55d1fba93d3b in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #20: <unknown function> + 0x26bb96 (0x55d1fbc5ab96 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #21: <unknown function> + 0x2bb83c (0x55d1fbcaa83c in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #22: <unknown function> + 0x27a605 (0x55d1fbc69605 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #23: <unknown function> + 0x9e426 (0x55d1fba8d426 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #24: PyEval_EvalCode + 0xa1 (0x55d1fbc5c7c1 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #25: <unknown function> + 0x2aca90 (0x55d1fbc9ba90 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #26: <unknown function> + 0x2aa49c (0x55d1fbc9949c in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #27: <unknown function> + 0x2a7436 (0x55d1fbc96436 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #28: <unknown function> + 0x2a7088 (0x55d1fbc96088 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #29: <unknown function> + 0x2a6e7c (0x55d1fbc95e7c in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #30: Py_RunMain + 0x32e (0x55d1fbc9408e in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #31: Py_BytesMain + 0x37 (0x55d1fbc486c7 in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+frame #32: __libc_start_main + 0xe5 (0x7f251fe5dd85 in /lib64/libc.so.6)
+frame #33: <unknown function> + 0x258abe (0x55d1fbc47abe in /home/geiger/gwb204/miniconda3/envs/citations/bin/python3.13)
+
+Traceback (most recent call last):
+  File "/home/geiger/gwb204/miniconda3/envs/citations/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+    ~~~^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+    ~~~~~~~~~~~~~~~
+        config=config,
+        ~~~~~~~~~~~~~~
+        entrypoint=cmd,
+        ~~~~~~~~~~~~~~~
+    )(*cmd_args)
+    ~^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py", line 261, in launch_agent
+    result = agent.run()
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/metrics/api.py", line 138, in wrapper
+    result = f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 711, in run
+    result = self._invoke_run(role)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 864, in _invoke_run
+    self._initialize_workers(self._worker_group)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/metrics/api.py", line 138, in wrapper
+    result = f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 683, in _initialize_workers
+    self._rendezvous(worker_group)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/metrics/api.py", line 138, in wrapper
+    result = f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 500, in _rendezvous
+    rdzv_info = spec.rdzv_handler.next_rendezvous()
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/rendezvous/dynamic_rendezvous.py", line 1170, in next_rendezvous
+    self._op_executor.run(join_op, deadline, self._get_deadline)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/rendezvous/dynamic_rendezvous.py", line 679, in run
+    raise RendezvousTimeoutError
+torch.distributed.elastic.rendezvous.api.RendezvousTimeoutError
+Traceback (most recent call last):
+  File "/home/geiger/gwb204/miniconda3/envs/citations/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+    ~~~^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+    ~~~~~~~~~~~~~~~
+        config=config,
+        ~~~~~~~~~~~~~~
+        entrypoint=cmd,
+        ~~~~~~~~~~~~~~~
+    )(*cmd_args)
+    ~^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py", line 261, in launch_agent
+    result = agent.run()
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/metrics/api.py", line 138, in wrapper
+    result = f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 711, in run
+    result = self._invoke_run(role)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 864, in _invoke_run
+    self._initialize_workers(self._worker_group)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/metrics/api.py", line 138, in wrapper
+    result = f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 683, in _initialize_workers
+    self._rendezvous(worker_group)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/metrics/api.py", line 138, in wrapper
+    result = f(*args, **kwargs)
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py", line 500, in _rendezvous
+    rdzv_info = spec.rdzv_handler.next_rendezvous()
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/rendezvous/dynamic_rendezvous.py", line 1170, in next_rendezvous
+    self._op_executor.run(join_op, deadline, self._get_deadline)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/rendezvous/dynamic_rendezvous.py", line 679, in run
+    raise RendezvousTimeoutError
+torch.distributed.elastic.rendezvous.api.RendezvousTimeoutError
+I0802 10:39:18.016000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:649] Using nproc_per_node=8.
+W0802 10:39:18.017000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] 
+W0802 10:39:18.017000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+W0802 10:39:18.017000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0802 10:39:18.017000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] Starting elastic_operator with launch configs:
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   entrypoint       : train.py
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   min_nodes        : 2
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_nodes        : 2
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   nproc_per_node   : 8
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   run_id           : none
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_backend     : c10d
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_endpoint    : 127.0.0.1
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_configs     : {'timeout': 900}
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_restarts     : 0
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   monitor_interval : 0.1
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   log_dir          : /scratch_local/gwb204-1637403/tmp/torchelastic_tf9uhl7q
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   metrics_cfg      : {}
+I0802 10:39:18.018000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] 
+I0802 10:39:18.022000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:860] [default] starting workers for entrypoint: python3.13
+I0802 10:39:18.022000 3442444 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:677] [default] Rendezvous'ing worker group
+I0802 10:39:18.164000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:649] Using nproc_per_node=8.
+W0802 10:39:18.164000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] 
+W0802 10:39:18.164000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+W0802 10:39:18.164000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0802 10:39:18.164000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/run.py:766] *****************************************
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] Starting elastic_operator with launch configs:
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   entrypoint       : train.py
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   min_nodes        : 2
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_nodes        : 2
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   nproc_per_node   : 8
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   run_id           : none
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_backend     : c10d
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_endpoint    : 127.0.0.1
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   rdzv_configs     : {'timeout': 900}
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   max_restarts     : 0
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   monitor_interval : 0.1
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   log_dir          : /scratch_local/gwb204-1637403/tmp/torchelastic_csec494i
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195]   metrics_cfg      : {}
+I0802 10:39:18.165000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/launcher/api.py:195] 
+I0802 10:39:18.170000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:860] [default] starting workers for entrypoint: python3.13
+I0802 10:39:18.170000 297174 /mnt/lustre/home/geiger/gwb204/miniconda3/envs/citations/lib/python3.13/site-packages/torch/distributed/elastic/agent/server/api.py:677] [default] Rendezvous'ing worker group
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** JOB 1637403 ON galvani-cn210 CANCELLED AT 2025-08-02T10:43:54 ***
+slurmstepd: error: *** STEP 1637403.0 ON galvani-cn210 CANCELLED AT 2025-08-02T10:43:54 ***
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** JOB 1637381 ON galvani-cn231 CANCELLED AT 2025-08-02T10:44:47 ***
+slurmstepd: error: *** STEP 1637381.0 ON galvani-cn231 CANCELLED AT 2025-08-02T10:44:47 ***
