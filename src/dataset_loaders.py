@@ -608,7 +608,7 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
         num_samples = 0
         skipped = 0
         with open(docs_dataset_path, "rb") as file:
-            for item in ijson.items(file, "", multiple):
+            for item in ijson.items(file, "", multiple_values=True):
                 sys.stdout.write("\033[F")
                 print(f"processing entry {count} - found {num_samples}/{max_samples} ({skipped} skipped)")
 
