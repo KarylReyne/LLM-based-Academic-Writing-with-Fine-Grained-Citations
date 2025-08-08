@@ -72,6 +72,7 @@ def main():
             count += 1
 
     # encode with reasonir
+    samples_per_shard = 30000
     max_shards = int(np.ceil([len(passages_data)/samples_per_shard])[0])
 
     starting_passages_idx = 0
@@ -87,7 +88,6 @@ def main():
     encoded = []
     lookup_indices = []
     num_shards = 1
-    samples_per_shard = 30000
     curr_num_samples = 0
     PSG_DATA_BATCH_SIZE = 128 # how many samples are passed to the encoder at once
     for i in tqdm.trange(starting_passages_idx, len(passages_data), PSG_DATA_BATCH_SIZE):
