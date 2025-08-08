@@ -635,22 +635,18 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                                 "source_arxiv_id": item["arxiv_id"],
                                 "target_corpus_id": sc_arxiv_id_map[target_arxiv_id]
                             }
-                            eval_dataset.append(rec)
+                            if len(eval_dataset) < max_samples: # adds just enough samples to the current dataset
+                                eval_dataset.append(rec)
                             num_samples += 1
 
-                            with open(sections_eval_dataset_path, "a") as outfile:
+                            with open(sections_eval_dataset_path, "a") as outfile: # adds every sample to the saved dataset
                                 json.dump(rec, outfile)
                                 outfile.write("\n")
-
-                            if len(eval_dataset) >= max_samples:
-                                break
 
                         if populate_with_abstracts:
                             target_abstract = " ".join(docs_retrieval_dataset[docs_id_map[target_arxiv_id]]["abstract"])
                             sections_fulltext = sections_fulltext.replace(f"#ref{key}#", target_abstract)
 
-                if len(eval_dataset) >= max_samples:
-                    break
 
     eval_indices = np.arange(len(eval_dataset))
     if shuffle:
