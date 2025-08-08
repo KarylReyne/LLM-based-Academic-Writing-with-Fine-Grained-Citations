@@ -581,3 +581,41 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
         print("caught SIGKILL")
         exit()
             
+
+def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_id_map, sc_id_map, max_samples=1000):
+    print("loading sections eval dataset...")
+    contains_substring = lambda s, sub: s.lower() != s.lower().replace(sub.lower(), "")
+    eval_dataset = []
+    count = 0
+    print()
+
+    try:
+        with open(sections_eval_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count}")
+                eval_dataset.append(item)
+                count += 1
+
+    except FileNotFoundError:
+        num_samples = 0
+        skipped = 0
+        with open(docs_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple)
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count} - found {num_samples}/{max_samples} ({skipped} skipped)")
+
+                # identify relevant sections
+                sections_fulltext = ""
+                for section in item["sections"]:
+                    for target_section in target_sections:
+                        if contains_substring(section["title"], target_section):
+                            sections_fulltext += section["title"]
+                            sections_fulltext += " ".join(section["sentences"])
+                
+                if sections_fulltext == "":
+                    skipped += 1
+                    continue
+
+                # identify retrievable citations
+                # create eval sample from each citation
