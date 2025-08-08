@@ -10,7 +10,7 @@ import numpy as np
 from evaluation_ranking_functions import rank_with_scholarcopilot, rank_with_passage_retrieval_from_sc_rankings
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, save_results
 from scholarcopilot_model import load_model, load_faiss_index
-from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset, load_prebuilt_passages_dataset, load_eval_dataset
+from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset, load_prebuilt_passages_dataset, load_eval_dataset, scholarcopilot_arxiv_to_corpus_id, load_sections_eval_dataset
 from util import recall_at_k
 
 
@@ -44,8 +44,16 @@ if __name__ == "__main__":
     
     # eval_dataset_path = f"data/context_citation_pairs_256_documents_3.0.jsonl"
     # eval_dataset_path = f"data/context_citation_pairs_last_sentence_documents_3.0.jsonl"
-    eval_dataset_path = f"data/context_citation_pairs_intro+relwork_documents_3.0.jsonl"
-    eval_dataset, eval_indices = load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, passage_retrieval_models["retr_tokenizer"], config, shuffle=True, max_samples=10000)
+    # eval_dataset_path = f"data/context_citation_pairs_intro+relwork_documents_3.0.jsonl"
+    # eval_dataset, eval_indices = load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, passage_retrieval_models["retr_tokenizer"], config, shuffle=True, max_samples=10000)
+
+    target_sections = ["methods"]
+    sections_eval_dataset_path "data/eval_dataset_methods-sections_documents_3.0_for_sc_corpus.jsonl"
+    docs_dataset_path = "data/documents_3.0_with_ids.jsonl"
+    docs_retrieval_dataset_path = "retrieval_dataset_documents_3.0.jsonl"
+    docs_id_map = arxiv_to_corpus_id_map # just renamed
+    sc_id_map = scholarcopilot_arxiv_to_corpus_id("data/arxiv_to_corpus_id_scholar_copilot_train_data_500k.json", "scholarcopilot_data/corpus_data_arxiv_1215.jsonl")
+    eval_dataset, eval_indices = load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_retrieval_dataset_path, docs_id_map, sc_id_map, max_samples=1000, populate_with_abstracts=False, shuffle=True)
 
     RECALL_K = 5
 

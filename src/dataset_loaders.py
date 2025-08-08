@@ -582,12 +582,15 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
         exit()
             
 
-def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_id_map, sc_id_map, max_samples=1000):
+def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_retrieval_dataset_path, docs_id_map, sc_id_map, max_samples=1000, populate_with_abstracts=False, shuffle=True):
     print("loading sections eval dataset...")
     contains_substring = lambda s, sub: s.lower() != s.lower().replace(sub.lower(), "")
     eval_dataset = []
     count = 0
     print()
+
+    if populate_with_abstracts:
+        assert contains_substring(sections_eval_dataset_path, "with_abstracts")
 
     try:
         with open(sections_eval_dataset_path, "rb") as file:
@@ -595,9 +598,13 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                 sys.stdout.write("\033[F")
                 print(f"processing entry {count}")
                 eval_dataset.append(item)
+                if len(eval_dataset) >= max_samples:
+                    break
                 count += 1
 
     except FileNotFoundError:
+        docs_retrieval_dataset = load_retrieval_dataset(docs_retrieval_dataset_path, docs_dataset_path, docs_id_map)
+
         num_samples = 0
         skipped = 0
         with open(docs_dataset_path, "rb") as file:
@@ -618,4 +625,38 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                     continue
 
                 # identify retrievable citations
-                # create eval sample from each citation
+                bib = item["bibliography"]
+                for key in bib:
+                    if "arxiv_id" in bib[key]: # target in docs dataset?
+                        target_arxiv_id = bib[key]["arxiv_id"]
+                        if target_arxiv_id in sc_arxiv_id_map: # target in sc corpus?
+                            rec = {
+                                "context": sections_fulltext.split(f"#ref{key}#")[0],
+                                "source_arxiv_id": item["arxiv_id"],
+                                "target_corpus_id": sc_arxiv_id_map[target_arxiv_id]
+                            }
+                            eval_dataset.append(rec)
+                            num_samples += 1
+
+                            with open(sections_eval_dataset_path, "a") as outfile:
+                                json.dump(rec, outfile)
+                                outfile.write("\n")
+
+                            if len(eval_dataset) >= max_samples:
+                                break
+
+                        if populate_with_abstracts:
+                            target_abstract = " ".join(docs_retrieval_dataset[docs_id_map[target_arxiv_id]]["abstract"])
+                            sections_fulltext = sections_fulltext.replace(f"#ref{key}#", target_abstract)
+
+                if len(eval_dataset) >= max_samples:
+                    break
+
+    eval_indices = np.arange(len(eval_dataset))
+    if shuffle:
+        random.shuffle(eval_indices)
+    print(f"sections eval dataset loaded (contains {len(eval_dataset)} samples).")
+
+    return eval_dataset, eval_indices
+
+                
