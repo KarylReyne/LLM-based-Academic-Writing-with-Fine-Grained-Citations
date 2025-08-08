@@ -72,12 +72,7 @@ def main():
             count += 1
 
     # encode with reasonir
-    encoded = []
-    lookup_indices = []
-    num_shards = 1
-    samples_per_shard = 30000
     max_shards = int(np.ceil([len(passages_data)/samples_per_shard])[0])
-    PSG_DATA_BATCH_SIZE = 128
 
     starting_passages_idx = 0
     for i in range(1, max_shards+1):
@@ -89,10 +84,18 @@ def main():
             break
 
     print(f"starting from {starting_passages_idx}")
+    encoded = []
+    lookup_indices = []
+    num_shards = 1
+    samples_per_shard = 30000
+    curr_num_samples = 0
+    PSG_DATA_BATCH_SIZE = 128 # how many samples are passed to the encoder at once
     for i in tqdm.trange(starting_passages_idx, len(passages_data), PSG_DATA_BATCH_SIZE):
         passage_ids = []
         passages = []
-        for (ids, psg) in passages_data[i:i+PSG_DATA_BATCH_SIZE]:
+        batch_data = passages_data[i:i+PSG_DATA_BATCH_SIZE]
+        curr_num_samples += len(batch_data)
+        for (ids, psg) in batch_data:
             passage_ids.extend(ids)
             passages.extend(psg)
 
@@ -107,13 +110,15 @@ def main():
                 )
                 encoded.extend(reps)
 
-        if len(encoded) >= samples_per_shard:
+        print(f"num samples in this shard: {curr_num_samples}/{samples_per_shard}")
+        if curr_num_samples >= samples_per_shard:
             this_shard_path = encodings_output_path.replace(".pkl", f"_shard-{num_shards}-of-{max_shards}.pkl")
             print(f"saving shard: {this_shard_path}")
             with open(this_shard_path, 'wb') as f:
                 pickle.dump((encoded, lookup_indices), f)
             encoded = []
             lookup_indices = []
+            curr_num_samples = 0
             num_shards += 1
 
     with open(encodings_output_path.replace(".pkl", f"_shard-{num_shards}-of-{max_shards}.pkl"), 'wb') as f:

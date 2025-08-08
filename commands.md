@@ -10,6 +10,12 @@ conda activate citations
 ## remove conda env
 conda remove -n citations --all
 
+## delete files starting with foo
+### check what would get deleted
+find . -type f -name foo\*
+### delete
+find . -type f -name foo\* -delete
+
 ## interactive session
 ### Galvani a100
 srun --job-name "InteractiveJob" --partition=a100-galvani --ntasks=1 --nodes=1 --gres=gpu:2 --time 1:00:00 --pty bash
