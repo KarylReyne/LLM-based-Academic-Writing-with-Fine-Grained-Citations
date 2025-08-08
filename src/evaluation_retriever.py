@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # eval_dataset, eval_indices = load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, passage_retrieval_models["retr_tokenizer"], config, shuffle=True, max_samples=10000)
 
     target_sections = ["methods"]
-    sections_eval_dataset_path "data/eval_dataset_methods-sections_documents_3.0_for_sc_corpus.jsonl"
+    sections_eval_dataset_path = "data/eval_dataset_methods-sections_documents_3.0_for_sc_corpus.jsonl"
     docs_dataset_path = "data/documents_3.0_with_ids.jsonl"
     docs_retrieval_dataset_path = "retrieval_dataset_documents_3.0.jsonl"
     docs_id_map = arxiv_to_corpus_id_map # just renamed
