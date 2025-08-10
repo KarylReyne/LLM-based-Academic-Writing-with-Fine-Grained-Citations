@@ -3,14 +3,10 @@ import torch
 import faiss
 import numpy as np
 import h5py
-import json
-from tqdm import tqdm
 import os
-import sys
 import glob
 import re
 import time
-import ijson
 
 
 def retrieve_reference(index, lookup_indices, cite_start_hidden_state, config, top_k=5, silent=False):
@@ -40,6 +36,7 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, config, t
         print("retrieved_corpus_indices", retrieved_corpus_indices)
         print("distances[0]", distances[0])
         print("***************Retrieval cost (time): ", time.time() - start)
+
     return list(zip(retrieved_corpus_indices, distances[0]))
 
 

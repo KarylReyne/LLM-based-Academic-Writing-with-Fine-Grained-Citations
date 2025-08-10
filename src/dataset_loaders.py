@@ -582,7 +582,7 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
         exit()
             
 
-def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_retrieval_dataset_path, docs_id_map, sc_id_map, max_samples=1000, populate_with_abstracts=False, shuffle=True):
+def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_retrieval_dataset, docs_id_map, sc_id_map, max_samples=1000, populate_with_abstracts=False, shuffle=True):
     print("loading sections eval dataset...")
     contains_substring = lambda s, sub: s.lower() != s.lower().replace(sub.lower(), "")
     eval_dataset = []
@@ -603,14 +603,12 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                 count += 1
 
     except FileNotFoundError:
-        docs_retrieval_dataset = load_retrieval_dataset(docs_retrieval_dataset_path, docs_dataset_path, docs_id_map)
-
         num_samples = 0
         skipped = 0
         with open(docs_dataset_path, "rb") as file:
             for item in ijson.items(file, "", multiple_values=True):
                 sys.stdout.write("\033[F")
-                print(f"processing entry {count} - found {num_samples}/{max_samples} ({skipped} skipped)")
+                print(f"processing entry {count} - found {num_samples}/{max_samples} samples ({skipped} entries skipped)")
 
                 # identify relevant sections
                 sections_fulltext = ""
@@ -622,30 +620,35 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                 
                 if sections_fulltext == "":
                     skipped += 1
+                    count += 1
                     continue
 
                 # identify retrievable citations
                 bib = item["bibliography"]
                 for key in bib:
-                    if "arxiv_id" in bib[key]: # target in docs dataset?
-                        target_arxiv_id = bib[key]["arxiv_id"]
-                        if target_arxiv_id in sc_arxiv_id_map: # target in sc corpus?
-                            rec = {
-                                "context": sections_fulltext.split(f"#ref{key}#")[0],
-                                "source_arxiv_id": item["arxiv_id"],
-                                "target_corpus_id": sc_arxiv_id_map[target_arxiv_id]
-                            }
-                            if len(eval_dataset) < max_samples: # adds just enough samples to the current dataset
-                                eval_dataset.append(rec)
-                            num_samples += 1
+                    if contains_substring(sections_fulltext, f"#ref{key}#"): # ref in selected sections ?
+                        if "arxiv_id" in bib[key]:
+                            target_arxiv_id = bib[key]["arxiv_id"]
+                            if target_arxiv_id in sc_id_map and target_arxiv_id in docs_id_map: # target in sc corpus and docs dataset?
+                                rec = {
+                                    "context": sections_fulltext.split(f"#ref{key}#")[0],
+                                    "source_arxiv_id": item["arxiv_id"],
+                                    "target_corpus_id": sc_id_map[target_arxiv_id]
+                                }
+                                if len(eval_dataset) < max_samples: # adds just enough samples to the current dataset
+                                    eval_dataset.append(rec)
+                                num_samples += 1
 
-                            with open(sections_eval_dataset_path, "a") as outfile: # adds every sample to the saved dataset
-                                json.dump(rec, outfile)
-                                outfile.write("\n")
+                                with open(sections_eval_dataset_path, "a") as outfile: # adds every sample to the saved dataset
+                                    json.dump(rec, outfile)
+                                    outfile.write("\n")
 
-                        if populate_with_abstracts:
-                            target_abstract = " ".join(docs_retrieval_dataset[docs_id_map[target_arxiv_id]]["abstract"])
-                            sections_fulltext = sections_fulltext.replace(f"#ref{key}#", target_abstract)
+                                if populate_with_abstracts:
+                                    target_abstract = " ".join(docs_retrieval_dataset[docs_id_map[target_arxiv_id]]["abstract"])
+                                    target_abstract = f"<|cite_start|> (Reference: {target_abstract}) <|cite_end|>"
+                                    sections_fulltext = sections_fulltext.replace(f"#ref{key}#", target_abstract)
+
+                count += 1
 
 
     eval_indices = np.arange(len(eval_dataset))
