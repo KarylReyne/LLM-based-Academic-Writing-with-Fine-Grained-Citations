@@ -34,6 +34,7 @@ CTRL+B+D <!-- detach job (can also close the terminal via vsc) -->
 tmux attach -t SESSION_NAME <!-- attach job -->
 exit <!-- exit job (inside tmux terminal) -->
 tmux kill-session -t SESSION_NAME <!-- terminate session -->
+tmux kill-server <!-- kill/reset tmux server (in case it hangs) -->
 
 ## gpustat
 gpustat -a <!-- discrete -->
@@ -41,3 +42,9 @@ gpustat -i <!-- continuous -->
 
 ## download huggingface model
 huggingface-cli download Qwen/Qwen2.5-3B --local-dir ../../qwen2.5_3b
+
+## galvani compute node login
+### job setup (on login node, repo root dir)
+sbatch vscode/allocate-galvani-vs.sh
+### node login (from local machine)
+ssh mlc-galvani-vs
