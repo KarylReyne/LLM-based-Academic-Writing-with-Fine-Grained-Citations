@@ -18,6 +18,7 @@ find . -type f -name foo\* -delete
 
 ## ...
 cd Literature-Search-with-Active-Disambiguation
+cd Literature-Search-with-Active-Disambiguation/src/scholarcopilot_train/src
 
 ## interactive session
 ### Galvani a100
@@ -40,11 +41,17 @@ tmux kill-server <!-- kill/reset tmux server (in case it hangs) -->
 gpustat -a <!-- discrete -->
 gpustat -i <!-- continuous -->
 
+## gpu utilization
+watch -n0.1 nvidia-smi
+
 ## download huggingface model
 huggingface-cli download Qwen/Qwen2.5-3B --local-dir ../../qwen2.5_3b
 
 ## galvani compute node login
 ### job setup (on login node, repo root dir)
 sbatch vscode/allocate-galvani-vs.sh
+sbatch vscode/allocate-galvani-sc-train.sh
+### check job availability
+squeue -u gwb204
 ### node login (from local machine)
 ssh mlc-galvani-vs

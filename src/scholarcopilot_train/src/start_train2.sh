@@ -25,9 +25,6 @@ torchrun \
  --node_rank 0 \
  --master_port $MASTER_PORT \
  --nnodes $NNODES \
- --rdzv_id $SLURM_JOB_ID \
- --rdzv_backend c10d \
- --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT \
  train.py \
  --deepspeed ds_zero3_config.json \
  --output_dir ${output_dir} \

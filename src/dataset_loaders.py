@@ -4,7 +4,7 @@ import json
 import re
 import random
 import numpy as np
-from tqdm import tqdm
+import tqdm
 
 from passage_retrieval_interface import apply_retrieval_context_window
 from sigterm_catcher import SIGTERMCatcher
@@ -425,7 +425,7 @@ def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc
     return eval_dataset, eval_indices
 
 
-def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_dataset_path, docs_dataset_path, get_passage_from_context, tokenizer, config):
+def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_dataset_path, docs_dataset_path, get_passage_from_context, tokenizer, config, shuffle=True, num_samples=None):
 
     def _get_passages_from_fulltext(fulltext, target_id, tokenizer, config):
         tokens = tokenizer(fulltext).to(config["scholarcopilot_device"])
@@ -451,6 +451,9 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                 print(f"processing entry {count}")
                 train_dataset.append(item)
                 count += 1
+                if num_samples != None:
+                    if count >= num_samples:
+                        break
     
     except FileNotFoundError:
         corpus = {}
@@ -495,12 +498,21 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
 
             count = 0
             skipped = 0
-            for arxiv_id in tqdm(corpus):
+            variable_size_breakpoint = 100000
+            corpus_keys = list(corpus.keys())
+            corpus_indices = np.arange(len(corpus_keys))
+            if shuffle:
+                random.shuffle(corpus_indices)
+            for j in tqdm.tqdm(corpus_indices):
                 try:
-                    item = corpus[arxiv_id]
+                    item = corpus[corpus_keys[j]]
 
                     sys.stdout.write("\033[F")
                     print(f"processing entry {count} ({skipped} skipped)")
+
+                    paper = item["fulltext"]
+                    if sys.getsizeof(paper) >= variable_size_breakpoint: # maybe causes SIGKILL, probably due to running out of memory
+                        raise ValueError(f"source fulltext variable size ({sys.getsizeof(paper)}) >= {variable_size_breakpoint}")
                     
                     # num citations for training the retriever per paper
                     # same as SC
@@ -527,20 +539,21 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                                     break
 
                     all_targets = []
-
-                    paper = item["fulltext"]
                     for key in replaceable_citations:
                         target_id = bib[key]["arxiv_id"]
                         # SC
                         # target = corpus[target_id]["title"]+":"
                         # target += " ".join(corpus[target_id]["abstract"]).lstrip(" Abstract")
                         # PR
+                        target_paper = corpus[target_id]["fulltext"]
+                        if sys.getsizeof(target_paper) >= variable_size_breakpoint: # maybe causes SIGKILL, probably due to running out of memory
+                            raise ValueError(f"target fulltext variable size ({sys.getsizeof(target_paper)}) >= {variable_size_breakpoint}")
                         target = get_passage_from_context(
                             paper.split(f"#ref{key}#")[0], 
                             [{
                                 "arxiv_id": "",
                                 "passages": _get_passages_from_fulltext(
-                                corpus[target_id]["fulltext"], target_id, tokenizer, config
+                                target_paper, target_id, tokenizer, config
                             )}]
                         )
                         all_targets.append(target)
@@ -570,7 +583,11 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                     with open(pr_train_dataset_path, "a") as outfile:
                         json.dump(rec, outfile)
                         outfile.write("\n")
+                    
                     count += 1
+                    if num_samples != None:
+                        if count >= num_samples:
+                            break
 
                 except Exception as e:
                     print(f"Failure due to {type(e)}: {e.args}\n")
@@ -580,6 +597,12 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
         # caught SIGKILL
         print("caught SIGKILL")
         exit()
+
+    train_indices = np.arange(len(train_dataset))
+    if shuffle:
+        random.shuffle(train_indices)
+    print(f"training dataset loaded ({len(train_dataset)} samples).")
+    return train_dataset, train_indices
             
 
 def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_retrieval_dataset, docs_id_map, sc_id_map, max_samples=1000, populate_with_abstracts=False, shuffle=True):

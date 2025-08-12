@@ -76,20 +76,22 @@ def main():
     max_shards = int(np.ceil([len(passages_data)/samples_per_shard])[0])
 
     starting_passages_idx = 0
+    num_shards = 0
     for i in range(1, max_shards+1):
         this_shard_path = encodings_output_path.replace(".pkl", f"_shard-{i}-of-{max_shards}.pkl")
         if os.path.isfile(this_shard_path):
             starting_passages_idx += samples_per_shard
+            num_shards = i
             print(f"found shard: {this_shard_path}")
         else:
             break
-
-    print(f"starting from {starting_passages_idx}")
+    
+    num_shards += 1 # this is the first shard that will be created (last existing shard +1)
+    print(f"starting from {starting_passages_idx}, new shards start from {num_shards}")
     encoded = []
     lookup_indices = []
-    num_shards = 1
     curr_num_samples = 0
-    PSG_DATA_BATCH_SIZE = 128 # how many samples are passed to the encoder at once
+    PSG_DATA_BATCH_SIZE = 64 # how many samples are passed to the encoder at once
     for i in tqdm.trange(starting_passages_idx, len(passages_data), PSG_DATA_BATCH_SIZE):
         passage_ids = []
         passages = []
@@ -124,7 +126,8 @@ def main():
     with open(encodings_output_path.replace(".pkl", f"_shard-{num_shards}-of-{max_shards}.pkl"), 'wb') as f:
         pickle.dump((encoded, lookup_indices), f)
 
-    # convert to h5py dataset
+    # collect all shartd into one corpus
+    print("collecting all corpus shards...", end="")
     encoded = []
     lookup_indices = []
     for shard_idx in tqdm.trange(1, max_shards+1):
@@ -133,14 +136,23 @@ def main():
             (e, li) = pickle.load(infile)
             encoded.extend(e)
             lookup_indices.extend(li)
+    print("done")
+
+    # save the corpus, just in case
+    print("saving corpus file...", end="")
+    with open(encodings_output_path.replace(".pkl", f"_corpus.pkl"), 'wb') as f:
+        pickle.dump((encoded, lookup_indices), f)
+    print("pkl saved...", end="")
+
+    # convert to h5py dataset      
     try:
-        h5_path = this_shard_path.replace('.pkl', '.h5')
-        save_prefix = encodings_output_path.lstrip("data/").replace(".pkl", "_")
+        h5_path = encodings_output_path.replace('.pkl', '_corpus.h5')
         with h5py.File(h5_path, 'w') as outfile:
-            outfile.create_dataset(save_prefix+'encoded', data=encoded)
-            outfile.create_dataset(save_prefix+'lookup_indices', data=lookup_indices)
+            outfile.create_dataset('encoded', data=encoded)
+            outfile.create_dataset('lookup_indices', data=lookup_indices)
     except Exception as e:
-        print(f"Failed to save encoded data to HDF5: {e}")
+        print(f"\nFailed to save encoded data to HDF5: {e}")
+    print("h5 saved")
 
 
 if __name__ == "__main__":
