@@ -19,6 +19,7 @@ find . -type f -name foo\* -delete
 ## ...
 cd Literature-Search-with-Active-Disambiguation
 cd Literature-Search-with-Active-Disambiguation/src/scholarcopilot_train/src
+conda activate /home/geiger/gwb204/miniconda3/envs/citations
 
 ## interactive session
 ### Galvani a100
@@ -55,3 +56,4 @@ sbatch vscode/allocate-galvani-sc-train.sh
 squeue -u gwb204
 ### node login (from local machine)
 ssh mlc-galvani-vs
+ssh mlc-galvani-sc-train

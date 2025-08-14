@@ -498,7 +498,7 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
 
             count = 0
             skipped = 0
-            variable_size_breakpoint = 100000
+            variable_size_breakpoint = 60000 # maybe causes SIGKILL, probably due to running out of memory
             corpus_keys = list(corpus.keys())
             corpus_indices = np.arange(len(corpus_keys))
             if shuffle:
@@ -511,7 +511,7 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                     print(f"processing entry {count} ({skipped} skipped)")
 
                     paper = item["fulltext"]
-                    if sys.getsizeof(paper) >= variable_size_breakpoint: # maybe causes SIGKILL, probably due to running out of memory
+                    if sys.getsizeof(paper) >= variable_size_breakpoint: 
                         raise ValueError(f"source fulltext variable size ({sys.getsizeof(paper)}) >= {variable_size_breakpoint}")
                     
                     # num citations for training the retriever per paper
@@ -546,7 +546,7 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
                         # target += " ".join(corpus[target_id]["abstract"]).lstrip(" Abstract")
                         # PR
                         target_paper = corpus[target_id]["fulltext"]
-                        if sys.getsizeof(target_paper) >= variable_size_breakpoint: # maybe causes SIGKILL, probably due to running out of memory
+                        if sys.getsizeof(target_paper) >= variable_size_breakpoint:
                             raise ValueError(f"target fulltext variable size ({sys.getsizeof(target_paper)}) >= {variable_size_breakpoint}")
                         target = get_passage_from_context(
                             paper.split(f"#ref{key}#")[0], 
@@ -678,6 +678,69 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
     if shuffle:
         random.shuffle(eval_indices)
     print(f"sections eval dataset loaded (contains {len(eval_dataset)} samples).")
+
+    return eval_dataset, eval_indices
+
+            
+
+def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_arxiv_id_map, max_samples=1000, shuffle=True):
+    print("loading sections eval dataset...")
+    eval_dataset = []
+    count = 0
+    print()
+
+    try:
+        with open(eval_dataset_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count}")
+                eval_dataset.append(item)
+                if len(eval_dataset) >= max_samples:
+                    break
+                count += 1
+
+    except FileNotFoundError:
+        num_samples = 0
+        
+        for _, entry in sorted(docs_retrieval_dataset.items(), key=lambda item: item[1]["arxiv_id"], reverse=True):
+            sys.stdout.write("\033[F")
+            print(f"collected {num_samples} samples")
+
+            # ensure that the paper is not in the retrieval corpus
+            if entry["arxiv_id"] in sc_arxiv_id_map:
+                continue
+            
+            try:
+                first_title = entry["sections"][0]["title"].lower()
+            except IndexError:
+                continue
+            if first_title.replace("introduction", "") == first_title: # probably has no introduction
+                continue
+
+            generation_context = f"Title: {entry["title"]}\n\n"
+            generation_context += f"Abstract: {entry["abstract"].lstrip(" Abstract")}\n\n"
+            generation_context += f"Introduction:\n{" ".join(entry["sections"][0]["sentences"])}"
+
+            rec = {
+                "context": generation_context,
+                "source_arxiv_id": entry["arxiv_id"],
+                "target_corpus_id": None
+            }
+
+            if len(eval_dataset) < max_samples: # adds just enough samples to the current dataset
+                eval_dataset.append(rec)
+            num_samples += 1
+
+            with open(eval_dataset_path, "a") as outfile: # adds every sample to the saved dataset
+                json.dump(rec, outfile)
+                outfile.write("\n")
+
+
+
+    eval_indices = np.arange(len(eval_dataset))
+    if shuffle:
+        random.shuffle(eval_indices)
+    print(f"sections eval dataset loaded (contains {len(eval_dataset)} samples, oldest is {eval_dataset[-1]["source_arxiv_id"]}).")
 
     return eval_dataset, eval_indices
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name="sc-train"
 #SBATCH --partition=a100-galvani
-#SBATCH --time=1:00:00
+#SBATCH --time=10:00:00
 #SBATCH --gpus=8
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

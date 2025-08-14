@@ -1,1 +1,3 @@
-slurmstepd: error: *** JOB 1662033 ON galvani-cn231 CANCELLED AT 2025-08-11T18:30:06 DUE TO TIME LIMIT ***
+
+CondaError: Run 'conda init' before 'conda activate'
+

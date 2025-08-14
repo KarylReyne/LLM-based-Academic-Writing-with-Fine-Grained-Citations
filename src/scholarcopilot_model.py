@@ -25,7 +25,7 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, config, t
     # custom efSearch
     index.hnsw.efSearch = config["hnsw_efSearch"]
 
-    # this retrieves papers by comparing the cite token embedding to the embedded corpus documents (title+abstract)
+    # this retrieves papers by comparing the cite token embedding to the embedded corpus documents
     distances, indices = index.search(cite_start_hidden_state, top_k)
     retrieved_corpus_indices = []
 
@@ -173,10 +173,10 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=Fal
             continue
         references.append(retrieval_dataset[curr_corpus_idx])
         distances.append(distance)
+    if len(references) == 0:
+        raise ScholarCopilotRetrievalError(f"none of the retrieved results found in the retrieval_dataset")
     if not silent:
         print(f"best reference before passage retrieval: {references[0]["arxiv_id"]}")
-    if len(references) < 1:
-        raise ScholarCopilotRetrievalError
     return references, distances
 
 

@@ -1,5 +1,4 @@
 import faiss
-import os
 import h5py
 import numpy as np
 
@@ -30,12 +29,12 @@ def load_corpus_base(file_path):
 if __name__ == "__main__":
     embed_dim_map = {
         "scholarcopilot": 3584,
-        "reasonir_8b": None #TODO
+        "reasonir_8b": 4096
     }
 
     input_file = "data/documents_3.0_512-passages_reasonir_8b-encoded_corpus.h5"
+    embed_dim = embed_dim_map["reasonir_8b"]
     threads = 1
-    embed_dim = embed_dim_map["scholarcopilot"] # tied to the encoded corpus
     M = 16 # number of edges that need to be added to every new node during insertion
     efC = 1000 # number of nearest neighbors to explore during construction
 
