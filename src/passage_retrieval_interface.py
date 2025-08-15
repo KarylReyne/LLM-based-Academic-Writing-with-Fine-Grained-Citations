@@ -76,15 +76,12 @@ def save_results(
 
 
 def get_passage_retrieval_models(config):
-    special_tokens = ['<|paper_start|>', '<|paper_end|>', '<|cite_start|>', '<|cite_end|>', '<|reference_start|>',
-                      '<|reference_end|>', config["label_sep_token"], config["citation_mask_token"]]
-
     # tokenizers
     retr_tokenizer = AutoTokenizer.from_pretrained(config["retriever"])
     rera_tokenizer = AutoTokenizer.from_pretrained(config["reranker"])
     for tokenizer in [retr_tokenizer, rera_tokenizer]:
         # tokenizer.padding_side = 'right'
-        tokenizer.add_tokens(special_tokens)
+        tokenizer.add_tokens(config["special_tokens"])
         # if tokenizer.pad_token_id is None:
         #     tokenizer.pad_token_id = tokenizer.eos_token_id
 

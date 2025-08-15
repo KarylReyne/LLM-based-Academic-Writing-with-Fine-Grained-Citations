@@ -1,3 +1,4 @@
 
 CondaError: Run 'conda init' before 'conda activate'
 
+slurmstepd: error: *** JOB 1668243 ON galvani-cn212 CANCELLED AT 2025-08-15T09:40:04 ***

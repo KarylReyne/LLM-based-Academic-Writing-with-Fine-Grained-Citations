@@ -5,6 +5,7 @@ import re
 import random
 import numpy as np
 import tqdm
+import math
 
 from passage_retrieval_interface import apply_retrieval_context_window
 from sigterm_catcher import SIGTERMCatcher
@@ -684,6 +685,7 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
             
 
 def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_arxiv_id_map, max_samples=1000, shuffle=True):
+    # build/load dataset of left-side generation contexts (just take title+abstract+2.5 sentences introduction of existing papers)
     print("loading sections eval dataset...")
     eval_dataset = []
     count = 0
@@ -712,6 +714,8 @@ def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_a
             
             try:
                 first_title = entry["sections"][0]["title"].lower()
+                split_list = entry["sections"][0]["sentences"][2].split(" ")
+                split_list = split_list[:math.ceil(len(split_list)/2)] 
             except IndexError:
                 continue
             if first_title.replace("introduction", "") == first_title: # probably has no introduction
@@ -719,7 +723,8 @@ def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_a
 
             generation_context = f"Title: {entry["title"]}\n\n"
             generation_context += f"Abstract: {entry["abstract"].lstrip(" Abstract")}\n\n"
-            generation_context += f"Introduction:\n{" ".join(entry["sections"][0]["sentences"])}"
+            generation_context += f"Introduction:\n{" ".join(entry["sections"][0]["sentences"][:2])} " # two full sentences
+            generation_context += " ".join(split_list) # 1/2 of the third sentence
 
             rec = {
                 "context": generation_context,

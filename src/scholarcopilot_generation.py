@@ -16,7 +16,7 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config):
+def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config, do_passage_retrieval=True, silent=False):
     sentence_num = 0
     enough = False
     current_text = text
@@ -34,7 +34,8 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
     for each in yield_list:
         if "." in each and (each.endswith(".") or ".\n" in each):
             sentence_num += 1
-            print("sentence_num: ", sentence_num, "each", each)
+            if not silent:
+                print("sentence_num: ", sentence_num, "each", each)
         curr_yield_text += " " + each
         yield curr_yield_text, citations_data
         time.sleep(0.1)
@@ -48,22 +49,31 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
 
         # --- BEGIN passage retrieval ---
         start = time.time()
-        try:
-            reranking_results = retrieve_relevant_passages(
-                current_text, references, passage_retrieval_models, config
-            )
-            best_matching_passage = reranking_results["ranked_passages"][0]
-            best_passage_label = reranking_results["ranked_passage_labels"][0]
-            best_passage_score = reranking_results["ranked_passage_scores"][0]
-            best_reference_arxiv_id = best_passage_label.split("_")[0]
-            best_matching_passage = best_matching_passage+"<|cite_end|>"
-            print("best matching passage: ", best_matching_passage)
-        except passage_reranking.InvalidLLMResponseError:
-            best_matching_passage = references[0]["abstract"]+"<|cite_end|>" # default to abstract if llm response parsing failed
+        if do_passage_retrieval:
+            try:
+                reranking_results = retrieve_relevant_passages(
+                    current_text, references, passage_retrieval_models, config
+                )
+                best_matching_passage = reranking_results["ranked_passages"][0]
+                best_passage_label = reranking_results["ranked_passage_labels"][0]
+                best_passage_score = reranking_results["ranked_passage_scores"][0]
+                best_reference_arxiv_id = best_passage_label.split("_")[0]
+                best_matching_passage = best_matching_passage+"<|cite_end|>"
+                if not silent:
+                    print("best matching passage: ", best_matching_passage)
+            except passage_reranking.InvalidLLMResponseError:
+                best_matching_passage = references[0]["abstract"]+"<|cite_end|>" # default to abstract if llm response parsing failed
+                best_reference_arxiv_id = references[0]["arxiv_id"]
+                if not silent:
+                    print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
+        else:
+            best_matching_passage = references[0]["abstract"]+"<|cite_end|>"
             best_reference_arxiv_id = references[0]["arxiv_id"]
-            print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
-        print(f"best reference after passage retrieval: {best_reference_arxiv_id}")
-        print("***************Passage retrieval cost (time): ", time.time() - start)
+            if not silent:
+                print("best abstract as reference: ", best_matching_passage)
+        if not silent:
+            print(f"best reference after passage retrieval: {best_reference_arxiv_id}")
+            print("***************Retrieval cost (time): ", time.time() - start)
         # --- END passage retrieval ---
 
         unique_id_suffix = len(unique_reference_id_list) # this resolves duplicate arxiv_ids in the list of references
@@ -78,16 +88,18 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
 
         citations_data += new_citation_data
 
-        # get the data entry of the newly added citation
-        citation_dict = citations_data[-1]
-        # check that its the correct entry
-        assert citation_dict["citation_key"] == f"arxivID-{best_reference_arxiv_id}-{unique_id_suffix}"
-        # add passage retrieval result
-        citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
-        citation_dict["passage_label"] = best_passage_label
-        citation_dict["passage_score"] = best_passage_score
-        # save modified data entry 
-        citations_data[-1] = citation_dict
+        # add passage retrieval-specific entries to citations data
+        if do_passage_retrieval:
+            # get the data entry of the newly added citation
+            citation_dict = citations_data[-1]
+            # check that its the correct entry
+            assert citation_dict["citation_key"] == f"arxivID-{best_reference_arxiv_id}-{unique_id_suffix}"
+            # add passage retrieval result
+            citation_dict["matched_passage"] = best_matching_passage.rstrip("<|cite_end|>")
+            citation_dict["passage_label"] = best_passage_label
+            citation_dict["passage_score"] = best_passage_score
+            # save modified data entry 
+            citations_data[-1] = citation_dict
 
         curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
         # print("curr_yield_text, yield_list", curr_yield_text, yield_list)

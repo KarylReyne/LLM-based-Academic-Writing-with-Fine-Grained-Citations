@@ -48,8 +48,8 @@ class ArxivLLM(nn.Module):
 
     def forward(self, query: Dict[str, Tensor] = None, passage: Dict[str, Tensor] = None):
         # added
-        get_accelerator().empty_cache()
-        torch.cuda.empty_cache()
+        # get_accelerator().empty_cache()
+        # torch.cuda.empty_cache()
 
         q_reps, gen_loss = self.encode_query(query) if query is not None else (None, None)
         p_reps = self.encode_passage(passage) if passage is not None else None

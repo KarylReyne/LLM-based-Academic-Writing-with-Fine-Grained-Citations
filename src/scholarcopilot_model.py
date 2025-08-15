@@ -297,10 +297,7 @@ def load_model(model_path, config):
     model.to(config["scholarcopilot_device"])
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-
-    special_tokens = ['<|paper_start|>', '<|paper_end|>', '<|cite_start|>', '<|cite_end|>', '<|reference_start|>',
-                      '<|reference_end|>', config["label_sep_token"], config["citation_mask_token"]]
-    tokenizer.add_tokens(special_tokens)
+    tokenizer.add_tokens(config["special_tokens"])
 
     model.resize_token_embeddings(len(tokenizer))
     print("model loaded successfully")

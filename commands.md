@@ -45,6 +45,9 @@ gpustat -i <!-- continuous -->
 ## gpu utilization
 watch -n0.1 nvidia-smi
 
+## get num lines in file
+wc -l <filename>
+
 ## download huggingface model
 huggingface-cli download Qwen/Qwen2.5-3B --local-dir ../../qwen2.5_3b
 

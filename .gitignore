@@ -27,6 +27,7 @@ src/scholarcopilot_data/**
 src/scholarcopilot_model_*/**
 src/reasonir_8b/**
 src/qwen2.5_*/**
+src/deepseek-r1-distill-qwen-7b/**
 
 src/archive/ScholarCopilot_unmodified/data/**
 src/archive/ScholarCopilot_unmodified/model_*/**
