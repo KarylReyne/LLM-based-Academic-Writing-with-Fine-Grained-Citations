@@ -714,22 +714,31 @@ def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_a
             
             try:
                 first_title = entry["sections"][0]["title"].lower()
-                split_list = entry["sections"][0]["sentences"][2].split(" ")
-                split_list = split_list[:math.ceil(len(split_list)/2)] 
+                split_list = entry["sections"][0]["sentences"][2].split(" ") # split third sentence
+                third_sent_start = " ".join(split_list[:math.ceil(len(split_list)/2)]) # 1/2 of the third sentence
             except IndexError:
                 continue
+
             if first_title.replace("introduction", "") == first_title: # probably has no introduction
                 continue
+            
+            entry_title = entry["title"]
+            entry_abstract = entry["abstract"].lstrip(" Abstract")
+            entry_introduction_sents = entry["sections"][0]["sentences"]
 
-            generation_context = f"Title: {entry["title"]}\n\n"
-            generation_context += f"Abstract: {entry["abstract"].lstrip(" Abstract")}\n\n"
-            generation_context += f"Introduction:\n{" ".join(entry["sections"][0]["sentences"][:2])} " # two full sentences
-            generation_context += " ".join(split_list) # 1/2 of the third sentence
+            generation_context = f"Title: {entry_title}\n\n"
+            generation_context += f"Abstract: {entry_abstract}\n\n"
+            generation_context += f"Introduction:\n{" ".join(entry_introduction_sents[:2])} " # two full sentences
+            generation_context += third_sent_start 
 
             rec = {
                 "context": generation_context,
                 "source_arxiv_id": entry["arxiv_id"],
-                "target_corpus_id": None
+                "target_corpus_id": None,
+                "title": entry_title,
+                "abstract": entry_abstract,
+                "introduction": " ".join(entry_introduction_sents),
+                "introduction_start": " ".join(entry_introduction_sents[:2])+" "+third_sent_start
             }
 
             if len(eval_dataset) < max_samples: # adds just enough samples to the current dataset

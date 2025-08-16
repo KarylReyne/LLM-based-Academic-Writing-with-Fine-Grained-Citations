@@ -7,6 +7,7 @@ import time
 import tarfile
 import passage_reranking
 from passage_retrieval_interface import *
+from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset
 
 
 def split_yield_list(input_text, prefix_length):
@@ -16,17 +17,17 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config, do_passage_retrieval=True, silent=False):
+def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config, generation_breakpoint=15000, do_passage_retrieval=True, silent=False):
     sentence_num = 0
     enough = False
     current_text = text
     current_text = preprocess_input_text(current_text)
     display_text = current_text.replace("<|paper_start|> ", "")
     curr_prefix_length = len(display_text)
-    current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text)
+    current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text, generation_breakpoint=generation_breakpoint, silent=silent)
     unique_reference_id_list = [] # (arxiv_id, suffix)
     display_text, new_citation_data = replace_citations(
-        current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+        current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent
     )
     citations_data += new_citation_data
     curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
@@ -43,16 +44,16 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
 
     while cite_start_hidden_state is not None and not enough:
         retrieved_k_results = retrieve_reference(
-            index, lookup_indices, cite_start_hidden_state, config, top_k=config["sc_retriever_topk"]
+            index, lookup_indices, cite_start_hidden_state, config, top_k=config["sc_retriever_topk"], silent=silent
         )
-        references, distances = collect_retrieval_results(retrieved_k_results, retrieval_dataset)
+        references, distances = collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=silent)
 
         # --- BEGIN passage retrieval ---
         start = time.time()
         if do_passage_retrieval:
             try:
                 reranking_results = retrieve_relevant_passages(
-                    current_text, references, passage_retrieval_models, config
+                    current_text, references, passage_retrieval_models, config, silent=silent
                 )
                 best_matching_passage = reranking_results["ranked_passages"][0]
                 best_passage_label = reranking_results["ranked_passage_labels"][0]
@@ -81,9 +82,9 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
 
         current_text = current_text + best_matching_passage
 
-        current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text)
+        current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text, generation_breakpoint=generation_breakpoint, silent=silent)
         display_text, new_citation_data = replace_citations(
-            current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+            current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent
         )
 
         citations_data += new_citation_data
@@ -106,14 +107,15 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
         for each in yield_list:
             if "." in each and (each.endswith(".") or ".\n" in each):
                 sentence_num += 1
-                print("sentence_num: ", sentence_num, "each", each)
+                if not silent:
+                    print("sentence_num: ", sentence_num, "each", each)
             curr_yield_text += " " + each
             yield curr_yield_text, citations_data
             time.sleep(0.1)
         curr_prefix_length = len(curr_yield_text)
 
     display_text, new_citation_data = post_process_output_text(
-        display_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map
+        display_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent
     )
     citations_data += new_citation_data
     yield display_text, citations_data
@@ -145,8 +147,8 @@ if __name__ == "__main__":
     complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
     retrieval_dataset = load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, arxiv_to_corpus_id_map)
 
-    index_dir = "data/index"
-    lookup_indices_dir = "data/lookup_indices.npy"
+    index_dir = "scholarcopilot_data/index"
+    lookup_indices_dir = "scholarcopilot_data/lookup_indices.npy"
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
     print("index building finished")
 

@@ -40,7 +40,7 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, config, t
     return list(zip(retrieved_corpus_indices, distances[0]))
 
 
-def single_complete_step(model, tokenizer, device, input_text, silent=False):
+def single_complete_step(model, tokenizer, device, input_text, generation_breakpoint=15000, silent=False):
     if not silent:
         print("completing sentence ...\n")
     
@@ -48,7 +48,7 @@ def single_complete_step(model, tokenizer, device, input_text, silent=False):
     try: # terminate early if process runs out of memory
         inputs = tokenizer(input_text, return_tensors="pt").to(device)
 
-        if len(inputs.input_ids[0]) > 15000:
+        if len(inputs.input_ids[0]) > generation_breakpoint:
             return input_text, None
 
         stop_token_ids = tokenizer.convert_tokens_to_ids(['<|cite_start|>', '<|paper_end|>'])
@@ -81,7 +81,7 @@ def single_complete_step(model, tokenizer, device, input_text, silent=False):
         cite_rep = new_output.hidden_states[-1][:, -1, :]
     except torch.OutOfMemoryError:
         if not silent:
-            print(f"CUDA out of memory. Terminating generation early at length {len(inputs.input_ids[0])}/15000")
+            print(f"CUDA out of memory. Terminating generation early at length {len(inputs.input_ids[0])}/{generation_breakpoint}")
         return input_text, None
 
     new_content = generated_text
@@ -228,9 +228,9 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
     return result, new_citation_data
 
 
-def post_process_output_text(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map):
+def post_process_output_text(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=False):
     # print("post_process_output_text, res_text", res_text)
-    output_text, citation_info_list = replace_citations(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map)
+    output_text, citation_info_list = replace_citations(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent)
     # print("post_process_output_text, citation_info_list ", citation_info_list)
     output_text = output_text.replace("<|paper_start|> ", "").replace(" <|paper_end|>", " <|section_end|>")
     # output_text = output_text.replace("<|paper_start|> ", "")
@@ -300,6 +300,7 @@ def load_model(model_path, config):
     tokenizer.add_tokens(config["special_tokens"])
 
     model.resize_token_embeddings(len(tokenizer))
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
     print("model loaded successfully")
     return model, tokenizer
 

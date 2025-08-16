@@ -109,6 +109,7 @@ def get_passage_retrieval_models(config):
     )
     reranker = reranker.to(config["reranker_device"])
     reranker.resize_token_embeddings(len(rera_tokenizer))
+    reranker.generation_config.pad_token_id = rera_tokenizer.pad_token_id
     reranker.eval()
 
     print("passage retrieval models loaded")
