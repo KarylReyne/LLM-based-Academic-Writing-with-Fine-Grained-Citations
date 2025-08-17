@@ -1,13 +1,8 @@
-from datetime import datetime
-import tempfile
 from scholarcopilot_model import *
-import torch
-import faiss
 import time
-import tarfile
 import passage_reranking
 from passage_retrieval_interface import *
-from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset
+from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset, load_scholarcopilot_metadata_corpus
 
 
 def split_yield_list(input_text, prefix_length):
@@ -17,8 +12,11 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config, generation_breakpoint=15000, do_passage_retrieval=True, silent=False):
+def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, passage_retrieval_models, config, generation_breakpoint=15000, do_passage_retrieval=True, catch_retrieval_fails=True, silent=False):
     sentence_num = 0
+    retrieval_fails = 0
+    llm_fails = 0
+    sc_corpus_id_map = {}
     enough = False
     current_text = text
     current_text = preprocess_input_text(current_text)
@@ -27,7 +25,7 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
     current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text, generation_breakpoint=generation_breakpoint, silent=silent)
     unique_reference_id_list = [] # (arxiv_id, suffix)
     display_text, new_citation_data = replace_citations(
-        current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent
+        current_text, unique_reference_id_list, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, sc_corpus_id_map, silent=silent
     )
     citations_data += new_citation_data
     curr_yield_text, yield_list = split_yield_list(display_text, curr_prefix_length)
@@ -38,43 +36,66 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
             if not silent:
                 print("sentence_num: ", sentence_num, "each", each)
         curr_yield_text += " " + each
-        yield curr_yield_text, citations_data
+        yield curr_yield_text, citations_data, [retrieval_fails, llm_fails]
         time.sleep(0.1)
     curr_prefix_length = len(curr_yield_text)
 
     while cite_start_hidden_state is not None and not enough:
+        retrieval_failed = False
         retrieved_k_results = retrieve_reference(
             index, lookup_indices, cite_start_hidden_state, config, top_k=config["sc_retriever_topk"], silent=silent
         )
-        references, distances = collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=silent)
+        try:
+            references, distances = collect_retrieval_results(retrieved_k_results, retrieval_dataset, docs_corpus_id_map, sc_metadata_corpus, silent=silent)
+        except ScholarCopilotRetrievalError as e:
+            retrieval_fails += 1
+            retrieval_failed = True
+            if catch_retrieval_fails:
+                sc_corpus_id, _ = retrieved_k_results[0]
+                best_matching_passage = sc_metadata_corpus[sc_corpus_id]["abstract"]+"<|cite_end|>"
+                best_reference_arxiv_id = sc_metadata_corpus[sc_corpus_id]["paper_id"]
+                # add this id to the sc corpus id map since its not from the docs dataset
+                # so that it can be found later by replace_citations()
+                sc_corpus_id_map[best_reference_arxiv_id] = sc_corpus_id
+                if not silent:
+                    print("sc retrieval failed, using best abstract as reference: ", best_matching_passage)
+            else:
+                raise e
 
         # --- BEGIN passage retrieval ---
-        start = time.time()
-        if do_passage_retrieval:
-            try:
-                reranking_results = retrieve_relevant_passages(
-                    current_text, references, passage_retrieval_models, config, silent=silent
-                )
-                best_matching_passage = reranking_results["ranked_passages"][0]
-                best_passage_label = reranking_results["ranked_passage_labels"][0]
-                best_passage_score = reranking_results["ranked_passage_scores"][0]
-                best_reference_arxiv_id = best_passage_label.split("_")[0]
-                best_matching_passage = best_matching_passage+"<|cite_end|>"
+        if not retrieval_failed:
+            start = time.time()
+            if do_passage_retrieval:
+                try:
+                    reranking_results = retrieve_relevant_passages(
+                        current_text, references, passage_retrieval_models, config, silent=silent
+                    )
+                    best_matching_passage = reranking_results["ranked_passages"][0]
+                    best_passage_label = reranking_results["ranked_passage_labels"][0]
+                    best_passage_score = reranking_results["ranked_passage_scores"][0]
+                    best_reference_arxiv_id = best_passage_label.split("_")[0]
+                    best_matching_passage = best_matching_passage+"<|cite_end|>"
+                    if not silent:
+                        print("best matching passage: ", best_matching_passage)
+                except passage_reranking.InvalidLLMResponseError:
+                    best_matching_passage = references[0]["abstract"]+"<|cite_end|>" # default to abstract if llm response parsing failed
+                    best_reference_arxiv_id = references[0]["arxiv_id"]
+                    llm_fails += 1
+                    retrieval_failed = True
+                    if not silent:
+                        print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
+            else: # standart sc behaviour
+                sc_corpus_id, _ = retrieved_k_results[0]
+                best_matching_passage = sc_metadata_corpus[sc_corpus_id]["abstract"]+"<|cite_end|>"
+                best_reference_arxiv_id = sc_metadata_corpus[sc_corpus_id]["paper_id"]
+                # add this id to the sc corpus id map since its not from the docs dataset
+                # so that it can be found later by replace_citations()
+                sc_corpus_id_map[best_reference_arxiv_id] = sc_corpus_id
                 if not silent:
-                    print("best matching passage: ", best_matching_passage)
-            except passage_reranking.InvalidLLMResponseError:
-                best_matching_passage = references[0]["abstract"]+"<|cite_end|>" # default to abstract if llm response parsing failed
-                best_reference_arxiv_id = references[0]["arxiv_id"]
-                if not silent:
-                    print("tex or llm response parsing failed, using abstract as reference: ", best_matching_passage)
-        else:
-            best_matching_passage = references[0]["abstract"]+"<|cite_end|>"
-            best_reference_arxiv_id = references[0]["arxiv_id"]
+                    print("best abstract as reference: ", best_matching_passage)
             if not silent:
-                print("best abstract as reference: ", best_matching_passage)
-        if not silent:
-            print(f"best reference after passage retrieval: {best_reference_arxiv_id}")
-            print("***************Retrieval cost (time): ", time.time() - start)
+                print(f"best reference after retrieval: {best_reference_arxiv_id}")
+                print("***************Retrieval cost (time): ", time.time() - start)
         # --- END passage retrieval ---
 
         unique_id_suffix = len(unique_reference_id_list) # this resolves duplicate arxiv_ids in the list of references
@@ -84,13 +105,13 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
 
         current_text, cite_start_hidden_state = single_complete_step(model, tokenizer, config["scholarcopilot_device"], current_text, generation_breakpoint=generation_breakpoint, silent=silent)
         display_text, new_citation_data = replace_citations(
-            current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent
+            current_text, unique_reference_id_list, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, sc_corpus_id_map, silent=silent
         )
 
         citations_data += new_citation_data
 
         # add passage retrieval-specific entries to citations data
-        if do_passage_retrieval:
+        if do_passage_retrieval and not retrieval_failed:
             # get the data entry of the newly added citation
             citation_dict = citations_data[-1]
             # check that its the correct entry
@@ -110,15 +131,15 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
                 if not silent:
                     print("sentence_num: ", sentence_num, "each", each)
             curr_yield_text += " " + each
-            yield curr_yield_text, citations_data
+            yield curr_yield_text, citations_data, [retrieval_fails, llm_fails]
             time.sleep(0.1)
         curr_prefix_length = len(curr_yield_text)
 
     display_text, new_citation_data = post_process_output_text(
-        display_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent
+        display_text, unique_reference_id_list, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, sc_corpus_id_map, silent=silent
     )
     citations_data += new_citation_data
-    yield display_text, citations_data
+    yield display_text, citations_data, [retrieval_fails, llm_fails]
     time.sleep(0.1)
 
 
@@ -147,6 +168,9 @@ if __name__ == "__main__":
     complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
     retrieval_dataset = load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, arxiv_to_corpus_id_map)
 
+    corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
+    sc_metadata_corpus = load_scholarcopilot_metadata_corpus(corpus_path)
+
     index_dir = "scholarcopilot_data/index"
     lookup_indices_dir = "scholarcopilot_data/lookup_indices.npy"
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
@@ -161,11 +185,10 @@ if __name__ == "__main__":
     print("pre-generation text_input:", text_input)
 
     gen = stream_generate(
-        text_input, citations_data, index, lookup_indices, model, tokenizer, # scholar copilot
-        retrieval_dataset, arxiv_to_corpus_id_map, passage_retrieval_models, config # passage retrieval
+        text_input, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, sc_metadata_corpus, arxiv_to_corpus_id_map, passage_retrieval_models, config
     )
     for t in gen:
-        text_input, citations_data = t
+        text_input, citations_data, _ = t
     print("text_input:", text_input)
     
     save_results({

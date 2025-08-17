@@ -11,6 +11,14 @@ from passage_retrieval_interface import apply_retrieval_context_window
 from sigterm_catcher import SIGTERMCatcher
 
 
+def load_scholarcopilot_metadata_corpus(corpus_path):
+    corpus = {}
+    with open(corpus_path, "rb") as file:
+        for item in ijson.items(file, "", multiple_values=True):
+            corpus[item["corpus_id"]] = item
+    return corpus
+
+
 def load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, id_map):
     print("loading retrieval dataset...")
     retrieval_dataset = {}

@@ -1,0 +1,562 @@
+python evaluation_generation.py
+Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:04<00:00,  1.07s/it]
+The new embeddings will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+The new lm_head weights will be initialized from a multivariate normal distribution that has old embeddings' mean and covariance. As described in this article: https://nlp.stanford.edu/~johnhew/vocab-expansion.html. To disable this, use `mean_resizing=False`
+scholarcopilot model loaded successfully
+Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:04<00:00,  1.05s/it]
+Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 86.20it/s]
+passage retrieval models loaded
+Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:04<00:00,  2.07s/it]
+judge loaded.
+loading arxiv_to_corpus_id map...
+arxiv_to_corpus_id map loaded.
+loading scholarcopilot_arxiv_to_corpus_id map...
+scholarcopilot_arxiv_to_corpus_id map loaded.
+arxiv_id mappings loaded. dataset overlap is 358746, 52.96% of the retrieval corpus
+index building finished
+loading retrieval dataset...
+processing entry 358746
+retrieval dataset loaded.
+loading sections eval dataset...
+processing entry 999
+sections eval dataset loaded (contains 1000 samples, oldest is 2211.02830).
+
+processing entry 0
+completing sentence ...
+
+IN replace_citations
+
+sentence_num:  1 each #eq22#.
+Retrieving reference
+retrieved_corpus_indices ['arxiv-9768', 'arxiv-88173', 'arxiv-80569', 'arxiv-676842', 'arxiv-7438', 'arxiv-3542', 'arxiv-144634', 'arxiv-460618', 'arxiv-135545', 'arxiv-24536']
+distances[0] [0.64022386 0.6401371  0.63393515 0.629959   0.62776935 0.6257615
+ 0.62574106 0.6223016  0.6211777  0.62084514]
+***************Retrieval cost (time):  0.004060506820678711
+arxiv id math/0606734 not found in the docs retrieval_dataset
+arxiv id 1801.01552 not found in the docs retrieval_dataset
+arxiv id 1109.2361 not found in the docs retrieval_dataset
+best reference before passage retrieval: 0910.5697
+best abstract as reference:  <|reference_start|>High Dimensional Error-Correcting Codes: In this paper we construct multidimensional codes with high dimension. The codes can correct high dimensional errors which have the form of either small clusters, or confined to an area with a small radius. We also consider small number of errors in a small area. The clusters which are discussed are mainly spheres such as semi-crosses and crosses. Also considered are clusters with small number of errors such as 2-bursts, two errors in various clusters, and three errors on a line. Our main focus is on the redundancy of the codes when the most dominant parameter is the dimension of the code.<|reference_end|><|cite_end|>
+best reference after retrieval: 0910.5697
+***************Retrieval cost (time):  1.430511474609375e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-76197', 'arxiv-9768', 'arxiv-9954', 'arxiv-59069', 'arxiv-30980', 'arxiv-6687', 'arxiv-37412', 'arxiv-88173', 'arxiv-37393', 'arxiv-309449']
+distances[0] [0.43114194 0.42902547 0.42054033 0.4175747  0.4150777  0.41395605
+ 0.40805826 0.40770897 0.4065463  0.4061334 ]
+***************Retrieval cost (time):  0.35880446434020996
+arxiv id 1504.04263 not found in the docs retrieval_dataset
+arxiv id 1204.4204 not found in the docs retrieval_dataset
+best reference before passage retrieval: 0910.5697
+best abstract as reference:  <|reference_start|>Concurrent codes: A holographic-type encoding robust against noise and loss: Concurrent coding is an encoding scheme with "holographic" type properties that are shown here to be robust against a significant amount of noise and signal loss. This single encoding scheme is able to correct for random errors and burst errors simultaneously, but does not rely on cyclic codes. A simple and practical scheme has been tested that displays perfect decoding when the signal to noise ratio is of order -18dB. The same scheme also displays perfect reconstruction when a contiguous block of 40% of the transmission is missing. In addition this scheme is 50% more efficient in terms of transmitted power requirements than equivalent cyclic codes. A simple model is presented that describes the process of decoding and can determine the computational load that would be expected, as well as describing the critical levels of noise and missing data at which false messages begin to be generated.<|reference_end|><|cite_end|>
+best reference after retrieval: 1504.04263
+***************Retrieval cost (time):  2.3603439331054688e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-9954', 'arxiv-6687', 'arxiv-9768', 'arxiv-80526', 'arxiv-30980', 'arxiv-2207', 'arxiv-244736', 'arxiv-59069', 'arxiv-9799', 'arxiv-36137']
+distances[0] [0.32190245 0.32004046 0.31520107 0.31347147 0.3128435  0.31260425
+ 0.31146434 0.30926532 0.30750644 0.30704755]
+***************Retrieval cost (time):  0.5397961139678955
+arxiv id 1204.4204 not found in the docs retrieval_dataset
+best reference before passage retrieval: 0911.1745
+best abstract as reference:  <|reference_start|>Sequence Folding, Lattice Tiling, and Multidimensional Coding: Folding a sequence $S$ into a multidimensional box is a well-known method which is used as a multidimensional coding technique. The operation of folding is generalized in a way that the sequence $S$ can be folded into various shapes and not just a box. The new definition of folding is based on a lattice tiling for the given shape $\cS$ and a direction in the $D$-dimensional integer grid. Necessary and sufficient conditions that a lattice tiling for $\cS$ combined with a direction define a folding of a sequence into $\cS$ are derived. The immediate and most impressive application is some new lower bounds on the number of dots in two-dimensional synchronization patterns. This can be also generalized for multidimensional synchronization patterns. The technique and its application for two-dimensional synchronization patterns, raise some interesting problems in discrete geometry. We will also discuss these problems. It is also shown how folding can be used to construct multidimensional error-correcting codes. Finally, by using the new definition of folding, multidimensional pseudo-random arrays with various shapes are generated.<|reference_end|><|cite_end|>
+best reference after retrieval: 0911.1745
+***************Retrieval cost (time):  2.2411346435546875e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-30980', 'arxiv-73400', 'arxiv-9768', 'arxiv-37393', 'arxiv-6687', 'arxiv-80526', 'arxiv-31906', 'arxiv-170822', 'arxiv-59069', 'arxiv-98015']
+distances[0] [0.27056247 0.26301563 0.26100782 0.2606794  0.25734955 0.2565683
+ 0.25406376 0.25379205 0.25361586 0.2535303 ]
+***************Retrieval cost (time):  0.7306149005889893
+arxiv id 1204.4204 not found in the docs retrieval_dataset
+arxiv id 1502.05881 not found in the docs retrieval_dataset
+arxiv id 1205.4067 not found in the docs retrieval_dataset
+arxiv id 1605.04721 not found in the docs retrieval_dataset
+best reference before passage retrieval: 0910.5697
+best abstract as reference:  <|reference_start|>Tilings with $n$-Dimensional Chairs and their Applications to Asymmetric Codes: An $n$-dimensional chair consists of an $n$-dimensional box from which a smaller $n$-dimensional box is removed. A tiling of an $n$-dimensional chair has two nice applications in coding for write-once memories. The first one is in the design of codes which correct asymmetric errors with limited-magnitude. The second one is in the design of $n$ cells $q$-ary write-once memory codes. We show an equivalence between the design of a tiling with an integer lattice and the design of a tiling from a generalization of splitting (or of Sidon sequences). A tiling of an $n$-dimensional chair can define a perfect code for correcting asymmetric errors with limited-magnitude. We present constructions for such tilings and prove cases where perfect codes for these type of errors do not exist.<|reference_end|><|cite_end|>
+best reference after retrieval: 1204.4204
+***************Retrieval cost (time):  1.7642974853515625e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-6687', 'arxiv-2207', 'arxiv-9768', 'arxiv-31906', 'arxiv-201312', 'arxiv-37412', 'arxiv-30980', 'arxiv-59069', 'arxiv-5291', 'arxiv-208706']
+distances[0] [0.2527833  0.25172704 0.24993744 0.24529353 0.24417382 0.24125546
+ 0.24068975 0.23998442 0.23978366 0.2394454 ]
+***************Retrieval cost (time):  0.8640434741973877
+arxiv id 1205.4067 not found in the docs retrieval_dataset
+arxiv id 1204.4204 not found in the docs retrieval_dataset
+best reference before passage retrieval: 0903.1724
+best abstract as reference:  <|reference_start|>Folding, Tiling, and Multidimensional Coding: Folding a sequence $S$ into a multidimensional box is a method that is used to construct multidimensional codes. The well known operation of folding is generalized in a way that the sequence $S$ can be folded into various shapes. The new definition of folding is based on lattice tiling and a direction in the $D$-dimensional grid. There are potentially $\frac{3^D-1}{2}$ different folding operations. Necessary and sufficient conditions that a lattice combined with a direction define a folding are given. The immediate and most impressive application is some new lower bounds on the number of dots in two-dimensional synchronization patterns. This can be also generalized for multidimensional synchronization patterns. We show how folding can be used to construct multidimensional error-correcting codes and to generate multidimensional pseudo-random arrays.<|reference_end|><|cite_end|>
+best reference after retrieval: 0903.1724
+***************Retrieval cost (time):  1.621246337890625e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-37393', 'arxiv-31906', 'arxiv-9768', 'arxiv-2207', 'arxiv-130539', 'arxiv-201312', 'arxiv-32132', 'arxiv-14867', 'arxiv-79006', 'arxiv-98015']
+distances[0] [0.24666375 0.24365987 0.24360049 0.2435319  0.24210054 0.23904474
+ 0.23620455 0.23504764 0.23490047 0.23307443]
+***************Retrieval cost (time):  1.0942084789276123
+arxiv id 1205.4067 not found in the docs retrieval_dataset
+arxiv id 1205.5914 not found in the docs retrieval_dataset
+arxiv id 1605.04721 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1210.5725
+best abstract as reference:  <|reference_start|>Coding for the Lee and Manhattan Metrics with Weighing Matrices: This paper has two goals. The first one is to discuss good codes for packing problems in the Lee and Manhattan metrics. The second one is to consider weighing matrices for some of these coding problems. Weighing matrices were considered as building blocks for codes in the Hamming metric in various constructions. In this paper we will consider mainly two types of weighing matrices, namely conference matrices and Hadamard matrices, to construct codes in the Lee (and Manhattan) metric. We will show that these matrices have some desirable properties when considered as generator matrices for codes in these metrics. Two related packing problems will be considered. The first is to find good codes for error-correction (i.e. dense packings of Lee spheres). The second is to transform the space in a way that volumes are preserved and each Lee sphere (or conscribed cross-polytope), in the space, will be transformed to a shape inscribed in a small cube.<|reference_end|><|cite_end|>
+best reference after retrieval: 1210.5725
+***************Retrieval cost (time):  1.9788742065429688e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-37412', 'arxiv-12545', 'arxiv-2207', 'arxiv-31906', 'arxiv-21748', 'arxiv-9768', 'arxiv-26795', 'arxiv-79006', 'arxiv-343298', 'arxiv-20169']
+distances[0] [0.2608839  0.2588985  0.256611   0.24723312 0.24677306 0.24480891
+ 0.24336466 0.24332437 0.24324787 0.24314089]
+***************Retrieval cost (time):  1.2563107013702393
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 1205.4067 not found in the docs retrieval_dataset
+arxiv id 1103.3933 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1210.5863
+best abstract as reference:  <|reference_start|>A Generalization of Lee Codes: Motivated by a problem in computer architecture we introduce a notion of the perfect distance-dominating set, PDDS, in a graph. PDDSs constitute a generalization of perfect Lee codes, diameter perfect codes, as well as other codes and dominating sets. In this paper we initiate a systematic study of PDDSs. PDDSs related to the application will be constructed and the non-existence of some PDDSs will be shown. In addition, an extension of the long-standing Golomb-Welch conjecture, in terms of PDDS, will be stated. We note that all constructed PDDSs are lattice-like which is a very important feature from the practical point of view as in this case decoding algorithms tend to be much simpler.<|reference_end|><|cite_end|>
+best reference after retrieval: 1210.5863
+***************Retrieval cost (time):  1.52587890625e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-12545', 'arxiv-115428', 'arxiv-2207', 'arxiv-24660', 'arxiv-20169', 'arxiv-160113', 'arxiv-21748', 'arxiv-84158', 'arxiv-31906', 'arxiv-474764']
+distances[0] [0.21838398 0.21131977 0.20940903 0.20438239 0.20246741 0.2011904
+ 0.20103343 0.20057675 0.19868913 0.19784284]
+***************Retrieval cost (time):  1.4600257873535156
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 1103.3933 not found in the docs retrieval_dataset
+arxiv id 1205.4067 not found in the docs retrieval_dataset
+arxiv id 2301.05834 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1701.08492
+best abstract as reference:  <|reference_start|>Dense Error-Correcting Codes in the Lee Metric: Several new applications and a number of new mathematical techniques have increased the research on error-correcting codes in the Lee metric in the last decade. In this work we consider several coding problems and constructions of error-correcting codes in the Lee metric. First, we consider constructions of dense error-correcting codes in relatively small dimensions over small alphabets. The second problem we solve is construction of diametric perfect codes with minimum distance four. We will construct such codes over various lengths and alphabet sizes. The third problem is to transfer an n-dimensional Lee sphere with large radius into a shape, with the same volume, located in a relatively small box. Hadamard matrices play an essential role in the solutions for all three problems. A construction of codes based on Hadamard matrices will start our discussion. These codes approach the sphere packing bound for very high rate range and appear to be the best known codes over some sets of parameters.<|reference_end|><|cite_end|>
+best reference after retrieval: 1004.0366
+***************Retrieval cost (time):  1.8596649169921875e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-62202', 'arxiv-70372', 'arxiv-20169', 'arxiv-12545', 'arxiv-115428', 'arxiv-31906', 'arxiv-234582', 'arxiv-387125', 'arxiv-2207', 'arxiv-160113']
+distances[0] [0.22160995 0.21739447 0.21538669 0.21483675 0.21454668 0.21364945
+ 0.213474   0.2116304  0.21151102 0.2104576 ]
+***************Retrieval cost (time):  1.6640088558197021
+arxiv id 1103.3933 not found in the docs retrieval_dataset
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 1205.4067 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1406.3466
+best abstract as reference:  <|reference_start|>On the Linear Programming Bound for Lee-codes: Finding the largest code with a given minimum distance is one of the most basic problems in coding theory. In this paper, we study the linear programming bound for codes in the Lee metric. We introduce refinements on the linear programming bound for linear codes in the Lee metric, which give a tighter bound for linear codes. We also discuss the computational aspects of the problem and introduce a more compact program by the obtained refinements, and a recursive method for computing the so-called Lee-numbers, which are important in the computation of the linear programming bound.<|reference_end|><|cite_end|>
+best reference after retrieval: 1406.3466
+***************Retrieval cost (time):  1.4781951904296875e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-387125', 'arxiv-70372', 'arxiv-20169', 'arxiv-234582', 'arxiv-12545', 'arxiv-650031', 'arxiv-21748', 'arxiv-156243', 'arxiv-18480', 'arxiv-31906']
+distances[0] [0.17638025 0.16895437 0.16857171 0.16709732 0.16610101 0.16580972
+ 0.1647133  0.1636487  0.16343345 0.16121656]
+***************Retrieval cost (time):  1.706242322921753
+arxiv id 1103.3933 not found in the docs retrieval_dataset
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 2408.11107 not found in the docs retrieval_dataset
+arxiv id 1205.4067 not found in the docs retrieval_dataset
+best reference before passage retrieval: 2112.06635
+best abstract as reference:  <|reference_start|>Bounds in the Lee Metric and Optimal Codes: In this paper we investigate known Singleton-like bounds in the Lee metric and characterize optimal codes, which turn out to be very few. We then focus on Plotkin-like bounds in the Lee metric and present a new bound that extends and refines a previously known, and out-performs it in the case of non-free codes. We then compute the density of optimal codes with regard to the new bound. Finally we fill a gap in the characterization of Lee-equidistant codes.<|reference_end|><|cite_end|>
+best reference after retrieval: 2112.06635
+***************Retrieval cost (time):  1.71661376953125e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-70372', 'arxiv-20169', 'arxiv-156243', 'arxiv-244564', 'arxiv-12545', 'arxiv-126557', 'arxiv-24660', 'arxiv-41524', 'arxiv-115428', 'arxiv-18480']
+distances[0] [0.17358035 0.17224164 0.17202875 0.16944508 0.16822022 0.16499028
+ 0.1642341  0.16412646 0.16398272 0.16375616]
+***************Retrieval cost (time):  1.853503942489624
+arxiv id 1103.3933 not found in the docs retrieval_dataset
+arxiv id 2001.08425 not found in the docs retrieval_dataset
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1412.5797
+best abstract as reference:  <|reference_start|>Quasi-perfect Lee Codes of Radius 2 and Arbitrarily Large Dimension: A construction of 2-quasi-perfect Lee codes is given over the space $\mathbb Z_p^n$ for $p$ prime, $p\equiv \pm 5\pmod{12}$ and $n=2[\frac{p}{4}]$. It is known that there are infinitely many such primes. Golomb and Welch conjectured that perfect codes for the Lee-metric do not exist for dimension $n\geq 3$ and radius $r\geq 2$. This conjecture was proved to be true for large radii as well as for low dimensions. The codes found are very close to be perfect, which exhibits the hardness of the conjecture. A series of computations show that related graphs are Ramanujan, which could provide further connections between Coding and Graph Theories.<|reference_end|><|cite_end|>
+best reference after retrieval: 1412.5797
+***************Retrieval cost (time):  1.9311904907226562e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-20169', 'arxiv-156243', 'arxiv-12545', 'arxiv-24660', 'arxiv-471514', 'arxiv-160113', 'arxiv-148205', 'arxiv-234582', 'arxiv-115428', 'arxiv-18480']
+distances[0] [0.19775149 0.19714049 0.19161384 0.19047576 0.18949227 0.18883401
+ 0.18823373 0.18470699 0.1840083  0.18385486]
+***************Retrieval cost (time):  2.083611488342285
+arxiv id 1103.3933 not found in the docs retrieval_dataset
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 2212.12212 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1804.09290
+best abstract as reference:  <|reference_start|>Product Constructions for Perfect Lee Codes: A well known conjecture of Golomb and Welch is that the only nontrivial perfect codes in the Lee and Manhattan metrics have length two or minimum distance three. This problem and related topics were subject for extensive research in the last forty years. In this paper two product constructions for perfect Lee codes and diameter perfect Lee codes are presented. These constructions yield a large number of nonlinear perfect codes and nonlinear diameter perfect codes in the Lee and Manhattan metrics. A short survey and other related problems on perfect codes in the Lee and the Manhattan metrics are also discussed.<|reference_end|><|cite_end|>
+best reference after retrieval: 1103.3933
+***************Retrieval cost (time):  1.4066696166992188e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-156243', 'arxiv-160113', 'arxiv-24660', 'arxiv-126557', 'arxiv-12545', 'arxiv-148205', 'arxiv-471514', 'arxiv-41524', 'arxiv-244564', 'arxiv-32019']
+distances[0] [0.16881678 0.16431148 0.16367629 0.16073442 0.16013792 0.15873647
+ 0.1557411  0.15381655 0.15177117 0.15173338]
+***************Retrieval cost (time):  2.209923267364502
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 2212.12212 not found in the docs retrieval_dataset
+arxiv id 2001.08425 not found in the docs retrieval_dataset
+arxiv id 1205.4875 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1804.09290
+best abstract as reference:  <|reference_start|>The set of dimensions for which there are no linear perfect 2-error-correcting Lee codes has positive density: The Golomb-Welch conjecture states that there are no perfect $e$-error-correcting Lee codes in $\mathbb{Z}^n$ ($PL(n,e)$-codes) whenever $n\geq 3$ and $e\geq 2$. A special case of this conjecture is when $e=2$. In a recent paper of A. Campello, S. Costa and the author of this paper, it is proved that the set $\mathcal{N}$ of dimensions $n\geq 3$ for which there are no linear $PL(n,2)$-codes is infinite and $\#\{n \in \mathcal{N}: n\leq x\} \geq \frac{x}{3\ln(x)/2} (1+o(1))$. In this paper we present a simple and elementary argument which allows to improve the above result to $\#\{n \in \mathcal{N}: n\leq x\} \geq \frac{4x}{25} (1+o(1))$. In particular, this implies that the set $\mathcal{N}$ has positive (lower) density in $\mathbb{Z}^+$.<|reference_end|><|cite_end|>
+best reference after retrieval: 1804.09290
+***************Retrieval cost (time):  1.4066696166992188e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-160113', 'arxiv-126557', 'arxiv-148205', 'arxiv-24660', 'arxiv-32019', 'arxiv-471514', 'arxiv-156243', 'arxiv-244564', 'arxiv-12545', 'arxiv-613384']
+distances[0] [0.13249284 0.12546754 0.1250858  0.12429711 0.12145761 0.12023559
+ 0.11860208 0.1180778  0.11730566 0.11311978]
+***************Retrieval cost (time):  2.486931324005127
+arxiv id 1205.4875 not found in the docs retrieval_dataset
+arxiv id 2212.12212 not found in the docs retrieval_dataset
+arxiv id 2001.08425 not found in the docs retrieval_dataset
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 2405.03347 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1805.10409
+best abstract as reference:  <|reference_start|>On the non-existence of linear perfect Lee codes: The Zhang-Ge condition and a new polynomial criterion: The Golomb-Welch conjecture (1968) states that there are no $e$-perfect Lee codes in $\mathbb{Z}^n$ for $n\geq 3$ and $e\geq 2$. This conjecture remains open even for linear codes. A recent result of Zhang and Ge establishes the non-existence of linear $e$-perfect Lee codes in $\mathbb{Z}^n$ for infinitely many dimensions $n$, for $e=3$ and $4$. In this paper we extend this result in two ways. First, using the non-existence criterion of Zhang and Ge together with a generalized version of Lucas' theorem we extend the above result for almost all $e$ (i.e. a subset of positive integers with density $1$). Namely, if $e$ contains a digit $1$ in its base-$3$ representation which is not in the unit place (e.g. $e=3,4$) there are no linear $e$-perfect Lee codes in $\mathbb{Z}^n$ for infinitely many dimensions $n$. Next, based on a family of polynomials (the $Q$-polynomials), we present a new criterion for the non-existence of certain lattice tilings. This criterion depends on a prime $p$ and a tile $B$. For $p=3$ and $B$ being a Lee ball we recover the criterion of Zhang and Ge.<|reference_end|><|cite_end|>
+best reference after retrieval: 1805.10409
+***************Retrieval cost (time):  1.4543533325195312e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-126557', 'arxiv-24660', 'arxiv-160113', 'arxiv-471514', 'arxiv-12545', 'arxiv-148205', 'arxiv-244564', 'arxiv-32019', 'arxiv-41524', 'arxiv-156243']
+distances[0] [0.10587119 0.10495462 0.10208485 0.10157216 0.10054585 0.09963427
+ 0.09721884 0.09576274 0.09336144 0.09018639]
+***************Retrieval cost (time):  2.341869831085205
+arxiv id 2212.12212 not found in the docs retrieval_dataset
+arxiv id 1004.0366 not found in the docs retrieval_dataset
+arxiv id 2001.08425 not found in the docs retrieval_dataset
+arxiv id 1205.4875 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1706.03589
+best abstract as reference:  <|reference_start|>50 Years of the Golomb--Welch Conjecture: Since 1968, when the Golomb--Welch conjecture was raised, it has become the main motive power behind the progress in the area of the perfect Lee codes. Although there is a vast literature on the topic and it is widely believed to be true, this conjecture is far from being solved. In this paper, we provide a survey of papers on the Golomb--Welch conjecture. Further, new results on Golomb--Welch conjecture dealing with perfect Lee codes of large radii are presented. Algebraic ways of tackling the conjecture in the future are discussed as well. Finally, a brief survey of research inspired by the conjecture is given.<|reference_end|><|cite_end|>
+best reference after retrieval: 1706.03589
+***************Retrieval cost (time):  1.8596649169921875e-05
+completing sentence ...
+
+IN replace_citations
+
+sentence_num:  2 each cite{arxivID-1706.03589-14}.
+Retrieving reference
+retrieved_corpus_indices ['arxiv-10923', 'arxiv-176780', 'arxiv-673538', 'arxiv-28456', 'arxiv-67225', 'arxiv-53290', 'arxiv-275668', 'arxiv-147145', 'arxiv-672001', 'arxiv-4611']
+distances[0] [0.52042395 0.51924586 0.5153739  0.513623   0.5134979  0.5127983
+ 0.51200473 0.51019156 0.5092677  0.5061294 ]
+***************Retrieval cost (time):  0.8650081157684326
+arxiv id 1810.08161 not found in the docs retrieval_dataset
+arxiv id cs/0511072 not found in the docs retrieval_dataset
+arxiv id 1311.7298 not found in the docs retrieval_dataset
+arxiv id 2007.00445 not found in the docs retrieval_dataset
+arxiv id cs/0407011 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1001.1781
+best abstract as reference:  <|reference_start|>Two Theorems in List Decoding: We prove the following results concerning the list decoding of error-correcting codes:   (i) We show that for \textit{any} code with a relative distance of $\delta$ (over a large enough alphabet), the following result holds for \textit{random errors}: With high probability, for a $\rho\le \delta -\eps$ fraction of random errors (for any $\eps>0$), the received word will have only the transmitted codeword in a Hamming ball of radius $\rho$ around it. Thus, for random errors, one can correct twice the number of errors uniquely correctable from worst-case errors for any code. A variant of our result also gives a simple algorithm to decode Reed-Solomon codes from random errors that, to the best of our knowledge, runs faster than known algorithms for certain ranges of parameters.   (ii) We show that concatenated codes can achieve the list decoding capacity for erasures. A similar result for worst-case errors was proven by Guruswami and Rudra (SODA 08), although their result does not directly imply our result. Our results show that a subset of the random ensemble of codes considered by Guruswami and Rudra also achieve the list decoding capacity for erasures.   Our proofs employ simple counting and probabilistic arguments.<|reference_end|><|cite_end|>
+best reference after retrieval: 1001.1781
+***************Retrieval cost (time):  2.0265579223632812e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-673538', 'arxiv-396141', 'arxiv-676701', 'arxiv-5578', 'arxiv-302392', 'arxiv-157290', 'arxiv-10887', 'arxiv-467040', 'arxiv-28456', 'arxiv-69494']
+distances[0] [0.26820004 0.2576691  0.25329834 0.252861   0.24974416 0.24606258
+ 0.24454331 0.24406783 0.24344148 0.24317554]
+***************Retrieval cost (time):  3.1521706581115723
+arxiv id cs/0511072 not found in the docs retrieval_dataset
+arxiv id math/0405082 not found in the docs retrieval_dataset
+arxiv id 0811.4395 not found in the docs retrieval_dataset
+arxiv id 2212.01443 not found in the docs retrieval_dataset
+best reference before passage retrieval: 2202.00240
+best abstract as reference:  <|reference_start|>Explicit Codes Achieving List Decoding Capacity: Error-correction with Optimal Redundancy: We present error-correcting codes that achieve the information-theoretically best possible trade-off between the rate and error-correction radius. Specifically, for every $0 < R < 1$ and $\eps> 0$, we present an explicit construction of error-correcting codes of rate $R$ that can be list decoded in polynomial time up to a fraction $(1-R-\eps)$ of {\em worst-case} errors. At least theoretically, this meets one of the central challenges in algorithmic coding theory.   Our codes are simple to describe: they are {\em folded Reed-Solomon codes}, which are in fact {\em exactly} Reed-Solomon (RS) codes, but viewed as a code over a larger alphabet by careful bundling of codeword symbols. Given the ubiquity of RS codes, this is an appealing feature of our result, and in fact our methods directly yield better decoding algorithms for RS codes when errors occur in {\em phased bursts}.   The alphabet size of these folded RS codes is polynomial in the block length. We are able to reduce this to a constant (depending on $\eps$) using ideas concerning ``list recovery'' and expander-based codes from \cite{GI-focs01,GI-ieeejl}. Concatenating the folded RS codes with suitable inner codes also gives us polynomial time constructible binary codes that can be efficiently list decoded up to the Zyablov bound, i.e., up to twice the radius achieved by the standard GMD decoding of concatenated codes.<|reference_end|><|cite_end|>
+best reference after retrieval: cs/0511072
+***************Retrieval cost (time):  2.2172927856445312e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-157290', 'arxiv-30981', 'arxiv-5578', 'arxiv-69494', 'arxiv-131083', 'arxiv-42294', 'arxiv-22362', 'arxiv-21939', 'arxiv-25706', 'arxiv-5962']
+distances[0] [0.23595852 0.2321763  0.2315717  0.22844636 0.22795004 0.2257303
+ 0.22565804 0.22425315 0.22308595 0.22202694]
+***************Retrieval cost (time):  0.05882859230041504
+arxiv id 1204.4209 not found in the docs retrieval_dataset
+arxiv id 0811.4395 not found in the docs retrieval_dataset
+arxiv id 1106.3951 not found in the docs retrieval_dataset
+arxiv id 1106.0436 not found in the docs retrieval_dataset
+arxiv id 0901.1162 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1805.01498
+best abstract as reference:  <|reference_start|>Improved decoding of Folded Reed-Solomon and Multiplicity Codes: In this work, we show new and improved error-correcting properties of folded Reed-Solomon codes and multiplicity codes. Both of these families of codes are based on polynomials over finite fields, and both have been the sources of recent advances in coding theory. Folded Reed-Solomon codes were the first explicit constructions of codes known to achieve list-decoding capacity; multivariate multiplicity codes were the first constructions of high-rate locally correctable codes; and univariate multiplicity codes are also known to achieve list-decoding capacity.   However, previous analyses of the error-correction properties of these codes did not yield optimal results. In particular, in the list-decoding setting, the guarantees on the list-sizes were polynomial in the block length, rather than constant; and for multivariate multiplicity codes, local list-decoding algorithms could not go beyond the Johnson bound.   In this paper, we show that Folded Reed-Solomon codes and multiplicity codes are in fact better than previously known in the context of list-decoding and local list-decoding. More precisely, we first show that Folded RS codes achieve list-decoding capacity with constant list sizes, independent of the block length; and that high-rate univariate multiplicity codes can also be list-recovered with constant list sizes. Using our result on univariate multiplicity codes, we show that multivariate multiplicity codes are high-rate, locally list-recoverable codes. Finally, we show how to combine the above results with standard tools to obtain capacity achieving locally list decodable codes with query complexity significantly lower than was known before.<|reference_end|><|cite_end|>
+best reference after retrieval: 1805.01498
+***************Retrieval cost (time):  2.1219253540039062e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-311028', 'arxiv-22362', 'arxiv-69494', 'arxiv-5578', 'arxiv-232452', 'arxiv-263711', 'arxiv-131083', 'arxiv-623736', 'arxiv-126507', 'arxiv-10887']
+distances[0] [0.20582053 0.20501107 0.20078306 0.19978605 0.19718102 0.19713335
+ 0.19703303 0.19653153 0.19588974 0.19497721]
+***************Retrieval cost (time):  0.0843505859375
+arxiv id 1106.3951 not found in the docs retrieval_dataset
+arxiv id 0811.4395 not found in the docs retrieval_dataset
+arxiv id 2406.02238 not found in the docs retrieval_dataset
+best reference before passage retrieval: 2012.10584
+best abstract as reference:  <|reference_start|>List-decodability with large radius for Reed-Solomon codes: List-decodability of Reed-Solomon codes has received a lot of attention, but the best-possible dependence between the parameters is still not well-understood. In this work, we focus on the case where the list-decoding radius is of the form $r=1-\varepsilon$ for $\varepsilon$ tending to zero. Our main result states that there exist Reed-Solomon codes with rate $\Omega(\varepsilon)$ which are $(1-\varepsilon, O(1/\varepsilon))$-list-decodable, meaning that any Hamming ball of radius $1-\varepsilon$ contains at most $O(1/\varepsilon)$ codewords. This trade-off between rate and list-decoding radius is best-possible for any code with list size less than exponential in the block length.   By achieving this trade-off between rate and list-decoding radius we improve a recent result of Guo, Li, Shangguan, Tamo, and Wootters, and resolve the main motivating question of their work. Moreover, while their result requires the field to be exponentially large in the block length, we only need the field size to be polynomially large (and in fact, almost-linear suffices). We deduce our main result from a more general theorem, in which we prove good list-decodability properties of random puncturings of any given code with very large distance.<|reference_end|><|cite_end|>
+best reference after retrieval: 2012.10584
+***************Retrieval cost (time):  1.9311904907226562e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-232452', 'arxiv-426248', 'arxiv-138740', 'arxiv-22362', 'arxiv-534063', 'arxiv-263711', 'arxiv-121173', 'arxiv-160855', 'arxiv-78902', 'arxiv-5560']
+distances[0] [0.20225656 0.19623812 0.19548589 0.19539675 0.19538239 0.19202676
+ 0.19180056 0.19159725 0.19080761 0.19078761]
+***************Retrieval cost (time):  0.10128092765808105
+arxiv id 1106.3951 not found in the docs retrieval_dataset
+arxiv id 2308.13424 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1911.01502
+best abstract as reference:  <|reference_start|>Combinatorial list-decoding of Reed-Solomon codes beyond the Johnson radius: List-decoding of Reed-Solomon (RS) codes beyond the so called Johnson radius has been one of the main open questions since the work of Guruswami and Sudan. It is now known by the work of Rudra and Wootters, using techniques from high dimensional probability, that over large enough alphabets most RS codes are indeed list-decodable beyond this radius.   In this paper we take a more combinatorial approach which allows us to determine the precise relation (up to the exact constant) between the decoding radius and the list size. We prove a generalized Singleton bound for a given list size, and conjecture that the bound is tight for most RS codes over large enough finite fields. We also show that the conjecture holds true for list sizes $2 \text{ and }3$, and as a by product show that most RS codes with a rate of at least $1/9$ are list-decodable beyond the Johnson radius. Lastly, we give the first explicit construction of such RS codes. The main tools used in the proof are a new type of linear dependency between codewords of a code that are contained in a small Hamming ball, and the notion of cycle space from Graph Theory. Both of them have not been used before in the context of list-decoding.<|reference_end|><|cite_end|>
+best reference after retrieval: 1911.01502
+***************Retrieval cost (time):  2.8848648071289062e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-160855', 'arxiv-22362', 'arxiv-534063', 'arxiv-623736', 'arxiv-42294', 'arxiv-327346', 'arxiv-426248', 'arxiv-55129', 'arxiv-5560', 'arxiv-138740']
+distances[0] [0.1782527  0.17769669 0.17631216 0.17621768 0.17508519 0.17490147
+ 0.17418535 0.17338985 0.17323056 0.17291506]
+***************Retrieval cost (time):  0.11705827713012695
+arxiv id 1106.3951 not found in the docs retrieval_dataset
+arxiv id 2308.13424 not found in the docs retrieval_dataset
+arxiv id 2406.02238 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1806.00152
+best abstract as reference:  <|reference_start|>Distance Distribution to Received Words in Reed-Solomon Codes: Let $\mathbb{F}_q$ be the finite field of $q$ elements. In this paper we obtain bounds on the following counting problem: given a polynomial $f(x)\in \mathbb{F}_q[x]$ of degree $k+m$ and a non-negative integer $r$, count the number of polynomials $g(x)\in \mathbb{F}_q[x]$ of degree at most $k-1$ such that $f(x)+g(x)$ has exactly $r$ roots in $\mathbb{F}_q$. Previously, explicit formulas were known only for the cases $m=0, 1, 2$. As an application, we obtain an asymptotic formula on the list size of the standard Reed-Solomon code $[q, k, q-k+1]_q$.<|reference_end|><|cite_end|>
+best reference after retrieval: 1806.00152
+***************Retrieval cost (time):  1.4543533325195312e-05
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-534063', 'arxiv-426248', 'arxiv-327346', 'arxiv-42294', 'arxiv-550652', 'arxiv-37764', 'arxiv-138740', 'arxiv-303008', 'arxiv-17107', 'arxiv-623736']
+distances[0] [0.17080593 0.16831371 0.16642907 0.1656913  0.16528323 0.16332006
+ 0.1629303  0.16246022 0.16186726 0.16167775]
+***************Retrieval cost (time):  0.12396383285522461
+arxiv id 2308.13424 not found in the docs retrieval_dataset
+arxiv id 2310.12898 not found in the docs retrieval_dataset
+arxiv id 2406.02238 not found in the docs retrieval_dataset
+best reference before passage retrieval: 2206.05256
+best abstract as reference:  <|reference_start|>AG codes have no list-decoding friends: Approaching the generalized Singleton bound requires exponential alphabets: A simple, recently observed generalization of the classical Singleton bound to list-decoding asserts that rate $R$ codes are not list-decodable using list-size $L$ beyond an error fraction $\frac{L}{L+1} (1-R)$ (the Singleton bound being the case of $L=1$, i.e., unique decoding). We prove that in order to approach this bound for any fixed $L >1$, one needs exponential alphabets. Specifically, for every $L>1$ and $R\in(0,1)$, if a rate $R$ code can be list-of-$L$ decoded up to error fraction $\frac{L}{L+1} (1-R -\varepsilon)$, then its alphabet must have size at least $\exp(\Omega_{L,R}(1/\varepsilon))$. This is in sharp contrast to the situation for unique decoding where certain families of rate $R$ algebraic-geometry (AG) codes over an alphabet of size $O(1/\varepsilon^2)$ are unique-decodable up to error fraction $(1-R-\varepsilon)/2$. Our bounds hold even for subconstant $\varepsilon\ge 1/n$, implying that any code exactly achieving the $L$-th generalized Singleton bound requires alphabet size $2^{\Omega_{L,R}(n)}$. Previously this was only known only for $L=2$ under the additional assumptions that the code is both linear and MDS.   Our lower bound is tight up to constant factors in the exponent -- with high probability random codes (or, as shown recently, even random linear codes) over $\exp(O_L(1/\varepsilon))$-sized alphabets, can be list-of-$L$ decoded up to error fraction $\frac{L}{L+1} (1-R -\varepsilon)$.<|reference_end|><|cite_end|>
+best reference after retrieval: 2308.13424
+***************Retrieval cost (time):  2.3365020751953125e-05
+completing sentence ...
+
+CUDA out of memory. Terminating generation early at length 5492/15000
+IN replace_citations
+
+IN replace_citations
+
+gen1 done in 384.0713679790497
+completing sentence ...
+
+IN replace_citations
+
+sentence_num:  1 each inclusive.
+sentence_num:  2 each it.
+sentence_num:  3 each set.
+sentence_num:  4 each metric.
+sentence_num:  5 each \ref{sec:unbounded}.
+Retrieving reference
+retrieved_corpus_indices ['arxiv-16724', 'arxiv-673538', 'arxiv-10887', 'arxiv-10923', 'arxiv-176780', 'arxiv-53290', 'arxiv-4611', 'arxiv-28456', 'arxiv-275668', 'arxiv-676701']
+distances[0] [0.681597   0.68036795 0.67888427 0.67765677 0.6760831  0.674891
+ 0.67473006 0.6730835  0.6705075  0.67000115]
+***************Retrieval cost (time):  0.0022246837615966797
+arxiv id cs/0511072 not found in the docs retrieval_dataset
+arxiv id 1810.08161 not found in the docs retrieval_dataset
+arxiv id 1311.7298 not found in the docs retrieval_dataset
+arxiv id 2007.00445 not found in the docs retrieval_dataset
+arxiv id math/0405082 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1010.3312
+[RERANKING] reranking 76 passages - self-consistency call 3/3
+best matching passage:   In this section we consider the random noise model mentioned in the introduction: the error locations are adversarial but the errors themselves are random. Our main result is the following. Let #eq229# be reals and let #eq230# and #eq231# be positive integers. Let #eq232#.666We will assume that #eq233# is equipped with a monoid structure, i.e. for any #eq234#, #eq235# and #eq236# is the identity element. Let #eq237# be a real. Let #eq238# be a code over #eq239# of block length #eq240# and relative distance #eq241#. Let #eq242# with #eq243#. Then the following hold: If #eq244#, then for every codeword #eq245# and all but a #eq246# fraction of error patterns #eq247# with #eq248# and #eq249#, the only codeword within the Hamming ball of radius #eq250# around the received word #eq251# is #eq252#. Let #eq253#. If #eq254#, then for every codeword #eq255# and all but a #eq256# fraction of error patterns #eq257# with #eq258# and #eq259#, the only codeword within the Hamming ball of radius #eq260# around the received word #eq261# is #eq262#. A weaker version of Theorem1 was previously known for RS codes #ref14#. (Though the bounds for part (b) are better in #ref14#.) In particular, McEliece showed Theorem1 for RS codes but over all error patterns of Hamming weight #eq263#. In other words, Theorem1 implies the result in #ref14# if we average our result over all subsets #eq264# with #eq265#. Part (a) of Theorem1 implies that for #eq266# random errors, with high probability, the Hamming ball of radius #eq267# has one codeword in it. Note that this is twice the number of errors for which an analogous result can be shown for worst-case errors. Part (b) of Theorem1 implies the following property of Reed-Solomon codes (where we pick #eq268# and #eq269#). Let #eq270# be integers such that #eq271#. Then the following property holds for Reed-Solomon codes of dimension #<|cite_end|>
+best reference after retrieval: 1001.1781
+***************Retrieval cost (time):  31.43108820915222
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-16724', 'arxiv-672000', 'arxiv-467040', 'arxiv-4611', 'arxiv-5962', 'arxiv-28456', 'arxiv-534063', 'arxiv-673538', 'arxiv-338703', 'arxiv-675573']
+distances[0] [0.6070515  0.6062799  0.60139555 0.60034317 0.5989672  0.5984572
+ 0.5976281  0.5973311  0.59691095 0.59650785]
+***************Retrieval cost (time):  0.8224136829376221
+arxiv id cs/0407010 not found in the docs retrieval_dataset
+arxiv id 2212.01443 not found in the docs retrieval_dataset
+arxiv id 0901.1162 not found in the docs retrieval_dataset
+arxiv id 2308.13424 not found in the docs retrieval_dataset
+arxiv id cs/0511072 not found in the docs retrieval_dataset
+arxiv id cs/0702017 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1010.3312
+[RERANKING] reranking 61 passages - self-consistency call 3/3
+best matching passage:   By Proposition 2, we have #eq219#, so it suffices to focus on the case #eq220# in this section. When #eq221#, #eq222# can be expressed in terms of #eq223#. When #eq224#, By considering the distance between codewords, we see that an #eq226# bounded-weight code #eq227# must satisfy: #eq228# for all #eq229#; there exists at most one #eq230# such that #eq231#; if there exists #eq232# such that #eq233#, then there do not exist any #eq234# such that #eq235#. Hence, for any fixed #eq251#, we can determine #eq252# whenever the exact value of #eq253# is known for all #eq254#. The following are classical results from the theory of constant-weight codes. Note that #eq257# when #eq258# is even, so results on #eq259# are normally stated only for even #eq260#. For #eq261# a positive integer, #eq262#, except when #eq263#, in which case, we have #eq264# and #eq265#. The values of #eq266# are trivial to obtain when #eq267#, so we assume henceforth that #eq268#. From Proposition 4 and Theorem 3.1(ii), we have First, note that since #eq272#, we have #eq273#. Now, take any #eq274# bounded-weight code #eq275# attaining the bound #eq276#, that is, #eq277# contains #eq278# codewords of weight two and then outside the supports of these codewords of weight two, #eq279# contains the remaining codewords of weight three. Without loss of generality, assume that the last coordinate position does not belong to any of the supports of the codewords of weight two. We consider two cases: Change the last coordinate (from zero to one) in every codeword of weight two in #eq281# to obtain a new code #eq282#. Clearly, the distances between the codewords in #eq283# obtained from those of weight two in #eq284# are unaffected, and remain at least four. The distances between codewords of weight two and codewords of weight three in #eq285# are all five, so the distances between codewords in #eq286# obtained from cod<|cite_end|>
+best reference after retrieval: 1010.3312
+***************Retrieval cost (time):  25.19469165802002
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-672000', 'arxiv-4611', 'arxiv-28456', 'arxiv-675573', 'arxiv-673201', 'arxiv-379216', 'arxiv-397818', 'arxiv-5560', 'arxiv-5962', 'arxiv-467040']
+distances[0] [0.5419512  0.54109955 0.53887904 0.5372361  0.5371288  0.5371082
+ 0.53695685 0.5360825  0.5356281  0.5340649 ]
+***************Retrieval cost (time):  1.4577419757843018
+arxiv id cs/0407010 not found in the docs retrieval_dataset
+arxiv id cs/0702017 not found in the docs retrieval_dataset
+arxiv id cs/0508062 not found in the docs retrieval_dataset
+arxiv id 0901.1162 not found in the docs retrieval_dataset
+arxiv id 2212.01443 not found in the docs retrieval_dataset
+best reference before passage retrieval: 0808.2837
+[RERANKING] reranking 89 passages - self-consistency call 3/3
+best matching passage:   that when #eq258#, every linear #eq259# MDS code is #eq260#-MDS (Theorem15). In SectionIV, we concentrate on the case #eq261# and prove a necessary and sufficient condition for a linear #eq262# MDS code to be #eq263#-MDS (and, thus, #eq264#-list decodable), in terms of certain properties of its punctured codes (Theorem18). We also show that the #eq265#-MDS property is preserved under duality (Theorem19): interestingly, while this property is known to hold for (ordinary) #eq266#-MDS codes, it does not generalize to #eq267#-MDS codes. Finally, we present in SectionV explicit constructions of GRS codes that are #eq268#-MDS. These constructions improve on the results of #ref25# in that they apply to smaller fields: the field size can be polynomial in#eq269# for any fixed#eq270# or #eq271#. We introduce the following notation. For a vector #eq272#, we denote by #eq273# the support of#eq274#. For a vector #eq275# and a subset #eq276#, we let #eq277# be the subvector of#eq278# which consists of the coordinates that are indexed by#eq279#. This notation extends to #eq280# matrices #eq281# over#eq282#, with #eq283# being the #eq284# submatrix of#eq285# consisting of the columns that are indexed by#eq286#. Given a #eq287# matrix#eq288# over#eq289# and #eq290# subsets #eq291# of #eq292#, we define the matrix #eq293# by While the role of #eq302# in(9) may seem to differ from that of the rest of the subsets #eq303#, in the uses of the matrix#eq304# in this work, the #eq305# subsets will enjoy full symmetry. For example, when #eq306#, the matrix#eq307# is square and its determinant is the same as that of the #eq308# matrix<|cite_end|>
+best reference after retrieval: 2111.03210
+***************Retrieval cost (time):  36.72935104370117
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-379216', 'arxiv-4611', 'arxiv-55129', 'arxiv-16724', 'arxiv-145320', 'arxiv-397818', 'arxiv-672000', 'arxiv-28456', 'arxiv-5962', 'arxiv-28387']
+distances[0] [0.516646   0.5163986  0.5153257  0.51357406 0.5133398  0.512053
+ 0.5112275  0.51102996 0.5107211  0.510713  ]
+***************Retrieval cost (time):  1.9023332595825195
+arxiv id 1801.04229 not found in the docs retrieval_dataset
+arxiv id cs/0407010 not found in the docs retrieval_dataset
+arxiv id 0901.1162 not found in the docs retrieval_dataset
+best reference before passage retrieval: 2111.03210
+[RERANKING] reranking 92 passages - self-consistency call 3/3
+best matching passage:   that when #eq258#, every linear #eq259# MDS code is #eq260#-MDS (Theorem15). In SectionIV, we concentrate on the case #eq261# and prove a necessary and sufficient condition for a linear #eq262# MDS code to be #eq263#-MDS (and, thus, #eq264#-list decodable), in terms of certain properties of its punctured codes (Theorem18). We also show that the #eq265#-MDS property is preserved under duality (Theorem19): interestingly, while this property is known to hold for (ordinary) #eq266#-MDS codes, it does not generalize to #eq267#-MDS codes. Finally, we present in SectionV explicit constructions of GRS codes that are #eq268#-MDS. These constructions improve on the results of #ref25# in that they apply to smaller fields: the field size can be polynomial in#eq269# for any fixed#eq270# or #eq271#. We introduce the following notation. For a vector #eq272#, we denote by #eq273# the support of#eq274#. For a vector #eq275# and a subset #eq276#, we let #eq277# be the subvector of#eq278# which consists of the coordinates that are indexed by#eq279#. This notation extends to #eq280# matrices #eq281# over#eq282#, with #eq283# being the #eq284# submatrix of#eq285# consisting of the columns that are indexed by#eq286#. Given a #eq287# matrix#eq288# over#eq289# and #eq290# subsets #eq291# of #eq292#, we define the matrix #eq293# by While the role of #eq302# in(9) may seem to differ from that of the rest of the subsets #eq303#, in the uses of the matrix#eq304# in this work, the #eq305# subsets will enjoy full symmetry. For example, when #eq306#, the matrix#eq307# is square and its determinant is the same as that of the #eq308# matrix<|cite_end|>
+best reference after retrieval: 2111.03210
+***************Retrieval cost (time):  37.97372889518738
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-16724', 'arxiv-55129', 'arxiv-145320', 'arxiv-534063', 'arxiv-28456', 'arxiv-672000', 'arxiv-4611', 'arxiv-5578', 'arxiv-5962', 'arxiv-28387']
+distances[0] [0.55230415 0.5469793  0.54530454 0.5443256  0.5438207  0.54293656
+ 0.54282296 0.54200846 0.5414501  0.5399517 ]
+***************Retrieval cost (time):  2.352694034576416
+arxiv id 1801.04229 not found in the docs retrieval_dataset
+arxiv id 2308.13424 not found in the docs retrieval_dataset
+arxiv id cs/0407010 not found in the docs retrieval_dataset
+arxiv id 0811.4395 not found in the docs retrieval_dataset
+arxiv id 0901.1162 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1010.3312
+[RERANKING] reranking 62 passages - self-consistency call 3/3
+best matching passage:   Random #eq189#-erasure list-decodable codes of rate #eq190# was discussed in  #ref6# by using a characterization of generator matrices of erasure list-decodable codes. However, the rate is quite small and actually is dependent on #eq191#. In this section, we are going to show that for any #eq192# (#eq193# is independent of #eq194#), with probability #eq195# a random linear code #eq196# of length #eq197# and rate #eq198# is #eq199#-erasure list-decodable. Our approach is through a characterization of parity-check matrices of erasure list-decodable codes. If #eq200# when #eq201# tends to #eq202#, then for a random matrix #eq203# over #eq204# of size #eq205#, the probability that #eq206# is full-rank is approaching #eq207# when #eq208# tends to #eq209#. On one hand, it is easy to compute that the total number of random matrix #eq210# over #eq211# of size #eq212# with full rank is To show #eq223#, it suffices to show that #eq224# When #eq225# tends to #eq226#, we have Let #eq228# be a positive integer, then an #eq229# code #eq230# is #eq231#-erasure-list-decodable if and only if any submatrix #eq232# of the parity check matrix #eq233# of #eq234# has rank at least #eq235#. By Definition I.1 and the fact that #eq236# is a linear code, #eq237# is #eq238#-erasure-list-decodable if and only if  For every small #eq251#, a real #eq252# and sufficiently large #eq253#, with probability at least #eq254#, a random linear code over #eq255# of length #eq256# and rate #eq257# is #eq258#-erasure list-decodable. Put #eq259# and #eq260#. Thus, #eq261#. We randomly pick a matrix #eq262#. Then with probability approaching #eq263#, #eq264# is full rank from Proposition III.1. Let such a full rank matric #eq265# be the parity check matrix of our linear code #eq266#. Then<|cite_end|>
+best reference after retrieval: 1401.2716
+***************Retrieval cost (time):  25.50742268562317
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-55129', 'arxiv-672000', 'arxiv-16724', 'arxiv-10923', 'arxiv-145320', 'arxiv-417125', 'arxiv-4611', 'arxiv-534063', 'arxiv-623736', 'arxiv-121173']
+distances[0] [0.6402082  0.63328606 0.63324076 0.6322869  0.62972033 0.6295714
+ 0.62912524 0.62580717 0.6258005  0.62534666]
+***************Retrieval cost (time):  2.9704740047454834
+arxiv id cs/0407010 not found in the docs retrieval_dataset
+arxiv id 1801.04229 not found in the docs retrieval_dataset
+arxiv id 2308.13424 not found in the docs retrieval_dataset
+arxiv id 2406.02238 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1401.2716
+[RERANKING] reranking 115 passages - self-consistency call 3/3
+best matching passage:   Random #eq189#-erasure list-decodable codes of rate #eq190# was discussed in  #ref6# by using a characterization of generator matrices of erasure list-decodable codes. However, the rate is quite small and actually is dependent on #eq191#. In this section, we are going to show that for any #eq192# (#eq193# is independent of #eq194#), with probability #eq195# a random linear code #eq196# of length #eq197# and rate #eq198# is #eq199#-erasure list-decodable. Our approach is through a characterization of parity-check matrices of erasure list-decodable codes. If #eq200# when #eq201# tends to #eq202#, then for a random matrix #eq203# over #eq204# of size #eq205#, the probability that #eq206# is full-rank is approaching #eq207# when #eq208# tends to #eq209#. On one hand, it is easy to compute that the total number of random matrix #eq210# over #eq211# of size #eq212# with full rank is To show #eq223#, it suffices to show that #eq224# When #eq225# tends to #eq226#, we have Let #eq228# be a positive integer, then an #eq229# code #eq230# is #eq231#-erasure-list-decodable if and only if any submatrix #eq232# of the parity check matrix #eq233# of #eq234# has rank at least #eq235#. By Definition I.1 and the fact that #eq236# is a linear code, #eq237# is #eq238#-erasure-list-decodable if and only if  For every small #eq251#, a real #eq252# and sufficiently large #eq253#, with probability at least #eq254#, a random linear code over #eq255# of length #eq256# and rate #eq257# is #eq258#-erasure list-decodable. Put #eq259# and #eq260#. Thus, #eq261#. We randomly pick a matrix #eq262#. Then with probability approaching #eq263#, #eq264# is full rank from Proposition III.1. Let such a full rank matric #eq265# be the parity check matrix of our linear code #eq266#. Then<|cite_end|>
+best reference after retrieval: 1401.2716
+***************Retrieval cost (time):  48.910727739334106
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-534063', 'arxiv-145320', 'arxiv-16724', 'arxiv-5578', 'arxiv-623736', 'arxiv-28387', 'arxiv-311028', 'arxiv-121173', 'arxiv-5962', 'arxiv-417125']
+distances[0] [0.5878049  0.5867144  0.5864792  0.5827685  0.58192176 0.5812787
+ 0.57915187 0.57837605 0.57781625 0.577772  ]
+***************Retrieval cost (time):  0.0654604434967041
+arxiv id 2308.13424 not found in the docs retrieval_dataset
+arxiv id 1801.04229 not found in the docs retrieval_dataset
+arxiv id 0811.4395 not found in the docs retrieval_dataset
+arxiv id 2406.02238 not found in the docs retrieval_dataset
+arxiv id 0901.1162 not found in the docs retrieval_dataset
+best reference before passage retrieval: 1010.3312
+[RERANKING] reranking 93 passages - self-consistency call 3/3
+best matching passage:   Recall that Theorem2 implies Theorem1. We now show how Theorem2 follows from Theorem3. Let #eq197#, let #eq198#, and let #eq199# be sufficiently large with respect to #eq200# and #eq201#. Let #eq202# and let #eq203# be a prime power with #eq204#. In order to apply Theorem 3, let #eq205# and #eq206#. Note that we have #eq207# and Let us consider the alphabet #eq213# and the full #eq214#-ReedSolomon code #eq215# where the evaluation points are all of the #eq216# points in #eq217#. Note that #eq218# has distance #eq219#. Hence all assumptions of Theorem 3 are satisfied, and we can conclude that a random puncturing of #eq220# of block length #eq221# is #eq222#-list-decodable with probability at least #eq223# (using that #eq224# is sufficiently large with respect to #eq225# and #eq226#). Noting that #eq227# and #eq228# (again, as #eq229# is sufficiently large with respect to #eq230# and #eq231#), this implies that such a random puncturing of #eq232# is #eq233#-list-decodable with probability at least #eq234#. In other words, for a uniformly random choice of an #eq235#-tuple #eq236# with distinct entries #eq237#, the ReedSolomon code #eq238# is #eq239#-list-decodable with probability at least #eq240#. Our aim for the rest of this section is to prove Theorem 3. We deduce Theorem 3 from the following theorem. This approach is motivated by  #ref5# and  #ref14#, even though the setting there is specific to ReedSolomon codes. Fix a constant #eq241#, suppose that #eq242# are such that #eq243#, and let #eq244# be a code over an alphabet #eq245# of size #eq246# such that #eq247# has distance at least #eq248#. Suppose #eq249# is a non-negative integer satisfying #eq250#. Let #eq251# and consider subsets #eq252# such that Guo, Li, Shangguan, Tamo, and Woott<|cite_end|>
+best reference after retrieval: 2012.10584
+***************Retrieval cost (time):  39.36586928367615
+completing sentence ...
+
+IN replace_citations
+
+Retrieving reference
+retrieved_corpus_indices ['arxiv-417125', 'arxiv-623736', 'arxiv-289048', 'arxiv-121173', 'arxiv-16724', 'arxiv-536514', 'arxiv-261936', 'arxiv-453988', 'arxiv-664745', 'arxiv-187357']
+distances[0] [0.7832056  0.77570724 0.7740004  0.7735283  0.77342725 0.7723628
+ 0.7711883  0.7707898  0.77011055 0.76947236]
+***************Retrieval cost (time):  0.09970736503601074
+arxiv id 2406.02238 not found in the docs retrieval_dataset
+arxiv id 2309.01800 not found in the docs retrieval_dataset
+arxiv id 2410.01951 not found in the docs retrieval_dataset
+best reference before passage retrieval: 2205.01513
+[RERANKING] reranking 191 passages - self-consistency call 3/3
+best matching passage:   Our main result in this section is the following. Fix #eq517#. Fix a prime power #eq518# and an integer #eq519#, and let #eq520#. Fix #eq521# and let #eq522#. For #eq523#, let #eq524# denote a random linear code of rate #eq525#. Then the probability of #eq526# being #eq527#-erasure list-recoverable is at most #eq528#. We will prove Theorem3 below, after we build up the necessary building blocks. As discussed in Sections 1.2 and 2, to prove Theorem 3 we seek a distribution #eq529# that is both is bad and abundant. That is, #eq530# should likely contains some matrix from #eq531#, and the corresponding codewords should yield a counterexample to the list-recoverability of #eq532#. We will describe our choice of #eq533# in Definition3.1; we will show that it is bad in Proposition3.1; and finally we will show that it is not implicitly rare (and hence abundant by Theorem2) in Lemma3.1. Our construction of the distribution #eq534# follows similar lines to that in Section1.2. Fix #eq536# as in Theorem3. Let #eq537# be a positive integer. Let #eq538# be a subfield of #eq539#, where #eq540# and #eq541#. Let #eq542# be a set so that #eq543# are disjoint cosets of #eq544# partitioning #eq545#. Let #eq546#. Let #eq547# be the matrix whose rows are all of the distinct elements of #eq548#. Let #eq549# be the distribution that with probability #eq550# returns #eq551# for #eq552# uniform in #eq553#; and with probability #eq554# returns a uniformly random element of #eq555#. Let #eq556# be the distribution given by #eq557# for #eq558#. To motivate this construction, consider first the #eq559# case. Now consider a matrix #eq560# that has row distribution given by #eq561#. If we ignore the coefficients #eq562#, the columns of #eq563# span a #eq564#-dimensional subspace of #eq565#. In particular, they are bad, in the sense that each coordinate of these codewords are<|cite_end|>
+best reference after retrieval: 2004.13247
+***************Retrieval cost (time):  79.07540583610535
+completing sentence ...
+
+CUDA out of memory. Terminating generation early at length 5333/15000
+IN replace_citations
+
+IN replace_citations
+
+gen2 done in 588.295191526413
+judging1 done in 34.40346145629883
+judging2 done in 52.416908502578735
+SC judge response
+['<｜begin▁of▁sentence｜><｜begin▁of▁sentence｜><｜User｜>\n                You are a senior computer science scholar. Please evaluate the AI-generated content\n                using the ground truth as reference.\n                Evaluate the following five dimensions by comparing the AI-generated content with the\n                ground truth:\n                [Detailed Evaluation]\n                1. Content Relevance:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                2. Logical Coherence:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                3. Academic Standards:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                4. Background Completeness:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                5. Innovation Statement:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                [End Evaluation]\n                [Improvement Suggestions]\n                1.\n                2.\n                3.\n                [End Suggestions]\n                Based on your above analysis, provide numerical scores in the following format:\n                [Scores]\n                Relevance: <score>/5\n                Coherence: <score>/5\n                Academic: <score>/5\n                Completeness: <score>/5\n                Innovation: <score>/5\n                Total: <sum>/25\n                [End Scores]\n                Below are the materials for evaluation:\n                Paper Title:\n                Multiple Packing: Lower Bounds via Error Exponents\n                Abstract:\n                We derive lower bounds on the maximal rates for multiple packings in high-dimensional Euclidean spaces. Multiple packing is a natural generalization of the sphere packing problem. For any #eq0# and #eq1#, a multiple packing is a set #eq2# of points in #eq3# such that any point in #eq4# lies in the intersection of at most #eq5# balls of radius #eq6# around points in #eq7#. We study this problem for both bounded point sets whose points have norm at most #eq8# for some constant #eq9# and unbounded point sets whose points are allowed to be anywhere in #eq10#. Given a well-known connection with coding theory, multiple packings can be viewed as the Euclidean analog of list-decodable codes, which are well-studied for finite fields. We derive the best known lower bounds on the optimal multiple packing density. This is accomplished by establishing a curious inequality which relates the list-decoding error exponent for additive white Gaussian noise channels, a quantity of average-case nature, to the list-decoding radius, a quantity of worst-case nature. We also derive various bounds on the list-decoding error exponent in both bounded and unbounded settings which are of independent interest beyond multiple packing.\n                Ground Truth Content:\n                 We study the problem of multiple packing in Euclidean space, a natural generalization of the sphere packing problem #ref19#. Let #eq11# and #eq12#. We say that a point set #eq13# in111Here we use #eq14# to denote an #eq15#-dimensional Euclidean ball of radius #eq16# centered at the origin. #eq17# forms a #eq18#-multiple packing222We choose to stick with #eq19# rather than #eq20# for notational convenience. This is because in the proof, we need to examine the violation of #eq21#-packing, i.e., the existence of an #eq22#-sized subset that lies in a ball of radius #eq23#. if any point in #eq24# lies in the intersection of at most #eq25# balls of radius #eq26# around points in #eq27#. Equivalently, the radius of the smallest ball containing any size-#eq28# subset of #eq29# is larger than #eq30#. This radius is known as the Chebyshev radius of the #eq31#-sized subset. If #eq32#, then #eq33# forms a sphere packing, i.e., a point set such that balls of radius #eq34# around points in #eq35# are disjoint, or equivalently, the pairwise distance of points in #eq36# is larger than #eq37#. The density of #eq38# is measured by its rate defined as The problem of multiple packing is closely related to the list-decoding problem  #ref22# #ref70# in coding theory. Indeed, a multiple packing can be seen exactly as the Euclidean analog of a list-decodable code. We will interchangeably use the terms packing and code to refer to the point set of interest. To see the connection, note that if any point/codeword in a multiple packing is transmitted through an adversarial omniscient jamming333An omniscient adversary is one who can choose the jamming/additive noise vector that must satisfy a power constraint but otherwise be any function of the codebook and the transmitted codeword (available noncausally to the jammer). This is more powerful than an oblivious jammer, who can transmit a jamming vector that can only depend on the codebook but not the transmitted codeword. channel that can inflict an arbitrary additive noise of length at most #eq48#, then given the distorted transmission, one can decode to a list of the nearest #eq49# points which is guaranteed to contain the transmitted one. The quantity #eq50# can therefore be interpreted as the capacity of this channel. Moreover, it is well known that with a small amount of shared secret key between the transmitter and receiver, list-decodable codes can be turned into unique-decodable codes so that the receiver can uniquely decode to the correct codeword with a vanishingly small probability of error #ref41# #ref55# #ref7#. List-decoding also serves as a proof technique for deriving bounds on the (unique-decoding) capacity for various adversarial jamming channels; see, e.g.,  #ref78# #ref77#. Let us start with the #eq51# case. The best known lower bound is due to Blachman in 1962  #ref11# using a simple volume packing argument. The best known upper bound is due to Kabatiansky and Levenshtein in 1978  #ref38# using the seminal Delsartes linear programming framework  #ref20# from coding theory. These bounds meet nowhere except at two points: #eq52# (where #eq53#), and #eq54# (where #eq55#). For #eq56#, Blinovsky #ref13# claimed a lower bound (Equation3) on #eq57#, and in fact our results are closely related to this work. Unfortunately, there were some gaps in the proof of #ref13# that we were not able to resolve, and we therefore use an alternate approach to proving this result which could be of wider interest. Please see SectionVIII-F for an in-depth discussion of the connection to #ref13#. To the best of our knowledge, the bound that we derive in this paper is the best known lower bound on #eq58#. Our high-level ideas of connecting error exponents to the list-decoding radius is in fact inspired by  #ref13#. However, we use a different approach to achieving the same. In the same paper, Blinovsky  #ref13# also derived an upper bound using the ideas of the Plotkin bound  #ref48# and the EliasBassalygo bound  #ref6# in coding theory. The same upper bound was originally shown by Blachman and Few  #ref8# using a more involved approach. Blinovsky and Litsyn  #ref10# later improved this bound in the low-rate regime by a recursive application of a bound on the distance distribution by Ben-Haim and Litsyn  #ref9#. The latter bound in turn relies on the KabatianskyLevenshtein linear programming bound  #ref38#. Blinovsky and Litsyn  #ref10# numerically verified that their bounds improve previous ones when the rate is sufficiently low, but no explicit expression was provided. More recently, Zhang and Vatedka #ref75# various upper and lower bounds on the list-decoding capacity and a related notion known as the average-radius list-decoding444A set #eq59# of #eq60#-valued points is called an average-radius multiple packing if for any #eq61#-subset of #eq62#, the maximum distance from any point in the subset to the centroid of the subset is less than #eq63#. Here the centroid of a subset is defined as the average of the points in the subset. capacity. The above notion of #eq64#-multiple packing is well defined even if we remove the restriction that all points lie in #eq65# and allow the packing to contain points anywhere in #eq66#. The codebook can now be countably infinite, and this leads to the notion of #eq67#-multiple packing. The density of such an unbounded packing is measured by the (normalized) number of points per volume For #eq73#, the unbounded sphere packing problem has a long history since at least the Kepler conjecture  #ref37# in 1611. The best known lower bound is given by a straightforward volume packing argument  #ref45#. The best known upper bound is obtained by reducing it to the bounded case for which we have the KabatianskyLevenshtein linear programming-type bound  #ref38#. For #eq74#, Blinovsky  #ref15# described a lower bound by analyzing an (expurgated) Poisson Point Process (PPP). Further results along similar lines can be found in Zhang and Vatedka #ref76#. For #eq75#, Zhang and Vatedka  #ref73# determined the limiting value of #eq76#. The limit of #eq77# as #eq78# is a folklore in the literature and a proof can be found in  #ref78#. Very little is known about structured packings. Grigorescu and Peikert  #ref28# initiated the study of list-decodability of lattices. Some recent work can be found in Mook and Peikert #ref46#, and Zhang and Vatedka  #ref73# on list-decodability of random lattices and infinite constellations. Our lower bounds on #eq79# and #eq80# are derived by making an interesting connection between list-decodable codes for adversarial (omnsicient jamming) channels and list-decodable codes for the additive white Gaussian noise (AWGN) channel. Loosely speaking, we show that any code that is #eq81#-list-decodable over the AWGN #eq82# channel with exponentially decaying probability of error #eq83# for some #eq84# can be expurgated without loss of rate to give a code with Chebyshev radius #eq85#. We then derive bounds on the list-decoding random coding and expurgated error exponents for the AWGN channel, and use these to obtain lower bounds on the (adversarial) list-decoding capacity. A similar approach was used to derive lower bounds on the zero-rate threshold of binary channels under (adversarial) list-decoding in #ref21#. However, no lower bounds on the list-decoding capacity were derived below the zero-rate threshold. List-decoding error exponents for discrete memoryless channels (DMCs) were originally studied by Gallager #ref24# and Viterbi and Omura #ref69#. A more systematic study of list-decoding error exponents for DMCs was made by Merhav #ref44#. Merhav #ref44# gave bounds on the list-decoding random coding and expurgated error exponents for both constant and exponential (in #eq86#) list sizes. In this work, we derive expressions for the list-decoding error exponents for discrete memoryless channels and AWGN channels with constant list sizes. We also derive these bounds in the case where input constraints are imposed on the channel through an extension of the same ideas. The techniques used are standard, following #ref24# and in fact, our expressions for the DMC without input constraints numerically match those in Gallager #ref24# and Merhav #ref44#. However, previous results obtain the error exponent in terms of an optimization problem or in a form which unfortunately does not allow us to derive explicit lower bounds on the achievable Chebyshev radius  #ref44#. For the AWGN channel, we derive explicit expressions for the list-decoding random coding and expurgated exponents which could be of independent interest. We also solve the optimization problem in an alternate form that allows us to get a simple closed form expression for the achievable (adversarial) list-decoding rate. For #eq87#, the problem of (unbounded) sphere packing has a long history and has been extensively studied, especially for small dimensions. The largest packing density is open for almost every dimension, except for #eq88# (trivial), #eq89# ( #ref63# #ref64#), #eq90# (the Kepler conjecture,  #ref32# #ref30#), #eq92# ( #ref68#) and #eq93# ( #ref18#). For #eq95#, the best lower and upper bounds remain the trivial sphere packing bound and KabatianskyLevenshteins linear programming bound  #ref38#. This paper is only concerned with (multiple) packings in high dimensions and we measure the density in the normalized way as mentioned in SectionI. There is a parallel line of research in combinatorial coding theory. Specifically, a uniquely-decodable code (resp.list-decodable code) is nothing but a sphere packing (resp.multiple packing) which has been extensively studied for #eq96# equipped with the Hamming metric. We first list the best known results for sphere packing (i.e., #eq97#) in Hamming spaces. For #eq98#, the best lower and upper bounds are the GilbertVarshamov bound  #ref26# #ref66# proved using a trivial volume packing argument and the second MRRW bound  #ref47# proved using the seminal Delsartes linear programming framework  #ref20#, respectively. Surprisingly, the GilbertVarshamov bound can be improved using algebraic geometry codes  #ref27# #ref65# for #eq99#. Note that such a phenomenon is absent in #eq100#; as far as we know, no algebraic constructions of Euclidean sphere packings are known to beat the greedy/random constructions. For #eq101#, the largest packing density is known to exactly equal the Singleton bound  #ref40# #ref36# #ref60# which is met by, for instance, the ReedSolomon code  #ref53#. Less is known for multiple packing in Hamming spaces. We first discuss the binary case (i.e., #eq102#). For every #eq103#, the best lower bound appears to be Blinovskys bound  #ref17# proved under the stronger notion of average-radius list-decoding. The best upper bound for #eq104# is due to Ashikhmin, Barg and Litsyn  #ref3# who combined the MRRW bound  #ref47# and Litsyns bound  #ref43# on distance distribution. For any #eq105#, the best upper bound is essentially due to Blinovsky again  #ref12#,  #ref17#, though there are some partial improvements. In particular, the idea in  #ref3# was recently generalized to larger #eq106# by Polyanskiy  #ref50# who improved Blinovskys upper bound for even #eq107# (i.e., odd #eq108#) and sufficiently large #eq109#. Similar to  #ref3#, the proof also makes use of a bound on distance distribution due to Kalai and Linial  #ref39# which in turn relies on Delsartes linear programming bound. For larger #eq110#, Blinovskys lower and upper bounds  #ref14# #ref16#,  #ref1# remain the best known. As #eq111#, the limiting value of the largest multiple packing density is a folklore in the literature known as the list-decoding capacity theorem555It is an abuse of terminology to use list-decoding capacity here to refer to the large #eq112# limit of the #eq113#-list-decoding capacity.. Moreover, the limiting value remains the same under a more general notion of average-radius list-decoding. The problem of list-decoding was also studied for settings beyond the Hamming errors, e.g., list-decoding against erasures  #ref29# #ref4#, insertions/deletions  #ref25#, asymmetric errors  #ref51#, etc. Zhang et al.considered list-decoding over general adversarial channels  #ref71#. List-decoding against other types of adversaries with limited knowledge such as oblivious or myopic adversaries were also considered in the literature  #ref34# #ref57# #ref72# #ref33# #ref78#. This work was presented in part at the 2022 IEEE International Symposium on Information Theory #ref74#. All proofs were omitted in the published 6-page conference paper. The current article contains complete proofs of all results, and also includes several novel results on error exponents and list-decoding for Euclidean codes without power constraints.\n                AI Generated Content:\n                 We study the problem of multiple packing in Euclidean space, a natural generalization of the sphere packing problem #ref19#. Let #eq11# and #eq12#. We say that a point set #eq13# in111Here we use #eq14# to  denote the Euclidean norm of a vector #eq15# is a multiple packing with radius #eq16# and list size #eq17# if for any point #eq18# in #eq19#, there are at most #eq20# points in #eq21# such that the distance between the point and each of the points is at most #eq22#. Multiple packings were studied in \\cite{arxivID-0910.5697-0, arxivID-1504.04263-1, arxivID-0911.1745-2, arxivID-1204.4204-3, arxivID-0903.1724-4, arxivID-1210.5725-5, arxivID-1210.5863-6, arxivID-1004.0366-7, arxivID-1406.3466-8, arxivID-2112.06635-9, arxivID-1412.5797-10, arxivID-1103.3933-11, arxivID-1804.09290-12, arxivID-1805.10409-13, arxivID-1706.03589-14}. Multiple packings can be viewed as the Euclidean analog of list-decodable codes, which are well-studied for finite fields (see, e.g., \\cite{arxivID-1001.1781-15, arxivID-cs/0511072-16, arxivID-1805.01498-17, arxivID-2012.10584-18, arxivID-1911.01502-19, arxivID-1806.00152-20, arxivID-2308.13424-21}\n                Remember to first provide detailed evaluation, then improvement suggestions, and\n                finally the numerical scores in the exact format specified above.\n            <｜Assistant｜><think>\nAlright, so I\'m trying to evaluate this AI-generated content based on the ground truth provided. The task is to assess the content in six different dimensions: Content Relevance, Logical Coherence, Academic Standards, Background Completeness, Innovation Statement, and Improvement Suggestions. Each has a score from 1 to 5, and then a total score out of 25. \n\nFirst, I\'ll read through both the ground truth and the AI-generated content to understand what\'s being assessed. The paper is about multiple packing in Euclidean space, connecting it to list-decodable codes, and deriving bounds on the optimal multiple packing density. The AI content seems to be a summary or a rewritten version of this paper, but it\'s a bit different.\n\nStarting with Content Relevance. The ground truth clearly states the key strengths and main gaps, comparing it to the AI content which seems to cover similar points but in a different structure. The AI mentions the same connections to coding theory and uses similar techniques, so it\'s relevant. However, it might not capture all the nuances, like the specific bounds or the detailed comparison with Blinovsky\'s work. So, I\'d give it a 4/5.\n\nLogical Coherence: The AI content is structured but seems a bit disjointed. It mentions the connection to list-decoding, the bounds, and the key papers, but it\'s not as logically structured as the ground truth. It might have some repetitive points or unclear transitions. I think a 3/5 here is fair because it\'s somewhat coherent but not as polished.\n\nAcademic Standards: The AI content seems to have some inaccuracies, like referring to "average-radius multiple packing" without proper definition, or mixing up some terms. It also doesn\'t cite all the sources correctly, missing some of the key papers mentioned in the ground truth. So, this would rate a 2/5.\n\nBackground Completeness: The AI content covers the necessary background but doesn\'t go into enough depth. It references several papers but doesn\'t explain them fully or connect them as thoroughly as the ground truth. This makes it somewhat incomplete, so a 3/5.\n\nInnovation Statement: The AI content discusses the connection between multiple packing and list-decodable codes, which is an innovation. However, it doesn\'t highlight how this connection is novel or how it improves upon existing methods. So, it\'s somewhat innovative but lacks depth, giving it a 2/5.\n\nImprovement Suggestions: The AI could add more detailed analysis, clarify definitions, and better connect to the existing literature. It could also improve the logical flow and ensure all sources are properly cited. So, a 4/5 here.\n\nFinally, the scores: Relevance 4, Coherence 3, Academic 2, Background 3, Innovation 2, Improvement 4. Adding these up gives a total of 18/25.\n</think>\n\n**[Scores]**\nRelevance: <4>/5  \nCoherence: <3>/5  \nAcademic: <2>/5  \nCompleteness: <3>/5  \nInnovation: <2>/5  \nTotal: <18>/25<｜end▁of▁sentence｜>']
+
+
+SC PR judge response
+['<｜begin▁of▁sentence｜><｜begin▁of▁sentence｜><｜User｜>\n                You are a senior computer science scholar. Please evaluate the AI-generated content\n                using the ground truth as reference.\n                Evaluate the following five dimensions by comparing the AI-generated content with the\n                ground truth:\n                [Detailed Evaluation]\n                1. Content Relevance:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                2. Logical Coherence:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                3. Academic Standards:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                4. Background Completeness:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                5. Innovation Statement:\n                - Key strengths:\n                - Main gaps:\n                - Comparison with ground truth:\n                [End Evaluation]\n                [Improvement Suggestions]\n                1.\n                2.\n                3.\n                [End Suggestions]\n                Based on your above analysis, provide numerical scores in the following format:\n                [Scores]\n                Relevance: <score>/5\n                Coherence: <score>/5\n                Academic: <score>/5\n                Completeness: <score>/5\n                Innovation: <score>/5\n                Total: <sum>/25\n                [End Scores]\n                Below are the materials for evaluation:\n                Paper Title:\n                Multiple Packing: Lower Bounds via Error Exponents\n                Abstract:\n                We derive lower bounds on the maximal rates for multiple packings in high-dimensional Euclidean spaces. Multiple packing is a natural generalization of the sphere packing problem. For any #eq0# and #eq1#, a multiple packing is a set #eq2# of points in #eq3# such that any point in #eq4# lies in the intersection of at most #eq5# balls of radius #eq6# around points in #eq7#. We study this problem for both bounded point sets whose points have norm at most #eq8# for some constant #eq9# and unbounded point sets whose points are allowed to be anywhere in #eq10#. Given a well-known connection with coding theory, multiple packings can be viewed as the Euclidean analog of list-decodable codes, which are well-studied for finite fields. We derive the best known lower bounds on the optimal multiple packing density. This is accomplished by establishing a curious inequality which relates the list-decoding error exponent for additive white Gaussian noise channels, a quantity of average-case nature, to the list-decoding radius, a quantity of worst-case nature. We also derive various bounds on the list-decoding error exponent in both bounded and unbounded settings which are of independent interest beyond multiple packing.\n                Ground Truth Content:\n                 We study the problem of multiple packing in Euclidean space, a natural generalization of the sphere packing problem #ref19#. Let #eq11# and #eq12#. We say that a point set #eq13# in111Here we use #eq14# to denote an #eq15#-dimensional Euclidean ball of radius #eq16# centered at the origin. #eq17# forms a #eq18#-multiple packing222We choose to stick with #eq19# rather than #eq20# for notational convenience. This is because in the proof, we need to examine the violation of #eq21#-packing, i.e., the existence of an #eq22#-sized subset that lies in a ball of radius #eq23#. if any point in #eq24# lies in the intersection of at most #eq25# balls of radius #eq26# around points in #eq27#. Equivalently, the radius of the smallest ball containing any size-#eq28# subset of #eq29# is larger than #eq30#. This radius is known as the Chebyshev radius of the #eq31#-sized subset. If #eq32#, then #eq33# forms a sphere packing, i.e., a point set such that balls of radius #eq34# around points in #eq35# are disjoint, or equivalently, the pairwise distance of points in #eq36# is larger than #eq37#. The density of #eq38# is measured by its rate defined as The problem of multiple packing is closely related to the list-decoding problem  #ref22# #ref70# in coding theory. Indeed, a multiple packing can be seen exactly as the Euclidean analog of a list-decodable code. We will interchangeably use the terms packing and code to refer to the point set of interest. To see the connection, note that if any point/codeword in a multiple packing is transmitted through an adversarial omniscient jamming333An omniscient adversary is one who can choose the jamming/additive noise vector that must satisfy a power constraint but otherwise be any function of the codebook and the transmitted codeword (available noncausally to the jammer). This is more powerful than an oblivious jammer, who can transmit a jamming vector that can only depend on the codebook but not the transmitted codeword. channel that can inflict an arbitrary additive noise of length at most #eq48#, then given the distorted transmission, one can decode to a list of the nearest #eq49# points which is guaranteed to contain the transmitted one. The quantity #eq50# can therefore be interpreted as the capacity of this channel. Moreover, it is well known that with a small amount of shared secret key between the transmitter and receiver, list-decodable codes can be turned into unique-decodable codes so that the receiver can uniquely decode to the correct codeword with a vanishingly small probability of error #ref41# #ref55# #ref7#. List-decoding also serves as a proof technique for deriving bounds on the (unique-decoding) capacity for various adversarial jamming channels; see, e.g.,  #ref78# #ref77#. Let us start with the #eq51# case. The best known lower bound is due to Blachman in 1962  #ref11# using a simple volume packing argument. The best known upper bound is due to Kabatiansky and Levenshtein in 1978  #ref38# using the seminal Delsartes linear programming framework  #ref20# from coding theory. These bounds meet nowhere except at two points: #eq52# (where #eq53#), and #eq54# (where #eq55#). For #eq56#, Blinovsky #ref13# claimed a lower bound (Equation3) on #eq57#, and in fact our results are closely related to this work. Unfortunately, there were some gaps in the proof of #ref13# that we were not able to resolve, and we therefore use an alternate approach to proving this result which could be of wider interest. Please see SectionVIII-F for an in-depth discussion of the connection to #ref13#. To the best of our knowledge, the bound that we derive in this paper is the best known lower bound on #eq58#. Our high-level ideas of connecting error exponents to the list-decoding radius is in fact inspired by  #ref13#. However, we use a different approach to achieving the same. In the same paper, Blinovsky  #ref13# also derived an upper bound using the ideas of the Plotkin bound  #ref48# and the EliasBassalygo bound  #ref6# in coding theory. The same upper bound was originally shown by Blachman and Few  #ref8# using a more involved approach. Blinovsky and Litsyn  #ref10# later improved this bound in the low-rate regime by a recursive application of a bound on the distance distribution by Ben-Haim and Litsyn  #ref9#. The latter bound in turn relies on the KabatianskyLevenshtein linear programming bound  #ref38#. Blinovsky and Litsyn  #ref10# numerically verified that their bounds improve previous ones when the rate is sufficiently low, but no explicit expression was provided. More recently, Zhang and Vatedka #ref75# various upper and lower bounds on the list-decoding capacity and a related notion known as the average-radius list-decoding444A set #eq59# of #eq60#-valued points is called an average-radius multiple packing if for any #eq61#-subset of #eq62#, the maximum distance from any point in the subset to the centroid of the subset is less than #eq63#. Here the centroid of a subset is defined as the average of the points in the subset. capacity. The above notion of #eq64#-multiple packing is well defined even if we remove the restriction that all points lie in #eq65# and allow the packing to contain points anywhere in #eq66#. The codebook can now be countably infinite, and this leads to the notion of #eq67#-multiple packing. The density of such an unbounded packing is measured by the (normalized) number of points per volume For #eq73#, the unbounded sphere packing problem has a long history since at least the Kepler conjecture  #ref37# in 1611. The best known lower bound is given by a straightforward volume packing argument  #ref45#. The best known upper bound is obtained by reducing it to the bounded case for which we have the KabatianskyLevenshtein linear programming-type bound  #ref38#. For #eq74#, Blinovsky  #ref15# described a lower bound by analyzing an (expurgated) Poisson Point Process (PPP). Further results along similar lines can be found in Zhang and Vatedka #ref76#. For #eq75#, Zhang and Vatedka  #ref73# determined the limiting value of #eq76#. The limit of #eq77# as #eq78# is a folklore in the literature and a proof can be found in  #ref78#. Very little is known about structured packings. Grigorescu and Peikert  #ref28# initiated the study of list-decodability of lattices. Some recent work can be found in Mook and Peikert #ref46#, and Zhang and Vatedka  #ref73# on list-decodability of random lattices and infinite constellations. Our lower bounds on #eq79# and #eq80# are derived by making an interesting connection between list-decodable codes for adversarial (omnsicient jamming) channels and list-decodable codes for the additive white Gaussian noise (AWGN) channel. Loosely speaking, we show that any code that is #eq81#-list-decodable over the AWGN #eq82# channel with exponentially decaying probability of error #eq83# for some #eq84# can be expurgated without loss of rate to give a code with Chebyshev radius #eq85#. We then derive bounds on the list-decoding random coding and expurgated error exponents for the AWGN channel, and use these to obtain lower bounds on the (adversarial) list-decoding capacity. A similar approach was used to derive lower bounds on the zero-rate threshold of binary channels under (adversarial) list-decoding in #ref21#. However, no lower bounds on the list-decoding capacity were derived below the zero-rate threshold. List-decoding error exponents for discrete memoryless channels (DMCs) were originally studied by Gallager #ref24# and Viterbi and Omura #ref69#. A more systematic study of list-decoding error exponents for DMCs was made by Merhav #ref44#. Merhav #ref44# gave bounds on the list-decoding random coding and expurgated error exponents for both constant and exponential (in #eq86#) list sizes. In this work, we derive expressions for the list-decoding error exponents for discrete memoryless channels and AWGN channels with constant list sizes. We also derive these bounds in the case where input constraints are imposed on the channel through an extension of the same ideas. The techniques used are standard, following #ref24# and in fact, our expressions for the DMC without input constraints numerically match those in Gallager #ref24# and Merhav #ref44#. However, previous results obtain the error exponent in terms of an optimization problem or in a form which unfortunately does not allow us to derive explicit lower bounds on the achievable Chebyshev radius  #ref44#. For the AWGN channel, we derive explicit expressions for the list-decoding random coding and expurgated exponents which could be of independent interest. We also solve the optimization problem in an alternate form that allows us to get a simple closed form expression for the achievable (adversarial) list-decoding rate. For #eq87#, the problem of (unbounded) sphere packing has a long history and has been extensively studied, especially for small dimensions. The largest packing density is open for almost every dimension, except for #eq88# (trivial), #eq89# ( #ref63# #ref64#), #eq90# (the Kepler conjecture,  #ref32# #ref30#), #eq92# ( #ref68#) and #eq93# ( #ref18#). For #eq95#, the best lower and upper bounds remain the trivial sphere packing bound and KabatianskyLevenshteins linear programming bound  #ref38#. This paper is only concerned with (multiple) packings in high dimensions and we measure the density in the normalized way as mentioned in SectionI. There is a parallel line of research in combinatorial coding theory. Specifically, a uniquely-decodable code (resp.list-decodable code) is nothing but a sphere packing (resp.multiple packing) which has been extensively studied for #eq96# equipped with the Hamming metric. We first list the best known results for sphere packing (i.e., #eq97#) in Hamming spaces. For #eq98#, the best lower and upper bounds are the GilbertVarshamov bound  #ref26# #ref66# proved using a trivial volume packing argument and the second MRRW bound  #ref47# proved using the seminal Delsartes linear programming framework  #ref20#, respectively. Surprisingly, the GilbertVarshamov bound can be improved using algebraic geometry codes  #ref27# #ref65# for #eq99#. Note that such a phenomenon is absent in #eq100#; as far as we know, no algebraic constructions of Euclidean sphere packings are known to beat the greedy/random constructions. For #eq101#, the largest packing density is known to exactly equal the Singleton bound  #ref40# #ref36# #ref60# which is met by, for instance, the ReedSolomon code  #ref53#. Less is known for multiple packing in Hamming spaces. We first discuss the binary case (i.e., #eq102#). For every #eq103#, the best lower bound appears to be Blinovskys bound  #ref17# proved under the stronger notion of average-radius list-decoding. The best upper bound for #eq104# is due to Ashikhmin, Barg and Litsyn  #ref3# who combined the MRRW bound  #ref47# and Litsyns bound  #ref43# on distance distribution. For any #eq105#, the best upper bound is essentially due to Blinovsky again  #ref12#,  #ref17#, though there are some partial improvements. In particular, the idea in  #ref3# was recently generalized to larger #eq106# by Polyanskiy  #ref50# who improved Blinovskys upper bound for even #eq107# (i.e., odd #eq108#) and sufficiently large #eq109#. Similar to  #ref3#, the proof also makes use of a bound on distance distribution due to Kalai and Linial  #ref39# which in turn relies on Delsartes linear programming bound. For larger #eq110#, Blinovskys lower and upper bounds  #ref14# #ref16#,  #ref1# remain the best known. As #eq111#, the limiting value of the largest multiple packing density is a folklore in the literature known as the list-decoding capacity theorem555It is an abuse of terminology to use list-decoding capacity here to refer to the large #eq112# limit of the #eq113#-list-decoding capacity.. Moreover, the limiting value remains the same under a more general notion of average-radius list-decoding. The problem of list-decoding was also studied for settings beyond the Hamming errors, e.g., list-decoding against erasures  #ref29# #ref4#, insertions/deletions  #ref25#, asymmetric errors  #ref51#, etc. Zhang et al.considered list-decoding over general adversarial channels  #ref71#. List-decoding against other types of adversaries with limited knowledge such as oblivious or myopic adversaries were also considered in the literature  #ref34# #ref57# #ref72# #ref33# #ref78#. This work was presented in part at the 2022 IEEE International Symposium on Information Theory #ref74#. All proofs were omitted in the published 6-page conference paper. The current article contains complete proofs of all results, and also includes several novel results on error exponents and list-decoding for Euclidean codes without power constraints.\n                AI Generated Content:\n                 We study the problem of multiple packing in Euclidean space, a natural generalization of the sphere packing problem #ref19#. Let #eq11# and #eq12#. We say that a point set #eq13# in111Here we use #eq14# to  denote the set of all vectors in #eq15# whose components are integers between #eq16# and #eq17# inclusive. The set #eq18# is called a multiple packing of radius #eq19# if for any point in #eq20# there are at most #eq21# points in #eq22# that are within distance #eq23# from it. The goal is to pack as many points as possible in this set. We also consider the problem of packing in the unbounded set #eq24# where the distance between points is measured in the Euclidean metric. The corresponding definition of a multiple packing is given in Section \\ref{sec:unbounded}. The problem of multiple packing is closely related to the problem of list-decodable coding for the additive white Gaussian noise (AWGN) channel, a problem which has been studied extensively for codes over finite fields (see, for example, \\cite{arxivID-1001.1781-0, arxivID-1010.3312-1, arxivID-2111.03210-2, arxivID-2111.03210-3, arxivID-1401.2716-4, arxivID-1401.2716-5, arxivID-2012.10584-6, arxivID-2004.13247-7}\n                Remember to first provide detailed evaluation, then improvement suggestions, and\n                finally the numerical scores in the exact format specified above.\n            <｜Assistant｜><think>\nAlright, so I\'m trying to evaluate this AI-generated content based on the ground truth provided. The paper is about multiple packing in Euclidean space and its relation to list-decodable codes for the AWGN channel. Let me go through each dimension step by step.\n\nFirst, for Content Relevance, the AI\'s version starts with a clear introduction to multiple packing and its connection to coding theory, which aligns with the ground truth. However, it mentions "lattice" in the unbounded case, which isn\'t in the ground truth. That might be a point to deduct a point since it\'s adding something not in the original. It also talks about expurgated codes and error exponents, which are relevant but might be too technical for the relevance score.\n\nMoving on to Logical Coherence, the AI seems to follow a logical flow but includes some redundant explanations, like defining terms again. The ground truth is more concise, so that\'s a slight deduction. The AI also mentions specific papers, which might not be necessary for a coherence score.\n\nAcademic Standards are mixed. The AI provides detailed analysis but sometimes repeats ground truth points, which could be seen as a lack of original contribution. However, it does add some insights like connections to coding theory, so that\'s a plus.\n\nBackground Completeness is okay. The AI covers the necessary points but doesn\'t go into as much depth as the ground truth. It mentions both bounded and unbounded cases, which is good.\n\nIn Innovation Statement, the AI introduces expurgated codes and error exponents, which are innovative but not entirely new since the ground truth already covers these. So, a slight deduction here.\n\nFor Improvement Suggestions, the AI could better align with the ground truth by removing redundant sections and focusing more on unique contributions. It should also ensure all mentioned papers are correctly cited as per the original.\n\nNow, the Scores: Relevance, Coherence, and Standards are all around 5/5. Completeness is 4/5. Innovation is 4/5. Total is 19/25. But since the AI made some deductions, maybe a slight adjustment.\n</think>\n\nHere is the evaluation based on the provided content and ground truth:\n\n### Evaluation\n\n1. **Content Relevance**:\n   - The AI-generated content is highly relevant to the ground truth, accurately reflecting the key strengths and gaps.\n   - Minor deduction for including "lattice" in the unbounded case, which is not in the ground truth.\n   - Deduction for adding redundant explanations and specific papers that are not necessary for relevance.\n\n   **Key Strengths**:\n   - Clear introduction to multiple packing and its connection to coding theory.\n   - Detailed analysis of list-decodable codes and their relation to Euclidean multiple packing.\n\n   **Comparison with Ground Truth**:\n   - Accurately describes the problem of multiple packing and its relation to list-decodable codes.\n   - Provides relevant details about expurgated codes and error exponents.\n\n   **Comparison with Background**:\n   - Adds specific insights but could be more concise.\n\n   **Key Strengths**:\n   - Establishes a connection between multiple packing and coding theory.\n   - Provides detailed analysis of error exponents and expurgated codes.\n\n   **Comparison with Ground Truth**:\n   - Accurately describes the connection to list-decodable codes.\n   - Provides relevant details about error exponents and expurgated codes.\n\n   **Comparison with Completeness**:\n   - Covers both bounded and unbounded cases.\n   - Provides detailed analysis but could be more concise.\n\n   **Key Strengths**:\n   - Clear explanation of multiple packing definitions and connections to coding theory.\n   - Detailed analysis of expurgated codes and error exponents.\n\n   **Comparison with Ground Truth**:\n   - Accurately describes the problem of multiple packing and its relation to coding theory.\n   - Provides relevant details about expurgated codes and error exponents.\n\n   **Key Strengths**:\n   - Establishes a connection between multiple packing and coding theory.\n   - Provides detailed analysis of expurgated codes and error exponents.\n\n   **Comparison with Background**:\n   - Adds specific insights but could be more concise.\n\n### Improvement Suggestions\n\n- Remove redundant explanations and specific papers not necessary for relevance.\n- Focus more on unique contributions without repeating ground truth points.\n\n### Scores\n\n- **Relevance**: 5/5\n- **Coherence**: 5/5\n- **Academic Standards**: 4/5\n- **Completeness**: 4/5\n- **Innovation Statement**: 4/5\n- **Total**: 19/25\n\n### Final Scores\n\n- **Relevance**: 5/5\n- **Coherence**: 5/5\n- **Academic Standards**: 4/5\n- **Completeness**: 4/5\n- **Innovation Statement**: 4/5\n- **Total**: 19/25\n\n### Final Answer\n\n\\boxed{19/25}<｜end▁of▁sentence｜>']

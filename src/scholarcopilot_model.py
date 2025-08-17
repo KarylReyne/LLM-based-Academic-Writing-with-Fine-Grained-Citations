@@ -162,16 +162,19 @@ def up_sample_cut(input_text, citation_list):
     return input_text
 
 
-def collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=False):
+def collect_retrieval_results(retrieved_k_results, retrieval_dataset, arxiv_to_corpus_id_map, sc_metadata_corpus, silent=False):
     references = []
     distances = []
     for each in retrieved_k_results:
         curr_corpus_idx, distance = each
-        if curr_corpus_idx not in retrieval_dataset:
+        try:
+            # sc corpus id -> docs corpus id
+            docs_corpus_idx = arxiv_to_corpus_id_map[sc_metadata_corpus[curr_corpus_idx]["paper_id"]]
+        except KeyError:
             if not silent:
-                print(f"index {curr_corpus_idx} not found in retrieval_dataset")
+                print(f"arxiv id {sc_metadata_corpus[curr_corpus_idx]["paper_id"]} not found in the docs retrieval_dataset")
             continue
-        references.append(retrieval_dataset[curr_corpus_idx])
+        references.append(retrieval_dataset[docs_corpus_idx])
         distances.append(distance)
     if len(references) == 0:
         raise ScholarCopilotRetrievalError(f"none of the retrieved results found in the retrieval_dataset")
@@ -180,7 +183,7 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset, silent=Fal
     return references, distances
 
 
-def replace_citations(current_text, unique_reference_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=False):
+def replace_citations(current_text, unique_reference_id_list, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, sc_corpus_id_map, silent=False):
     if not silent:
         print("IN replace_citations\n")
     # Find all citations with pattern <|cite_start|>XXX<|cite_end|>
@@ -197,7 +200,13 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
             
             arxiv_id = unique_reference_id_list[citation_index][0]
             unique_id_suffix = unique_reference_id_list[citation_index][1]
-            corpus_id = arxiv_to_corpus_id_map[arxiv_id]
+
+            try: # corpus id is from the docs dataset
+                corpus_id = docs_corpus_id_map[arxiv_id]
+                title = retrieval_dataset[corpus_id]["title"]
+            except KeyError: # corpus id is from the sc corpus
+                corpus_id = sc_corpus_id_map[arxiv_id]
+                title = sc_metadata_corpus[corpus_id]["title"]
 
             citation_key = f"arxivID-{arxiv_id}-{unique_id_suffix}"
             # print("citation_key", citation_key)
@@ -206,7 +215,7 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
             citation_data_entry = {
                 "corpus_id": corpus_id,
                 "arxiv_id": arxiv_id,
-                "title": retrieval_dataset[corpus_id]["title"],
+                "title": title,
                 "citation_key": citation_key
             }
             # print("citation_data", citation_data)
@@ -228,9 +237,11 @@ def replace_citations(current_text, unique_reference_id_list, retrieval_dataset,
     return result, new_citation_data
 
 
-def post_process_output_text(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=False):
+def post_process_output_text(res_text, unique_reference_id_list, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, sc_corpus_id_map, silent=False):
     # print("post_process_output_text, res_text", res_text)
-    output_text, citation_info_list = replace_citations(res_text, reference_arxiv_id_list, retrieval_dataset, arxiv_to_corpus_id_map, silent=silent)
+    output_text, citation_info_list = replace_citations(
+        res_text, unique_reference_id_list, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, sc_corpus_id_map, silent=silent
+    )
     # print("post_process_output_text, citation_info_list ", citation_info_list)
     output_text = output_text.replace("<|paper_start|> ", "").replace(" <|paper_end|>", " <|section_end|>")
     # output_text = output_text.replace("<|paper_start|> ", "")
@@ -301,11 +312,11 @@ def load_model(model_path, config):
 
     model.resize_token_embeddings(len(tokenizer))
     model.generation_config.pad_token_id = tokenizer.pad_token_id
-    print("model loaded successfully")
+    print("scholarcopilot model loaded successfully")
     return model, tokenizer
 
 
 class ScholarCopilotRetrievalError(Exception):
-    """Scholar Copilot did retrieve less than one reference."""
+    """Scholar Copilot did retrieve less than one reference that can be found in the provided retrieval dataset."""
     pass
 
