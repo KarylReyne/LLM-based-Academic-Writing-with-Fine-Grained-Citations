@@ -3,12 +3,12 @@ import sys
 from evaluation_ranking_functions import rank_with_scholarcopilot, rank_with_passage_retrieval_from_sc_rankings
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, save_results
 from scholarcopilot_model import load_model, load_faiss_index, ScholarCopilotRetrievalError
-from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset, load_eval_dataset, load_scholarcopilot_eval_dataset, scholarcopilot_arxiv_to_corpus_id, load_sections_eval_dataset, load_retrieval_dataset_for_sc_corpus_with_fulltext
+from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset, scholarcopilot_arxiv_to_corpus_id, load_sections_eval_dataset, load_scholarcopilot_metadata_corpus
 from util import recall_at_k, single_recall_at_k
 
 
 if __name__ == "__main__":
-    config = get_config()
+    config = get_config("cfg/config_thesis_eval_retrieval.json")
 
     model_path = "scholarcopilot_model_v1208/"
     model, tokenizer = load_model(model_path, config)
@@ -18,53 +18,44 @@ if __name__ == "__main__":
     docs_id_map_path = "data/arxiv_to_corpus_id_documents_3.0.json"
     processed_corpus_path = "data/documents_3.0_processed_corpus.jsonl"
     docs_corpus_id_map = arxiv_to_corpus_id(docs_id_map_path, processed_corpus_path)
-    docs_arxiv_id_map = {v: k for k, v in docs_corpus_id_map.items()}
 
     sc_corpus_id_map_path = "data/arxiv_to_corpus_id_scholar_copilot_train_data_500k.json"
     sc_corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     sc_corpus_id_map = scholarcopilot_arxiv_to_corpus_id(sc_corpus_id_map_path, sc_corpus_path)
-    sc_arxiv_id_map = {v: k for k, v in sc_corpus_id_map.items()}
     
     docs_retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
     complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
     docs_retrieval_dataset = load_retrieval_dataset(docs_retrieval_dataset_path, complete_dataset_path, docs_corpus_id_map)
 
-    sc_retrieval_dataset_path = "data/retrieval_dataset_scholar_copilot_corpus_with_fulltext.jsonl"
-    documents_retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
-    sc_retrieval_corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
-    sc_retrieval_dataset = load_retrieval_dataset_for_sc_corpus_with_fulltext(
-        sc_retrieval_dataset_path,
-        {}, #docs_retrieval_dataset, # only needed when generating this dataset
-        sc_retrieval_corpus_path,
-        docs_corpus_id_map,
-        config
-    )
+    corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
+    sc_metadata_corpus = load_scholarcopilot_metadata_corpus(corpus_path)
 
-    # index_dir = "data/index"
-    # lookup_indices_dir = "data/lookup_indices.npy"
     index_dir = "scholarcopilot_data/index"
     lookup_indices_dir = "scholarcopilot_data/lookup_indices.npy"
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
     print("index building finished")
-    
-    # eval_dataset_path = f"data/context_citation_pairs_256_documents_3.0.jsonl"
-    # eval_dataset_path = f"data/context_citation_pairs_last_sentence_documents_3.0.jsonl"
-    # eval_dataset_path = f"data/context_citation_pairs_intro+relwork_documents_3.0.jsonl"
-    # eval_dataset, eval_indices = load_eval_dataset(eval_dataset_path, docs_id_map, passage_retrieval_models["retr_tokenizer"], config, shuffle=True, max_samples=10000)
 
-    # shuffle = True
-    # eval_dataset_path = "data/eval_dataset_scholarcopilot_eval_data_1k_eval_pairs.jsonl"
-    # sc_eval_dataset_path = f"scholarcopilot_data/scholar_copilot_eval_data_1k.json"
-    # eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, config, shuffle=shuffle)
+    SECTIONS = "intro+relwork" # eval1
+    # SECTIONS = "methods" # eval2
+    # SECTIONS = "experiments" # eval3
+    # SECTIONS = "conclusion" # eval4
 
-    target_sections = ["methods"]
-    eval_dataset_path = "data/eval_dataset_methods-sections_documents_3.0_for_sc_corpus.jsonl"
-    # eval_dataset_path = "data/eval_dataset_methods-sections_documents_3.0_for_sc_corpus_with_abstracts.jsonl"
-    docs_dataset_path = "data/documents_3.0_with_ids.jsonl"
     shuffle = True
-    eval_dataset, eval_indices = load_sections_eval_dataset(target_sections, eval_dataset_path, docs_dataset_path, docs_retrieval_dataset, docs_corpus_id_map, sc_corpus_id_map, max_samples=1000, populate_with_abstracts=False, shuffle=shuffle)
 
-    RECALL_K = 5
+    if SECTIONS == "intro+relwork":
+        target_sections = ["introduction", "related work"]
+    elif SECTIONS == "methods":
+        target_sections = ["methods"]
+    elif SECTIONS == "experiments":
+        target_sections = ["experiments"]
+    elif SECTIONS == "conclusion":
+        target_sections = ["conclusion"]
+    eval_dataset_path = f"data/eval_dataset_{SECTIONS}-sections_documents_3.0_for_sc_corpus_with_abstracts.jsonl"
+
+    docs_dataset_path = "data/documents_3.0_with_ids.jsonl"
+    eval_dataset, eval_indices = load_sections_eval_dataset(target_sections, eval_dataset_path, docs_dataset_path, docs_retrieval_dataset, docs_corpus_id_map, sc_corpus_id_map, max_samples=100000, populate_with_abstracts=True, shuffle=shuffle)
+
+    RECALL_K = 10
 
     if config["sc_retriever_topk"] < RECALL_K:
         raise ValueError(f"ScholarCopilot top-k ({config["sc_retriever_topk"]}) cannot be smaller than recall k ({RECALL_K})")
@@ -74,7 +65,7 @@ if __name__ == "__main__":
     sc_rankings = [] # len_dataset x recall_k
     sc_pr_rankings = [] # len_dataset x recall_k
     gold = [] # len_dataset x 1
-    max_samples = 100
+    max_samples = 1000
     samples = 0
     num_llm_fails = 0
     retrieval_fails = 0
@@ -82,6 +73,9 @@ if __name__ == "__main__":
     pr_fail_records = {}
     llm_response_fail_records = {}
     eps = 1e-6 # fail metrics
+
+    config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}"
+
     print()
     for i in eval_indices:
         sys.stdout.write("\033[F")
@@ -95,14 +89,8 @@ if __name__ == "__main__":
                 context, index, lookup_indices, model, tokenizer, config
             )
 
-            retrieval_dataset = docs_retrieval_dataset
-            corpus_id_lookup_map = docs_corpus_id_map
-            if index_dir == "scholarcopilot_data/index":
-                retrieval_dataset = sc_retrieval_dataset
-                corpus_id_lookup_map = sc_corpus_id_map
-
             sc_pr_ranking, fail, reranking_results, error_msg = rank_with_passage_retrieval_from_sc_rankings(
-                context, retrieved_k_results, retrieval_dataset, corpus_id_lookup_map, tokenizer, passage_retrieval_models, config
+                context, retrieved_k_results, docs_retrieval_dataset, docs_corpus_id_map, sc_metadata_corpus, tokenizer, passage_retrieval_models, config
             )
 
             # appending to the containers is delayed until all retrievals are done (because of the error handling)
@@ -117,26 +105,26 @@ if __name__ == "__main__":
             overlap_of_successful_retrievals += bool_sc and bool_sc_pr
 
             # collect pr failures
-            if bool_sc and not bool_sc_pr:
-                rec = {
-                    "sample context": context,
-                    "sample source": item["source_arxiv_id"],
-                    "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
-                    "ranked_passage_labels": reranking_results["ranked_passage_labels"], 
-                    "ranked_passage_scores": reranking_results["ranked_passage_scores"], 
-                    "ranked_passages": reranking_results["ranked_passages"]
-                }
-                pr_fail_records[f"sample index {i}"] = rec
+            # if bool_sc and not bool_sc_pr:
+            #     rec = {
+            #         "sample context": context,
+            #         "sample source": item["source_arxiv_id"],
+            #         "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
+            #         "ranked_passage_labels": reranking_results["ranked_passage_labels"], 
+            #         "ranked_passage_scores": reranking_results["ranked_passage_scores"], 
+            #         "ranked_passages": reranking_results["ranked_passages"]
+            #     }
+            #     pr_fail_records[f"sample index {i}"] = rec
 
             # collect failing llm responses
-            if error_msg != None:
-                rec = {
-                    "sample context": context,
-                    "sample source": item["source_arxiv_id"],
-                    "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
-                    "failing llm chat log": error_msg
-                }
-                llm_response_fail_records[f"sample index {i}"] = rec
+            # if error_msg != None:
+            #     rec = {
+            #         "sample context": context,
+            #         "sample source": item["source_arxiv_id"],
+            #         "sample target": sc_arxiv_id_map[item["target_corpus_id"]],
+            #         "failing llm chat log": error_msg
+            #     }
+            #     llm_response_fail_records[f"sample index {i}"] = rec
 
             samples += 1
             if samples >= max_samples:
@@ -162,7 +150,7 @@ if __name__ == "__main__":
         "overlap ratio of successful retrievals": (overlap_of_successful_retrievals/samples)/(sc_pr_recall+eps),
         "unsuccessful rerankings given successful SC retrieval": (len(pr_fail_records)/samples)/(sc_recall+eps),
         "llm response fails": num_llm_fails,
-        "SC retrieval fails": retrieval_fails,
-        "samples_where_only_pr_fails": pr_fail_records,
-        "llm response failure logs": llm_response_fail_records
+        "SC retrieval fails": retrieval_fails
+        # "samples_where_only_pr_fails": pr_fail_records,
+        # "llm response failure logs": llm_response_fail_records
     }, config, mode="eval_retrieval")

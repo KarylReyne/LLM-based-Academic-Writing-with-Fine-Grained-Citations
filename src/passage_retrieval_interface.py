@@ -28,15 +28,18 @@ def save_results(
     mode="passage retrieval", # "passage retrieval", "generation", "eval_retrieval", "eval_generation"
     save_passage_records=True
 ):
+    out_dir = "out"
+    if "custom_save_dir" in config:
+        out_dir = config["custom_save_dir"]
     results = None
     try:
-        with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'r', encoding='utf-8') as f:
+        with open(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'r', encoding='utf-8') as f:
             results = json.load(f)
     except FileNotFoundError:
-        if not os.path.exists(f'out/{datetime.now().strftime('%Y-%m-%d')}'):
-            os.makedirs(f'out/{datetime.now().strftime('%Y-%m-%d')}')
+        if not os.path.exists(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}'):
+            os.makedirs(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}')
         results = {}
-    assert os.path.exists(f'out/{datetime.now().strftime('%Y-%m-%d')}')
+    assert os.path.exists(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}')
     assert results != None
 
     if mode == "passage retrieval": # saves continuously at depth 2
@@ -65,13 +68,13 @@ def save_results(
         raise NotImplementedError(f"mode '{mode}' is not implemented!")
 
 
-    with open(f'out/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'w', encoding='utf-8') as f:
+    with open(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
 
     if mode in ["generation", "eval_retrieval", "eval_generation"]:
         os.rename( # rename results file for final save
-            f'out/{datetime.now().strftime('%Y-%m-%d')}/records.json',
-            f'out/{datetime.now().strftime('%Y-%m-%d')}/records_{mode}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json'
+            f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records.json',
+            f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records_{mode}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json'
         )
 
 

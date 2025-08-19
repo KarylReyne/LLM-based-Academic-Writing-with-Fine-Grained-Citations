@@ -3,7 +3,8 @@ import time
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, save_results
-from scholarcopilot_model import load_model, load_faiss_index, ScholarCopilotRetrievalError
+from scholarcopilot_model import load_model, load_faiss_index
+from evaluation_generation_instruction import judge_instruction, judge_instruction2
 from scholarcopilot_generation import stream_generate
 from dataset_loaders import load_generation_eval_dataset, arxiv_to_corpus_id, scholarcopilot_arxiv_to_corpus_id, load_retrieval_dataset, load_scholarcopilot_metadata_corpus
 
@@ -35,7 +36,8 @@ def stream_generate_discretizer(
         generation_breakpoint=15000, 
         do_passage_retrieval=True,
         catch_retrieval_fails=True,
-        silent=False
+        silent=False,
+        save_passage_records=False
 ):
     gen = stream_generate(
         input_context, 
@@ -52,7 +54,8 @@ def stream_generate_discretizer(
         generation_breakpoint=generation_breakpoint, 
         do_passage_retrieval=do_passage_retrieval,
         catch_retrieval_fails=catch_retrieval_fails,
-        silent=silent
+        silent=silent,
+        save_passage_records=save_passage_records
     )
     for t in gen:
         generated_paper, citations_data, fails = t
@@ -64,6 +67,37 @@ def apply_generation_breakpoint(gold_generation, generation_breakpoint, tokenize
     gold_generation = tokenizer.decode(gold_generation["input_ids"][:generation_breakpoint+1])
     gold_generation = gold_generation.replace(config["tokenizer_begin_token"], "")
     return gold_generation
+
+
+def parse_judge_response(response):
+    scores = {
+        "Content Relevance": -1,
+        "Logical Coherence": -1,
+        "Academic Rigor": -1,
+        "Background Completeness": -1,
+        "Innovation Statement": -1
+    }
+    try:
+        response = response.split("<｜Assistant｜>")[1]
+        total = -1
+        for score_label in scores:
+            score = response.split(score_label)[-1]
+            score = score.split(" ")[1].split("/")[0]
+            scores[score_label] = float(score)
+            total += float(score)
+        scores["total"] = total
+        for _, score in scores.items():
+            assert score != -1
+    except Exception:
+        print(response)
+        exit()
+        raise ResponseParsingError
+    return scores
+
+
+class ResponseParsingError(Exception):
+    """LLM response couldn't be parsed"""
+    pass
 
 
 if __name__ == "__main__":
@@ -110,14 +144,14 @@ if __name__ == "__main__":
         eval_dataset_path, 
         docs_retrieval_dataset, 
         sc_arxiv_id_map, 
-        max_samples=1000, 
+        max_samples=10000, 
         shuffle=shuffle
     )
 
     # print(eval_dataset[:3])
 
     samples = 0
-    max_samples = 1
+    max_samples = 10
     sample_fails = 0
     retrieval_fails = 0
     llm_fails = 0
@@ -128,7 +162,7 @@ if __name__ == "__main__":
     print()
     for i in eval_indices:
         # sys.stdout.write("\033[F")
-        print(f"processing entry {samples}")
+        print(f"processing entry {samples} ({sample_fails} sample fails)")
 
         try:
             item = eval_dataset[i]
@@ -151,7 +185,8 @@ if __name__ == "__main__":
                 generation_breakpoint=generation_breakpoint,
                 do_passage_retrieval=False,
                 catch_retrieval_fails=catch_retrieval_fails,
-                silent=False
+                silent=True,
+                save_passage_records=False
             )
             sc_generated_paper = item["introduction_start"]+" "+sc_generated_paper.replace(context, "")
             retrieval_fails += sc_fails[0]
@@ -175,7 +210,8 @@ if __name__ == "__main__":
                 generation_breakpoint=generation_breakpoint,
                 do_passage_retrieval=True,
                 catch_retrieval_fails=catch_retrieval_fails,
-                silent=False
+                silent=True,
+                save_passage_records=False
             )
             sc_pr_generated_paper = item["introduction_start"]+" "+sc_pr_generated_paper.replace(context, "")
             retrieval_fails += sc_pr_fails[0]
@@ -184,86 +220,46 @@ if __name__ == "__main__":
             print(f"gen2 done in {time.time() - start}")
 
             # judge each generated output individually (prompt from SC paper)
-            judge_instruction = lambda gen: f"""
-                You are a senior computer science scholar. Please evaluate the AI-generated content
-                using the ground truth as reference.
-                Evaluate the following five dimensions by comparing the AI-generated content with the
-                ground truth:
-                [Detailed Evaluation]
-                1. Content Relevance:
-                - Key strengths:
-                - Main gaps:
-                - Comparison with ground truth:
-                2. Logical Coherence:
-                - Key strengths:
-                - Main gaps:
-                - Comparison with ground truth:
-                3. Academic Standards:
-                - Key strengths:
-                - Main gaps:
-                - Comparison with ground truth:
-                4. Background Completeness:
-                - Key strengths:
-                - Main gaps:
-                - Comparison with ground truth:
-                5. Innovation Statement:
-                - Key strengths:
-                - Main gaps:
-                - Comparison with ground truth:
-                [End Evaluation]
-                [Improvement Suggestions]
-                1.
-                2.
-                3.
-                [End Suggestions]
-                Based on your above analysis, provide numerical scores in the following format:
-                [Scores]
-                Relevance: <score>/5
-                Coherence: <score>/5
-                Academic: <score>/5
-                Completeness: <score>/5
-                Innovation: <score>/5
-                Total: <sum>/25
-                [End Scores]
-                Below are the materials for evaluation:
-                Paper Title:
-                {item["title"]}
-                Abstract:
-                {item["abstract"]}
-                Ground Truth Content:
-                {gold_generation}
-                AI Generated Content:
-                {gen}
-                Remember to first provide detailed evaluation, then improvement suggestions, and
-                finally the numerical scores in the exact format specified above.
-            """
-
             # (judge both at once by contrasting them?)
-            judge_responses = []
+            judge_scores_avg = [] # [0]: SC, [1]: SC PR
             for gen in [sc_generated_paper, sc_pr_generated_paper]:
                 start = time.time()
-                chat = judge_tokenizer.apply_chat_template(
-                    [{"role": "user", "content": judge_instruction(gen)}], 
-                    tokenize=False, 
-                    add_generation_prompt=True
-                )
-                judge_input = judge_tokenizer([chat], return_tensors="pt", padding=True, padding_side="left").to(config["judge_device"])
-                res = judge.generate(
-                    **judge_input,
-                    max_new_tokens=generation_breakpoint,
-                    temperature=0.6
-                )
-                res = judge_tokenizer.batch_decode(res)
-                judge_responses.append(res)
-                print(f"judging{len(judge_responses)} done in {time.time() - start}")
+                scores_per_call = []
+                for _ in range(config["m_judging"]):
+                    chat = judge_tokenizer.apply_chat_template(
+                        [{"role": "user", "content": judge_instruction2(item["title"], item["abstract"], gold_generation, gen)}], 
+                        tokenize=False, 
+                        add_generation_prompt=True
+                    )
+                    judge_input = judge_tokenizer([chat], return_tensors="pt", padding=True, padding_side="left").to(config["judge_device"])
+                    res = judge.generate(
+                        **judge_input,
+                        max_new_tokens=generation_breakpoint,
+                        temperature=0.6
+                    )
+                    res = judge_tokenizer.batch_decode(res)[0]
+                    scores_per_call.append(parse_judge_response(res))
+
+                scores_avg = {}
+                for key in scores_per_call[0]: # initialization
+                    scores_avg[key] = 0
+                for scores in scores_per_call: # iterates llm calls
+                    for key in scores: # iterates score categories
+                        scores_avg[key] += scores[key]
+                for key in scores_avg:
+                    scores_avg[key] /= len(scores_per_call)
+                judge_scores_avg.append(scores_avg)
+                print(f"judging{len(judge_scores_avg)} done in {time.time() - start}")
+                print(f"SC {"PR" if len(judge_scores_avg) == 2 else ""} scores:")
+                print(scores_avg)
             
             samples += 1
             if samples >= max_samples:
                 break
 
-        except Exception as e: 
+        except Exception as e: # such as ResponseParsingError
             sample_fails += 1 # skip this sample entirely
-            raise e
+            # raise e
 
         
     save_results({
@@ -277,11 +273,7 @@ if __name__ == "__main__":
         "catch retrieval fails": catch_retrieval_fails,
         "PR LLM fails": llm_fails,
         "total fraction of fails": (retrieval_fails+llm_fails)/(total_num_retrievals+eps),
-        "SC generated paper": sc_generated_paper,
-        "SC PR generated paper": sc_pr_generated_paper,
-        "SC judge response": judge_responses[0],
-        "SC PR judge response": judge_responses[1]
+        "SC scores average": judge_scores_avg[0],
+        "SC PR scores average": judge_scores_avg[1]
     }, config, mode="eval_generation")
 
-    print(f"SC judge response\n{judge_responses[0]}\n\n")
-    print(f"SC PR judge response\n{judge_responses[1]}\n\n")

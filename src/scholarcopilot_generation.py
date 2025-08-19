@@ -12,7 +12,7 @@ def split_yield_list(input_text, prefix_length):
     return prefix_text, text_list
 
 
-def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, passage_retrieval_models, config, generation_breakpoint=15000, do_passage_retrieval=True, catch_retrieval_fails=True, silent=False):
+def stream_generate(text, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, sc_metadata_corpus, docs_corpus_id_map, passage_retrieval_models, config, generation_breakpoint=15000, do_passage_retrieval=True, catch_retrieval_fails=True, silent=False, save_passage_records=True):
     sentence_num = 0
     retrieval_fails = 0
     llm_fails = 0
@@ -68,7 +68,7 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
             if do_passage_retrieval:
                 try:
                     reranking_results = retrieve_relevant_passages(
-                        current_text, references, passage_retrieval_models, config, silent=silent
+                        current_text, references, passage_retrieval_models, config, silent=silent, save_passage_records=save_passage_records
                     )
                     best_matching_passage = reranking_results["ranked_passages"][0]
                     best_passage_label = reranking_results["ranked_passage_labels"][0]
