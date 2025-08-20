@@ -676,7 +676,7 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                                     outfile.write("\n")
 
                                 if populate_with_abstracts:
-                                    target_abstract = " ".join(docs_retrieval_dataset[docs_id_map[target_arxiv_id]]["abstract"])
+                                    target_abstract = docs_retrieval_dataset[docs_id_map[target_arxiv_id]]["abstract"]
                                     target_abstract = f"<|cite_start|> (Reference: {target_abstract}) <|cite_end|>"
                                     sections_fulltext = sections_fulltext.replace(f"#ref{key}#", target_abstract)
 

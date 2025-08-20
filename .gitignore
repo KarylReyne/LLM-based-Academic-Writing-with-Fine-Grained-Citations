@@ -18,6 +18,7 @@ latex/**/*.toc
 
 # datasets
 src/data/**
+src/data_thesis/**
 
 src/ScholarCopilot/data/**
 src/ScholarCopilot/model_*/**
