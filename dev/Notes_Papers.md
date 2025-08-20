@@ -12,7 +12,7 @@
 ### LongCite https://arxiv.org/pdf/2409.02897
  - generation with sentence-level citations via in-context learning
  - reduces hallucinations, provides verifiability and faithfulness
- - LongBench-Cite: benchmark for evaluating LLM for long-context question answering with citations (data from LongBench and LongBench-Chat, English and Chinese1)
+ - LongBench-Cite: benchmark for evaluating LLM for long-context question answering with citations (data from LongBench and LongBench-Chat, English and Chinese)
  - Coarse to Fine (CoF): method for constructing long-context QA instances with citations
     - LLM produces query and answer from long-context input (via [Self-Instruct](https://aclanthology.org/2023.acl-long.754/))
     - use the answer to retrieve chunks (128 tokens) from the context that are fed to the LLM as (coarse) citations within the answer
