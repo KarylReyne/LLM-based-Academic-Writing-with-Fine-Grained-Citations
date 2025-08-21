@@ -7,9 +7,12 @@ TODO
 
 % Introduction RAG
 \section{Retrieval-Augmented Generation}\label{rag}
-TODO 
-
 % traditional rag
-% rag for scientific writing
+TODO
 
-ScholarCopilot \cite{wang2025scholarcopilottraininglargelanguage} is a RAG system developed for generating academic-style text with accurate citations. It is intended as a tool that assists the user with academic paper writing by providing iterative text generation with automated citation retrieval \cite{wang2025scholarcopilottraininglargelanguage}. Previous work on text generation with citations treated retrieval and generation as seperate stages during inference, for example, "Attribute First, then Generate" \cite{slobodkin2024attributefirstgeneratelocallyattributable} first TODO. OpenScholar \cite{asai2024openscholarsynthesizingscientificliterature} TODO. ReClaim \cite{xia2025groundsentenceimprovingretrievalaugmented}). TODO In contrast, ScholarCopilot \cite{wang2025scholarcopilottraininglargelanguage} TODO
+% special challenges of scientific text
+
+% rag for scientific writing
+Previous work on text generation with citations treated retrieval and generation as seperate stages during inference. For example, "Attribute First, then Generate" \cite{slobodkin2024attributefirstgeneratelocallyattributable} initially retrieves a set of relevant spans which are then grouped into coherent clusters which in turn are used to inform an iterative sentence-by-sentence generation step \cite{slobodkin2024attributefirstgeneratelocallyattributable}. Similarly, OpenScholar \cite{asai2024openscholarsynthesizingscientificliterature} first retrieves and reranks a set of papers relevant to the given query. These papers inform a subsequent generation step that produces a generated response $r_i$ \cite{asai2024openscholarsynthesizingscientificliterature}. This response is refined through iterative \emph{self-feedback} where during each iteration of the feedback loop $F=f_1,...,f_T$, the generator model generates sentences $f_j$ that describe potential improvements to the response and may also prompt the retrieval pipeline to retrieve additional papers, should $r_i$ require more information to generate an improved response $r_{i+1}$ \cite{asai2024openscholarsynthesizingscientificliterature}. Depending on the choice of $T$, OpenScholar still performs retrieval and generation largely seperately. ReClaim \cite{xia2025groundsentenceimprovingretrievalaugmented} TODO
+
+ScholarCopilot \cite{wang2025scholarcopilottraininglargelanguage} is a RAG system developed for generating academic-style text with accurate citations. It is intended as a tool that assists the user with academic paper writing by providing iterative text generation with automated citation retrieval \cite{wang2025scholarcopilottraininglargelanguage}. ScholarCopilot also enables user interaction during generation \cite{wang2025scholarcopilottraininglargelanguage} by allowing the user to rewrite the generated text or forcefully trigger citation retrieval between the consecutive generation steps but this feature is beyond the scope of this thesis and is thus not utilized for the experiments. 
