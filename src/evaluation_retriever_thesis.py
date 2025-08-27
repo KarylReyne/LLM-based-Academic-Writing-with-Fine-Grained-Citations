@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # from dataset_loaders import load_scholarcopilot_eval_dataset
     # eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, docs_corpus_id_map, config, shuffle=shuffle)
 
-    RECALL_K = 1
+    RECALL_K = 10
     
     sc_rankings = [] # len_dataset x recall_k
     sc_pr_rankings = [] # len_dataset x recall_k
@@ -89,9 +89,15 @@ if __name__ == "__main__":
     eps = 1e-6 # fail metrics
 
     # override some model settings to match the settings defined in this file
-    config["sc_retriever_topk"] = RECALL_K*2
-    config["reranker_topk"] = RECALL_K
-    config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
+    if config["enable_passage_retriever"]:
+        config["sc_retriever_topk"] = RECALL_K*3
+        config["retriever_topk"] = RECALL_K*2
+        config["reranker_topk"] = RECALL_K
+        config["custom_save_dir"] = f"out_thesis/eval_retrieval_with-reasonir-ranking_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
+    else:
+        config["sc_retriever_topk"] = RECALL_K*2
+        config["reranker_topk"] = RECALL_K
+        config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
 
     print()
     for i in eval_indices:
