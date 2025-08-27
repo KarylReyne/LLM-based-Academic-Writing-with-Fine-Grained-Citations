@@ -5,13 +5,14 @@ import sys
 from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
 from torch import nn
 import numpy as np
-import itertools
+import faiss
 from datetime import datetime
 import time
 
 from passage_retrieval import retrieval
 from passage_reranking import reranking_and_scoring, InvalidLLMResponseError
 from passage_retrieval_instructions import *
+from evaluation_generation_instruction import *
 
 
 def get_config(path='cfg/config.json'):
@@ -42,14 +43,16 @@ def save_results(
     assert os.path.exists(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}')
     assert results != None
 
+    results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+    results["config"] = config
+    results["instructions"] = {
+        "retr_query": retrieval_instruction_query,
+        "retr_document": retrieval_instruction_document,
+        "rera_scoring": reranking_instruction("", []),
+        "judge_instruction": judge_instruction2("", "", "", "")
+    }
+
     if mode == "passage retrieval": # saves continuously at depth 2
-        results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-        results["config"] = config
-        results["instructions"] = {
-            "retr_query": retrieval_instruction_query(config["citation_mask_token"]),
-            "retr_document": retrieval_instruction_document,
-            "rera_scoring": reranking_instruction("", [])
-        }
         if save_passage_records:
             for key in evaluation_records:
                 try:
@@ -59,8 +62,6 @@ def save_results(
                     results["passage_records"][key] = evaluation_records[key]
 
     elif mode in ["generation", "eval_retrieval", "eval_generation"]: # saves once at depth 1
-        results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-        results["config"] = config
         for key in evaluation_records:
             results[key] = evaluation_records[key]
 
@@ -80,13 +81,14 @@ def save_results(
 
 def get_passage_retrieval_models(config):
     # tokenizers
-    retr_tokenizer = AutoTokenizer.from_pretrained(config["retriever"])
-    rera_tokenizer = AutoTokenizer.from_pretrained(config["reranker"])
+    retr_tokenizer = AutoTokenizer.from_pretrained(
+        config["retriever"]
+    )
+    rera_tokenizer = AutoTokenizer.from_pretrained(
+        config["reranker"]
+    )
     for tokenizer in [retr_tokenizer, rera_tokenizer]:
-        # tokenizer.padding_side = 'right'
         tokenizer.add_tokens(config["special_tokens"])
-        # if tokenizer.pad_token_id is None:
-        #     tokenizer.pad_token_id = tokenizer.eos_token_id
 
     # retrieval model definition
     retriever = AutoModel.from_pretrained(
@@ -108,7 +110,7 @@ def get_passage_retrieval_models(config):
         trust_remote_code=True,
         # attn_implementation="flash_attention_2",
         attn_implementation="sdpa",
-        torch_dtype=torch.bfloat16
+        torch_dtype=torch.float16
     )
     reranker = reranker.to(config["reranker_device"])
     reranker.resize_token_embeddings(len(rera_tokenizer))
@@ -127,18 +129,26 @@ def get_passage_retrieval_models(config):
 def get_candidate_passages(references, tokenizer, config):
     candidate_passages = []
     for rec in references:
-        for section in rec["sections"]:
-            section_label = f"{rec["arxiv_id"]}_{section["title"].lstrip(" ").replace(" ", "-")}"
-            text = " ".join(section["sentences"])
-            tokens = tokenizer(text).to(config["retriever_device"])
-            tokens = tokens["input_ids"] # get only the encoded tokens
+        if "sections" in rec: # rec is from a retrieval dataset
+            for section in rec["sections"]:
+                section_label = f"{rec["arxiv_id"]}_{section["title"].lstrip(" ").replace(" ", "-")}"
+                text = " ".join(section["sentences"])
+                tokens = tokenizer(text).to(config["retriever_device"])
+                tokens = tokens["input_ids"] # get only the encoded tokens
 
-            passage_idx = 0
-            for i in range(0, len(tokens), config["passage_length"]):
-                passage_label = f"{section_label}-{passage_idx}"
-                passage = tokenizer.decode(tokens[i:i+config["passage_length"]]).replace(config["tokenizer_begin_token"], "")
-                candidate_passages.append(passage_label+config["label_sep_token"]+passage)
-                passage_idx += 1
+                passage_idx = 0
+                for i in range(0, len(tokens), config["passage_length"]):
+                    passage_label = f"{section_label}-{passage_idx}"
+                    passage = tokenizer.decode(tokens[i:i+config["passage_length"]]).replace(config["tokenizer_begin_token"], "")
+                    candidate_passages.append(passage_label+config["label_sep_token"]+passage)
+                    passage_idx += 1
+        elif "passage_label" in rec: # rec is from retrieve_passages_with_reasonir()
+            passage_label = rec["passage_label"]
+            passage = rec["passage"]
+            candidate_passages.append(passage_label+config["label_sep_token"]+passage)
+        else:
+            print(f"references: {references}")
+            raise ValueError(f"get_candidate_passages() could not parse the given references.")
 
     return candidate_passages
 
@@ -154,13 +164,9 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
     }
 
     start = time.time()
-    b = "passages" in references[0] and not "sections" in references[0] # given prebuilt passages
-    if b:
-        candidate_passages = [p for r in references for p in r["passages"]]
-    else:
-        candidate_passages = get_candidate_passages(
-            references, passage_retrieval_models["retr_tokenizer"], config
-        )
+    candidate_passages = get_candidate_passages(
+        references, passage_retrieval_models["retr_tokenizer"], config
+    )
     # print("***************Build passages cost (time): ", time.time() - start)
 
     start = time.time()
@@ -218,24 +224,74 @@ def unified_passage_retrieval(generated_context, references, passage_retrieval_m
     return reranking_results
 
 
+def retrieve_passages_with_reasonir(index, lookup_indices, cite_start_hidden_state, passages_data_dataset, config, top_k=5, silent=False):
+    start = time.time()
+    if not silent:
+        print("[ReasonIR-passages] Retrieving passages...")
+
+    if isinstance(cite_start_hidden_state, torch.Tensor):
+        cite_start_hidden_state = cite_start_hidden_state.cpu().numpy()
+
+    if cite_start_hidden_state.ndim == 1: # transposes the vector
+        cite_start_hidden_state = cite_start_hidden_state.reshape(1, -1)
+
+    faiss.normalize_L2(cite_start_hidden_state)
+
+    # custom efSearch
+    index.hnsw.efSearch = config["hnsw_efSearch"]
+
+    # cpu index search
+    distances, indices = index.search(cite_start_hidden_state, top_k)
+    # gpu index search
+    # res = faiss.StandardGpuResources()
+    # gpu_index = faiss.index_cpu_to_gpu(res, config["retriever_device"], index)
+    # distances, indices = gpu_index.search(cite_start_hidden_state, top_k)
+
+    retrieved_passage_labels = []
+    for i in indices[0]:
+        try:
+            each_index = str(lookup_indices[i], 'ascii')
+        except UnicodeDecodeError as e:
+            each_index = str(lookup_indices[i], 'utf-8')
+        retrieved_passage_labels.append(each_index)
+    if not silent:
+        print("[ReasonIR-passages] retrieved_passage_labels", retrieved_passage_labels)
+        print("[ReasonIR-passages] distances[0]", distances[0])
+        print("[ReasonIR-passages] ***************Retrieval cost (time): ", time.time() - start)
+
+    references = []
+    for label in retrieved_passage_labels:
+        rec = passages_data_dataset[label]
+        references.append(rec)
+    
+    return references, distances[0]
+
+
 def apply_retrieval_context_window(generated_context, tokenizer, config):
     context = generated_context
     if config["enable_query_context_window"]:
-        tokens = tokenizer(generated_context).to(config["retriever_device"])
-        tokens = tokens["input_ids"] # get only the encoded tokens
-        index = len(tokens)-1 # index of the citation, for generation always the last index
-        low = max(index-config["query_context"], 0)
-        high = index+1
-        context = tokenizer.decode(tokens[low:high])
+        assert tokenizer.padding_side == "left"
+        assert tokenizer.truncation_side == "left"
+        tokens = tokenizer(
+            generated_context,
+            max_length=config["query_context"],
+            padding="max_length",
+            truncation=True
+        ).to(config["retriever_device"])
+        assert len(tokens.input_ids) == config["query_context"], f"{len(tokens.input_ids)} != {config["query_context"]}"
+        context = tokenizer.decode(tokens.input_ids)
+        # tokens = tokens["input_ids"] # get only the encoded tokens
+        # index = len(tokens)-1 # index of the citation, for generation always the last index
+        # low = max(index-config["query_context"], 0)
+        # high = index+1
+        # context = tokenizer.decode(tokens[low:high])
         context = context.replace(config["tokenizer_begin_token"], "")
     return context
 
 
-def retrieve_relevant_passages(generated_context, references, passage_retrieval_models, config, silent=False, save_passage_records=True):
-    if config["enable_query_context_window"]: # for evaluation, this is redundant, see evaluation_ranking_functions.py
-        generated_context = apply_retrieval_context_window(
-            generated_context, passage_retrieval_models["retr_tokenizer"], config
-        ) 
+def retrieve_relevant_passages(generated_context, references, tokenizer, passage_retrieval_models, config, silent=False, save_passage_records=True):
+    if config["enable_query_context_window"]:
+        generated_context = apply_retrieval_context_window(generated_context, tokenizer, config)
     reranking_results = unified_passage_retrieval(
         generated_context,
         references, 

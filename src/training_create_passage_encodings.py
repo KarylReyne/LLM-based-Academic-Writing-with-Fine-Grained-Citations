@@ -7,7 +7,7 @@ import sys
 import os
 import numpy as np
 import json
-import tqdm
+
 
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, retrieve_relevant_passages, apply_retrieval_context_window, get_candidate_passages
 from passage_retrieval_instructions import retrieval_instruction_document
@@ -25,6 +25,34 @@ def _get_passages_data_items(retr_dataset_entry, tokenizer, config):
         passage_ids.append(split[0])
         passages.append(split[1])
     return passage_ids, passages
+
+
+# for passage retrieval during inference
+def load_passages_data_dataset(passages_data_path, docs_corpos_id_map):
+    print("loading passages_data...")
+    passages_data = {}
+    count = 0
+    print()
+    try:
+        with open(passages_data_path, "rb") as file:
+            for item in ijson.items(file, "", multiple_values=True):
+                sys.stdout.write("\033[F")
+                print(f"processing entry {count}")
+                passage_ids = item["passage_ids"]
+                passages = item["passages"]
+                for i in range(len(passages)):
+                    arxiv_id = passage_ids[i].split("_")[0]
+                    passages_data[passage_ids[i]] = {
+                        "corpus_id": docs_corpos_id_map[arxiv_id],
+                        "arxiv_id": arxiv_id,
+                        "passage_label": passage_ids[i],
+                        "passage": passages[i]
+                    }
+                count += 1
+    except FileNotFoundError as e:
+        raise e(f"{passages_data_path} not found. Run training_create_passage_encodings.py to create the dataset (this may take some time and will also create the corresponding passage encodings).")
+    print("passages_data loaded.")
+    return passages_data
 
 
 def main():

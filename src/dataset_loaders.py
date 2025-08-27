@@ -114,54 +114,54 @@ def load_retrieval_dataset_from_sc_eval(retrieval_dataset_path, complete_dataset
     return retrieval_dataset
 
 
-def load_prebuilt_passages_dataset(retrieval_dataset_path, complete_dataset_path, id_map, tokenizer, config):
-    print("loading prebuilt passages dataset...")
-    retrieval_dataset = {}
-    print()
-    counter = 0
-    try:
-        with open(retrieval_dataset_path, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
-                sys.stdout.write("\033[F")
-                print(f"processing entry {counter}")
-                retrieval_dataset[item["corpus_id"]] = item
-                counter += 1
-    except FileNotFoundError:
-        with open(complete_dataset_path, "rb") as file:
-            for item in ijson.items(file, "", multiple_values=True):
-                sys.stdout.write("\033[F")
-                print(f"processing entry {counter}")
-                arxiv_id = item["arxiv_id"]
-                corpus_id = id_map[arxiv_id]
-                title = item["title"]
-                abstract = " ".join(item["abstract"])
-                passages = []
-                for section in item["sections"]:
-                    section_label = f"{arxiv_id}_{title.lstrip(" ").replace(" ", "-")}"
-                    text = " ".join(section["sentences"])
-                    tokens = tokenizer(text).to(config["retriever_device"])
-                    tokens = tokens["input_ids"] # get only the encoded tokens
+# def load_prebuilt_passages_dataset(retrieval_dataset_path, complete_dataset_path, id_map, tokenizer, config):
+#     print("loading prebuilt passages dataset...")
+#     retrieval_dataset = {}
+#     print()
+#     counter = 0
+#     try:
+#         with open(retrieval_dataset_path, "rb") as file:
+#             for item in ijson.items(file, "", multiple_values=True):
+#                 sys.stdout.write("\033[F")
+#                 print(f"processing entry {counter}")
+#                 retrieval_dataset[item["corpus_id"]] = item
+#                 counter += 1
+#     except FileNotFoundError:
+#         with open(complete_dataset_path, "rb") as file:
+#             for item in ijson.items(file, "", multiple_values=True):
+#                 sys.stdout.write("\033[F")
+#                 print(f"processing entry {counter}")
+#                 arxiv_id = item["arxiv_id"]
+#                 corpus_id = id_map[arxiv_id]
+#                 title = item["title"]
+#                 abstract = " ".join(item["abstract"])
+#                 passages = []
+#                 for section in item["sections"]:
+#                     section_label = f"{arxiv_id}_{title.lstrip(" ").replace(" ", "-")}"
+#                     text = " ".join(section["sentences"])
+#                     tokens = tokenizer(text).to(config["retriever_device"])
+#                     tokens = tokens["input_ids"] # get only the encoded tokens
 
-                    passage_idx = 0
-                    for i in range(0, len(tokens), config["passage_length"]):
-                        passage_label = f"{section_label}-{passage_idx}"
-                        passage = tokenizer.decode(tokens[i:i+config["passage_length"]]).replace(config["tokenizer_begin_token"], "")
-                        passages.append(passage_label+config["label_sep_token"]+passage)
-                        passage_idx += 1
-                rec = {
-                    "corpus_id": corpus_id,
-                    "arxiv_id": arxiv_id,
-                    "title": title, 
-                    "abstract": abstract,
-                    "passages": passages
-                }
-                retrieval_dataset[corpus_id] = rec
-                counter += 1
-                with open(retrieval_dataset_path, "a") as outfile:
-                    json.dump(rec, outfile)
-                    outfile.write("\n")
-    print("prebuilt passages dataset loaded.")
-    return retrieval_dataset
+#                     passage_idx = 0
+#                     for i in range(0, len(tokens), config["passage_length"]):
+#                         passage_label = f"{section_label}-{passage_idx}"
+#                         passage = tokenizer.decode(tokens[i:i+config["passage_length"]]).replace(config["tokenizer_begin_token"], "")
+#                         passages.append(passage_label+config["label_sep_token"]+passage)
+#                         passage_idx += 1
+#                 rec = {
+#                     "corpus_id": corpus_id,
+#                     "arxiv_id": arxiv_id,
+#                     "title": title, 
+#                     "abstract": abstract,
+#                     "passages": passages
+#                 }
+#                 retrieval_dataset[corpus_id] = rec
+#                 counter += 1
+#                 with open(retrieval_dataset_path, "a") as outfile:
+#                     json.dump(rec, outfile)
+#                     outfile.write("\n")
+#     print("prebuilt passages dataset loaded.")
+#     return retrieval_dataset
 
 
 def load_retrieval_dataset_for_sc_corpus_with_fulltext(
@@ -380,7 +380,7 @@ def load_eval_dataset(eval_dataset_path, arxiv_to_corpus_id_map, tokenizer, conf
     return eval_dataset, eval_indices
 
 
-def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, config, shuffle=True):
+def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, docs_corpus_id_map, config, shuffle=True):
     eval_dataset = []
     count = 0
     print()
@@ -411,21 +411,23 @@ def load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc
                     for possible_citation in sample["bib_info"][citation_token]:
                         
                         citation_corpus_id = possible_citation["citation_corpus_id"]
-                        if citation_corpus_id in sc_arxiv_id_map:
+                        if citation_corpus_id in sc_arxiv_id_map: # target corpus id in sc corpus?
+                            target_arxiv_id = sc_arxiv_id_map[citation_corpus_id]
+                            if target_arxiv_id in docs_corpus_id_map: # target arxiv id in docs dataset?
 
-                            sys.stdout.write("\033[F")
-                            print(f"processing entry {count}")
+                                sys.stdout.write("\033[F")
+                                print(f"processing entry {count}")
 
-                            rec = {
-                                "context": context,
-                                "source_arxiv_id": sample["paper_id"],
-                                "target_corpus_id": citation_corpus_id
-                            }
-                            eval_dataset.append(rec)
-                            with open(eval_dataset_path, "a") as outfile:
-                                json.dump(rec, outfile)
-                                outfile.write("\n")
-                            count += 1
+                                rec = {
+                                    "context": context,
+                                    "source_arxiv_id": sample["paper_id"],
+                                    "target_corpus_id": docs_corpus_id_map[target_arxiv_id]
+                                }
+                                eval_dataset.append(rec)
+                                with open(eval_dataset_path, "a") as outfile:
+                                    json.dump(rec, outfile)
+                                    outfile.write("\n")
+                                count += 1
 
     eval_indices = np.arange(len(eval_dataset))
     if shuffle:
@@ -614,7 +616,7 @@ def load_pr_train_set_for_scholarcopilot(pr_train_dataset_path, docs_fulltext_da
     return train_dataset, train_indices
             
 
-def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_retrieval_dataset, docs_id_map, sc_id_map, max_samples=1000, populate_with_abstracts=False, shuffle=True):
+def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs_dataset_path, docs_retrieval_dataset, docs_id_map, sc_id_map, config, max_samples=1000, populate_with_abstracts=False, shuffle=True):
     print("loading sections eval dataset...")
     contains_substring = lambda s, sub: s.lower() != s.lower().replace(sub.lower(), "")
     eval_dataset = []
@@ -665,7 +667,7 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                                 rec = {
                                     "context": sections_fulltext.split(f"#ref{key}#")[0],
                                     "source_arxiv_id": item["arxiv_id"],
-                                    "target_corpus_id": sc_id_map[target_arxiv_id]
+                                    "target_arxiv_id": target_arxiv_id
                                 }
                                 if len(eval_dataset) < max_samples: # adds just enough samples to the current dataset
                                     eval_dataset.append(rec)
@@ -679,6 +681,12 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
                                     target_abstract = docs_retrieval_dataset[docs_id_map[target_arxiv_id]]["abstract"]
                                     target_abstract = f"<|cite_start|> (Reference: {target_abstract}) <|cite_end|>"
                                     sections_fulltext = sections_fulltext.replace(f"#ref{key}#", target_abstract)
+                                else: # no special ref replacement rule set
+                                    sections_fulltext = sections_fulltext.replace(f"#ref{key}#", config["citation_mask_token"])
+                            else: # ref target not retrievable
+                                sections_fulltext = sections_fulltext.replace(f"#ref{key}#", config["citation_mask_token"])
+                        else: # ref target not found
+                            sections_fulltext = sections_fulltext.replace(f"#ref{key}#", config["citation_mask_token"])
 
                 count += 1
 
@@ -694,7 +702,7 @@ def load_sections_eval_dataset(target_sections, sections_eval_dataset_path, docs
 
 def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_arxiv_id_map, max_samples=1000, shuffle=True):
     # build/load dataset of left-side generation contexts (just take title+abstract+2.5 sentences introduction of existing papers)
-    print("loading sections eval dataset...")
+    print("loading generation eval dataset...")
     eval_dataset = []
     count = 0
     print()
@@ -742,7 +750,7 @@ def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_a
             rec = {
                 "context": generation_context,
                 "source_arxiv_id": entry["arxiv_id"],
-                "target_corpus_id": None,
+                "target_arxiv_id": None,
                 "title": entry_title,
                 "abstract": entry_abstract,
                 "introduction": " ".join(entry_introduction_sents),
@@ -762,7 +770,7 @@ def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_a
     eval_indices = np.arange(len(eval_dataset))
     if shuffle:
         random.shuffle(eval_indices)
-    print(f"sections eval dataset loaded (contains {len(eval_dataset)} samples, oldest is {eval_dataset[-1]["source_arxiv_id"]}).")
+    print(f"generation eval dataset loaded (contains {len(eval_dataset)} samples, oldest is {eval_dataset[-1]["source_arxiv_id"]}).")
 
     return eval_dataset, eval_indices
 

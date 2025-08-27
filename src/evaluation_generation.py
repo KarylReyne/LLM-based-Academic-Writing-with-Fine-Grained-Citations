@@ -48,6 +48,7 @@ def stream_generate_discretizer(
         tokenizer, 
         retrieval_dataset,
         sc_metadata_corpus,
+        None, # passages_data
         arxiv_to_corpus_id_map, 
         passage_retrieval_models, 
         config, 
@@ -83,14 +84,17 @@ def parse_judge_response(response):
         for score_label in scores:
             score = response.split(score_label)[-1]
             score = score.split(" ")[1].split("/")[0]
+            score = score.lstrip("<").rstrip(">")
             scores[score_label] = float(score)
             total += float(score)
         scores["total"] = total
-        for _, score in scores.items():
-            assert score != -1
+        for label, score in scores.items():
+            if label == "total":
+                assert score >= 0 and score <= 25
+            else:
+                assert score >= 0 and score <= 5
     except Exception:
-        print(response)
-        exit()
+        # print(response)
         raise ResponseParsingError
     return scores
 
@@ -101,7 +105,7 @@ class ResponseParsingError(Exception):
 
 
 if __name__ == "__main__":
-    config = get_config()
+    config = get_config("cfg/config_thesis_eval_generation.json")
 
     model_path = "scholarcopilot_model_v1208/"
     model, tokenizer = load_model(model_path, config)
@@ -139,95 +143,119 @@ if __name__ == "__main__":
     docs_retrieval_dataset = load_retrieval_dataset(docs_retrieval_dataset_path, complete_dataset_path, docs_corpus_id_map)
 
     shuffle = True
-    eval_dataset_path = "data/eval_dataset_generation.jsonl"
+    eval_dataset_path = "data_thesis/eval_dataset_generation.jsonl"
     eval_dataset, eval_indices = load_generation_eval_dataset(
         eval_dataset_path, 
         docs_retrieval_dataset, 
         sc_arxiv_id_map, 
-        max_samples=10000, 
+        max_samples=100000, 
         shuffle=shuffle
     )
 
-    # print(eval_dataset[:3])
-
     samples = 0
-    max_samples = 10
-    sample_fails = 0
+    max_samples = 50
     retrieval_fails = 0
     llm_fails = 0
     catch_retrieval_fails = True
     total_num_retrievals = 0
-    generation_breakpoint = 15000
+    generation_breakpoint = 30000
+    shuffle_instruction = True
     eps = 1e-6 # fail metrics
+    scoring_records = []
+    total_sc_judge_scores_avg = {
+        "Content Relevance": 0,
+        "Logical Coherence": 0,
+        "Academic Rigor": 0,
+        "Background Completeness": 0,
+        "Innovation Statement": 0,
+        "total": 0
+    }
+    total_sc_pr_judge_scores_avg = {
+        "Content Relevance": 0,
+        "Logical Coherence": 0,
+        "Academic Rigor": 0,
+        "Background Completeness": 0,
+        "Innovation Statement": 0,
+        "total": 0
+    }
+
+    # override some model settings to match the settings defined in this file
+    config["custom_save_dir"] = f"out_thesis/eval_generation_judge_instruction2_{max_samples}"
+
     print()
     for i in eval_indices:
         # sys.stdout.write("\033[F")
-        print(f"processing entry {samples} ({sample_fails} sample fails)")
+        print(f"processing entry {samples}")
 
-        try:
-            item = eval_dataset[i]
-            context = item["context"]
-            gold_generation = apply_generation_breakpoint(item["introduction"], generation_breakpoint, tokenizer, config)
+        item = eval_dataset[i]
+        context = item["context"]
+        gold_generation = apply_generation_breakpoint(item["introduction"], generation_breakpoint, tokenizer, config)
 
-            # generate with SC
+        # generate with SC
+        start = time.time()
+        sc_generated_paper, sc_citations_data, sc_fails = stream_generate_discretizer(
+            context, 
+            index, 
+            lookup_indices, 
+            model, 
+            tokenizer, 
+            docs_retrieval_dataset,
+            sc_metadata_corpus,
+            docs_corpus_id_map, 
+            passage_retrieval_models, 
+            config,
+            generation_breakpoint=generation_breakpoint,
+            do_passage_retrieval=False,
+            catch_retrieval_fails=catch_retrieval_fails,
+            silent=True,
+            save_passage_records=False
+        )
+        sc_generated_paper = item["introduction_start"]+" "+sc_generated_paper.replace(context, "")
+        retrieval_fails += sc_fails[0]
+        llm_fails += sc_fails[1]
+        total_num_retrievals += len(sc_citations_data)
+        print(f"gen1 done in {time.time() - start}")
+
+        # generate with SC+PR
+        start = time.time()
+        sc_pr_generated_paper, sc_pr_citations_data, sc_pr_fails = stream_generate_discretizer(
+            context, 
+            index, 
+            lookup_indices, 
+            model, 
+            tokenizer, 
+            docs_retrieval_dataset,
+            sc_metadata_corpus,
+            docs_corpus_id_map, 
+            passage_retrieval_models, 
+            config,
+            generation_breakpoint=generation_breakpoint,
+            do_passage_retrieval=True,
+            catch_retrieval_fails=catch_retrieval_fails,
+            silent=True,
+            save_passage_records=False
+        )
+        sc_pr_generated_paper = item["introduction_start"]+" "+sc_pr_generated_paper.replace(context, "")
+        retrieval_fails += sc_pr_fails[0]
+        llm_fails += sc_pr_fails[1]
+        total_num_retrievals += len(sc_pr_citations_data)
+        print(f"gen2 done in {time.time() - start}")
+
+        # judge each generated output individually (prompt from SC paper)
+        # (judge both at once by contrasting them?)
+        judge_scores_avg = [] # [0]: SC, [1]: SC PR
+        for gen in [sc_generated_paper, sc_pr_generated_paper]:
             start = time.time()
-            sc_generated_paper, sc_citations_data, sc_fails = stream_generate_discretizer(
-                context, 
-                index, 
-                lookup_indices, 
-                model, 
-                tokenizer, 
-                docs_retrieval_dataset,
-                sc_metadata_corpus, 
-                docs_corpus_id_map, 
-                passage_retrieval_models, 
-                config,
-                generation_breakpoint=generation_breakpoint,
-                do_passage_retrieval=False,
-                catch_retrieval_fails=catch_retrieval_fails,
-                silent=True,
-                save_passage_records=False
-            )
-            sc_generated_paper = item["introduction_start"]+" "+sc_generated_paper.replace(context, "")
-            retrieval_fails += sc_fails[0]
-            llm_fails += sc_fails[1]
-            total_num_retrievals += len(sc_citations_data)
-            print(f"gen1 done in {time.time() - start}")
-
-            # generate with SC+PR
-            start = time.time()
-            sc_pr_generated_paper, sc_pr_citations_data, sc_pr_fails = stream_generate_discretizer(
-                context, 
-                index, 
-                lookup_indices, 
-                model, 
-                tokenizer, 
-                docs_retrieval_dataset,
-                sc_metadata_corpus,
-                docs_corpus_id_map, 
-                passage_retrieval_models, 
-                config,
-                generation_breakpoint=generation_breakpoint,
-                do_passage_retrieval=True,
-                catch_retrieval_fails=catch_retrieval_fails,
-                silent=True,
-                save_passage_records=False
-            )
-            sc_pr_generated_paper = item["introduction_start"]+" "+sc_pr_generated_paper.replace(context, "")
-            retrieval_fails += sc_pr_fails[0]
-            llm_fails += sc_pr_fails[1]
-            total_num_retrievals += len(sc_pr_citations_data)
-            print(f"gen2 done in {time.time() - start}")
-
-            # judge each generated output individually (prompt from SC paper)
-            # (judge both at once by contrasting them?)
-            judge_scores_avg = [] # [0]: SC, [1]: SC PR
-            for gen in [sc_generated_paper, sc_pr_generated_paper]:
-                start = time.time()
-                scores_per_call = []
-                for _ in range(config["m_judging"]):
+            scores_per_call = []
+            scoring_fails = 0
+            num_successful_scorings = 0
+            print()
+            while num_successful_scorings < config["m_judging"]: # try to score until enough scorings are collected
+                sys.stdout.write("\033[F")
+                print(f"got {num_successful_scorings} scorings after {num_successful_scorings+scoring_fails} tries")
+                try:
                     chat = judge_tokenizer.apply_chat_template(
-                        [{"role": "user", "content": judge_instruction2(item["title"], item["abstract"], gold_generation, gen)}], 
+                        [{"role": "user", "content": judge_instruction2(item["title"], item["abstract"], gold_generation, gen, shuffle=shuffle_instruction)}], 
                         tokenize=False, 
                         add_generation_prompt=True
                     )
@@ -235,45 +263,62 @@ if __name__ == "__main__":
                     res = judge.generate(
                         **judge_input,
                         max_new_tokens=generation_breakpoint,
-                        temperature=0.6
+                        temperature=config["judge_temperature"]
                     )
                     res = judge_tokenizer.batch_decode(res)[0]
                     scores_per_call.append(parse_judge_response(res))
+                    num_successful_scorings += 1
+                except ResponseParsingError:
+                    scoring_fails += 1
+                    continue
 
-                scores_avg = {}
-                for key in scores_per_call[0]: # initialization
-                    scores_avg[key] = 0
-                for scores in scores_per_call: # iterates llm calls
-                    for key in scores: # iterates score categories
-                        scores_avg[key] += scores[key]
-                for key in scores_avg:
-                    scores_avg[key] /= len(scores_per_call)
-                judge_scores_avg.append(scores_avg)
-                print(f"judging{len(judge_scores_avg)} done in {time.time() - start}")
-                print(f"SC {"PR" if len(judge_scores_avg) == 2 else ""} scores:")
-                print(scores_avg)
-            
-            samples += 1
-            if samples >= max_samples:
-                break
+            scores_avg = {}
+            for key in scores_per_call[0]: # initialization
+                scores_avg[key] = 0
+            for scores in scores_per_call: # iterates llm calls
+                for key in scores: # iterates score categories
+                    scores_avg[key] += scores[key]
+            for key in scores_avg:
+                scores_avg[key] /= len(scores_per_call)
+            judge_scores_avg.append(scores_avg)
+            print(f"judging{len(judge_scores_avg)} done in {time.time() - start}")
+            print(f"SC {"PR" if len(judge_scores_avg) == 2 else ""} scores:")
+            print(scores_avg)
 
-        except Exception as e: # such as ResponseParsingError
-            sample_fails += 1 # skip this sample entirely
-            # raise e
+        scoring_records.append({
+            "source_id": item["source_arxiv_id"],
+            "gold": gold_generation,
+            "sc_generation": sc_generated_paper,
+            "sc_pr_generation": sc_pr_generated_paper,
+            "sc_scores": judge_scores_avg[0],
+            "sc_pr_scores": judge_scores_avg[1]
+        })
 
+        for key in total_sc_judge_scores_avg:
+            total_sc_judge_scores_avg[key] += judge_scores_avg[0][key]
+            total_sc_pr_judge_scores_avg[key] += judge_scores_avg[1][key]
+        
+        samples += 1
+        if samples >= max_samples:
+            break
+
+    for key in total_sc_judge_scores_avg:
+        total_sc_judge_scores_avg[key] /= max_samples
+        total_sc_pr_judge_scores_avg[key] /= max_samples
         
     save_results({
         "eval_dataset": eval_dataset_path,
         "retrieval_index": index_dir,
         "num_samples": samples,
         "shuffled_samples": shuffle,
-        "sample_fails": sample_fails,
+        "shuffled_instruction": shuffle_instruction,
         "generation_breakpoint": generation_breakpoint,
         "SC retrieval fails": retrieval_fails,
         "catch retrieval fails": catch_retrieval_fails,
         "PR LLM fails": llm_fails,
         "total fraction of fails": (retrieval_fails+llm_fails)/(total_num_retrievals+eps),
-        "SC scores average": judge_scores_avg[0],
-        "SC PR scores average": judge_scores_avg[1]
+        "SC scores average": total_sc_judge_scores_avg,
+        "SC PR scores average": total_sc_pr_judge_scores_avg,
+        "scoring records": scoring_records
     }, config, mode="eval_generation")
 

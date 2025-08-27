@@ -1,31 +1,46 @@
-from passage_retrieval_interface import get_config, get_passage_retrieval_models, retrieve_relevant_passages, save_results, apply_retrieval_context_window
+import torch
+
+from passage_retrieval_interface import retrieve_relevant_passages, retrieve_passages_with_reasonir
 from passage_reranking import InvalidLLMResponseError
-from scholarcopilot_model import collect_retrieval_results, load_model, load_faiss_index, single_step_retrieval
+from scholarcopilot_model import collect_retrieval_results, single_step_retrieval
+from passage_retrieval_instructions import retrieval_instruction_query
 
 
-def rank_with_scholarcopilot(context, index, lookup_indices, model, tokenizer, config):
+def rank_with_scholarcopilot(context, retrieval_dataset, docs_arxiv_to_corpus_id_map, sc_metadata_corpus, index, lookup_indices, model, tokenizer, config):
     silence = True
-    context = apply_retrieval_context_window(context, tokenizer, config)
+    # if config["enable_query_context_window"]:
+    #     context = apply_retrieval_context_window(context, tokenizer, config)
     retrieved_k_results = single_step_retrieval(context, index, lookup_indices, model, tokenizer, config, silent=silence)
-    ranked_corpus_ids = [t[0] for t in retrieved_k_results]
-    return ranked_corpus_ids, retrieved_k_results
-
-
-def rank_with_passage_retrieval_from_sc_rankings(context, retrieved_k_results, retrieval_dataset, docs_arxiv_to_corpus_id_map, sc_metadata_corpus, tokenizer, passage_retrieval_models, config):
-    silence = True
-    context = apply_retrieval_context_window(context, tokenizer, config)
     references, _ = collect_retrieval_results(
         retrieved_k_results, retrieval_dataset, docs_arxiv_to_corpus_id_map, sc_metadata_corpus, silent=silence
     )
+    ranked_corpus_ids = [item["corpus_id"] for item in references]
+    return ranked_corpus_ids, references
+
+
+def rank_with_reasonir(context, passage_retrieval_models, index, lookup_indices, passages_data_dataset, docs_arxiv_to_corpus_id_map, config):
+    silence = True
+    with torch.no_grad():
+        cite_rep = passage_retrieval_models["retriever"].encode(
+            context,
+            instruction=retrieval_instruction_query
+        )
+    references, _ = retrieve_passages_with_reasonir(index, lookup_indices, cite_rep, passages_data_dataset, config, top_k=config["only_passage_retriever_topk"], silent=silence)
+    ranked_corpus_ids = [docs_arxiv_to_corpus_id_map[ref["arxiv_id"]] for ref in references]
+    return ranked_corpus_ids, references
+
+
+def rank_with_passage_retrieval_from_sc_rankings(context, references, docs_arxiv_to_corpus_id_map, tokenizer, passage_retrieval_models, config):
+    silence = True
     response_failure = False
     try:
         reranking_results = retrieve_relevant_passages(
-            context, references, passage_retrieval_models, config, silent=silence, save_passage_records=False
+            context, references, tokenizer, passage_retrieval_models, config, silent=silence, save_passage_records=False
         )
         ranked_corpus_ids = [docs_arxiv_to_corpus_id_map[l.split("_")[0]] for l in reranking_results["ranked_passage_labels"]]
         return ranked_corpus_ids, response_failure, reranking_results, None
     except InvalidLLMResponseError as err:
-        ranked_corpus_ids = [t[0] for t in retrieved_k_results]
         response_failure = True
+        ranked_corpus_ids = [ref["corpus_id"] for ref in references]
         return ranked_corpus_ids, response_failure, None, err.args
 

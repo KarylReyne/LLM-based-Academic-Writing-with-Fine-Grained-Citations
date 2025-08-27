@@ -1,7 +1,7 @@
 
 
 # retriever instructions (based on ReasonIR / BRIGHT)
-retrieval_instruction_query = lambda m: f"<|user|>\nGiven a query with a citation marked by '{m}', retrieve relevant passages that describe the cited topic\n<|embed|>\n"
+retrieval_instruction_query = "<|user|>\nGiven a query with a citation marked by <|cite_start|>, retrieve relevant passages that describe the cited topic\n<|embed|>\n"
 retrieval_instruction_document = f"<|embed|>\n"
 
 # outdated instructions

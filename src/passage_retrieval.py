@@ -27,7 +27,7 @@ def retrieval(
 
     query_emb = retriever.encode(
         generated_context, 
-        instruction=retrieval_instruction_query(CITATION_MASK_TOKEN), 
+        instruction=retrieval_instruction_query, 
         batch_size=1,
         max_length=QUERY_CONTEXT_SIZE
     )

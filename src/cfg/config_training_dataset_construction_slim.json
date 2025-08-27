@@ -22,5 +22,6 @@
     "rera_sc_permutation_mode": "stb",
     "rera_passages_per_call": 3,
     "reranker_temperature": 0.6,
-    "hnsw_efSearch": 32
+    "hnsw_efSearch": 32,
+    "judge_temperature": 0.6
 }
