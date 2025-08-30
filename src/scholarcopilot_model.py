@@ -182,7 +182,7 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset, arxiv_to_c
     for each in retrieved_k_results:
         curr_corpus_idx, distance = each
         try:
-            # sc corpus id -> docs corpus id
+            # sc corpus id -> arxiv id
             docs_corpus_idx = arxiv_to_corpus_id_map[sc_metadata_corpus[curr_corpus_idx]["paper_id"]]
         except KeyError:
             if not silent:

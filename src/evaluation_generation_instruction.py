@@ -55,7 +55,7 @@ judge_instruction = lambda t, a, gold, gen: f"""
     finally the numerical scores in the exact format specified above.
 """
 
-def judge_instruction2(t, a, gold, gen, shuffle=True):
+def judge_instruction2(t, a, gold, gen, shuffle=True, only_scores=False):
     indices = np.arange(5)
     if shuffle:
         random.shuffle(indices)
@@ -77,21 +77,20 @@ def judge_instruction2(t, a, gold, gen, shuffle=True):
     score_format = lambda l: f"""
         {l}: <score>/5"""
     
-    instruction_begin = """
+    instruction_begin = f"""
         You are a senior computer science scholar. Please evaluate the AI-generated content
         using the ground truth as reference.
-        Evaluate the following five dimensions by comparing the AI-generated content with the
-        ground truth:
-        [Detailed Evaluation]"""
+        {"Evaluate the following five dimensions by comparing the AI-generated content with the ground truth." if only_scores else "Evaluate the following five dimensions by comparing the AI-generated content with the ground truth:\n[Detailed Evaluation]"}"""
     
-    instruction_interm = """
+    instruction_interm = f"""
+        {"Based on your analysis, provide numerical scores in the following format:" if only_scores else """
         [End Evaluation]
         [Improvement Suggestions]
         1.
         2.
         3.
         [End Suggestions]
-        Based on your above analysis, provide numerical scores in the following format:
+        Based on your above analysis, provide numerical scores in the following format:"""}
         [Scores]"""
     
     instruction_end = f"""
@@ -106,15 +105,14 @@ def judge_instruction2(t, a, gold, gen, shuffle=True):
         {gold}
         AI Generated Content:
         {gen}
-        Remember to first provide detailed evaluation, then improvement suggestions, and
-        finally the numerical scores in the exact format specified above.
-        Make sure that you output the numerical scores last."""
+        {"Remember to provide the numerical scores in the exact format specified above.\nMake sure that you output the numerical scores last." if only_scores else "Remember to first provide detailed evaluation, then improvement suggestions, and finally the numerical scores in the exact format specified above.\nMake sure that you output the numerical scores last."}"""
 
     instruction = instruction_begin
     j = 1
-    for i in indices:
-        instruction += eval_tasks(j, eval_categories[i])
-        j += 1
+    if not only_scores:
+        for i in indices:
+            instruction += eval_tasks(j, eval_categories[i])
+            j += 1
     instruction += instruction_interm
     for i in indices:
         instruction += score_format(eval_categories[i])

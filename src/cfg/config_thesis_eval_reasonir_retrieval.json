@@ -28,5 +28,6 @@
     "rera_passages_per_call": 5,
     "reranker_temperature": 0.6,
     "hnsw_efSearch": 2,
-    "judge_temperature": 0.6
+    "judge_temperature": 0.6,
+    "judge_should_only_score": false
 }

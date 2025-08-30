@@ -32,6 +32,8 @@ if __name__ == "__main__":
     corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     sc_metadata_corpus = load_scholarcopilot_metadata_corpus(corpus_path)
 
+    # TODO: rebuild the retrieval index with only papers in sc and docs
+
     index_dir = "scholarcopilot_data/index"
     lookup_indices_dir = "scholarcopilot_data/lookup_indices.npy"
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
@@ -79,7 +81,7 @@ if __name__ == "__main__":
     sc_rankings = [] # len_dataset x recall_k
     sc_pr_rankings = [] # len_dataset x recall_k
     gold = [] # len_dataset x 1
-    max_samples = 1000
+    max_samples = 50
     samples = 0
     num_llm_fails = 0
     retrieval_fails = 0
@@ -111,7 +113,7 @@ if __name__ == "__main__":
             # print(context)
 
             sc_ranking, references = rank_with_scholarcopilot(
-                context, docs_retrieval_dataset, docs_corpus_id_map, sc_metadata_corpus, index, lookup_indices, model, tokenizer, config
+                context, docs_retrieval_dataset, docs_corpus_id_map, sc_metadata_corpus, index, lookup_indices, model, tokenizer, config, recall_k=RECALL_K
             )
             # print(sc_ranking)
 
@@ -158,7 +160,7 @@ if __name__ == "__main__":
             if samples >= max_samples:
                 break
 
-        except ScholarCopilotRetrievalError : 
+        except ScholarCopilotRetrievalError: 
             retrieval_fails += 1 # skip this sample entirely
 
     sc_recall = recall_at_k(sc_rankings, gold, k=RECALL_K)

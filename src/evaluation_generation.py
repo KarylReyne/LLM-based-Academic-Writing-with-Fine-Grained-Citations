@@ -1,6 +1,7 @@
 import sys
 import time
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
+import numpy as np
 
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, save_results
 from scholarcopilot_model import load_model, load_faiss_index
@@ -153,34 +154,34 @@ if __name__ == "__main__":
     )
 
     samples = 0
-    max_samples = 50
+    max_samples = 100
     retrieval_fails = 0
     llm_fails = 0
     catch_retrieval_fails = True
     total_num_retrievals = 0
-    generation_breakpoint = 30000
+    generation_breakpoint = 8000
     shuffle_instruction = True
     eps = 1e-6 # fail metrics
     scoring_records = []
-    total_sc_judge_scores_avg = {
-        "Content Relevance": 0,
-        "Logical Coherence": 0,
-        "Academic Rigor": 0,
-        "Background Completeness": 0,
-        "Innovation Statement": 0,
-        "total": 0
+    all_sc_judge_scores_avg = {
+        "Content Relevance": [],
+        "Logical Coherence": [],
+        "Academic Rigor": [],
+        "Background Completeness": [],
+        "Innovation Statement": [],
+        "total": []
     }
-    total_sc_pr_judge_scores_avg = {
-        "Content Relevance": 0,
-        "Logical Coherence": 0,
-        "Academic Rigor": 0,
-        "Background Completeness": 0,
-        "Innovation Statement": 0,
-        "total": 0
+    all_sc_pr_judge_scores_avg = {
+        "Content Relevance": [],
+        "Logical Coherence": [],
+        "Academic Rigor": [],
+        "Background Completeness": [],
+        "Innovation Statement": [],
+        "total": []
     }
 
     # override some model settings to match the settings defined in this file
-    config["custom_save_dir"] = f"out_thesis/eval_generation_judge_instruction2_{max_samples}"
+    config["custom_save_dir"] = f"out_thesis/eval_generation_judge_instruction2{"-only-scores" if config["judge_should_only_score"] else ""}_{generation_breakpoint}_{max_samples}"
 
     print()
     for i in eval_indices:
@@ -255,7 +256,7 @@ if __name__ == "__main__":
                 print(f"got {num_successful_scorings} scorings after {num_successful_scorings+scoring_fails} tries")
                 try:
                     chat = judge_tokenizer.apply_chat_template(
-                        [{"role": "user", "content": judge_instruction2(item["title"], item["abstract"], gold_generation, gen, shuffle=shuffle_instruction)}], 
+                        [{"role": "user", "content": judge_instruction2(item["title"], item["abstract"], gold_generation, gen, shuffle=shuffle_instruction, only_scores=config["judge_should_only_score"])}], 
                         tokenize=False, 
                         add_generation_prompt=True
                     )
@@ -294,17 +295,29 @@ if __name__ == "__main__":
             "sc_pr_scores": judge_scores_avg[1]
         })
 
-        for key in total_sc_judge_scores_avg:
-            total_sc_judge_scores_avg[key] += judge_scores_avg[0][key]
-            total_sc_pr_judge_scores_avg[key] += judge_scores_avg[1][key]
+        for key in all_sc_judge_scores_avg:
+            all_sc_judge_scores_avg[key].append(judge_scores_avg[0][key])
+            all_sc_pr_judge_scores_avg[key].append(judge_scores_avg[1][key])
         
         samples += 1
         if samples >= max_samples:
             break
-
-    for key in total_sc_judge_scores_avg:
-        total_sc_judge_scores_avg[key] /= max_samples
-        total_sc_pr_judge_scores_avg[key] /= max_samples
+    
+    sc_scores_stats = {}
+    sc_pr_scores_stats = {}
+    for key in all_sc_judge_scores_avg:
+        sc_scores_stats[key] = {
+            "mean": np.mean(all_sc_judge_scores_avg[key]),
+            "std": np.std(all_sc_judge_scores_avg[key]),
+            "var": np.var(all_sc_judge_scores_avg[key]),
+            "scores": all_sc_judge_scores_avg[key]
+        }
+        sc_pr_scores_stats[key] = {
+            "mean": np.mean(all_sc_pr_judge_scores_avg[key]),
+            "std": np.std(all_sc_pr_judge_scores_avg[key]),
+            "var": np.var(all_sc_pr_judge_scores_avg[key]),
+            "scores": all_sc_pr_judge_scores_avg[key]
+        }
         
     save_results({
         "eval_dataset": eval_dataset_path,
@@ -317,8 +330,8 @@ if __name__ == "__main__":
         "catch retrieval fails": catch_retrieval_fails,
         "PR LLM fails": llm_fails,
         "total fraction of fails": (retrieval_fails+llm_fails)/(total_num_retrievals+eps),
-        "SC scores average": total_sc_judge_scores_avg,
-        "SC PR scores average": total_sc_pr_judge_scores_avg,
+        "SC scores stats": sc_scores_stats,
+        "SC PR scores stats": sc_pr_scores_stats,
         "scoring records": scoring_records
     }, config, mode="eval_generation")
 

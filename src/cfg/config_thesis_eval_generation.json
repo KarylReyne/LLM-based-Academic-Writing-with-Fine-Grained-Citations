@@ -7,7 +7,7 @@
     "reranker_device": "cuda:2",
     "judge_device": "cuda:3",
     "m_reranking": 3,
-    "m_judging": 3,
+    "m_judging": 5,
     "final_score_delta": 0.5,
     "ranking_score_normalization": true,
     "passage_length": 512,
@@ -29,5 +29,6 @@
     "rera_passages_per_call": 5,
     "reranker_temperature": 0.6,
     "hnsw_efSearch": 32,
-    "judge_temperature": 0.6
+    "judge_temperature": 0.6,
+    "judge_should_only_score": false
 }

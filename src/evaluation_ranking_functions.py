@@ -2,11 +2,11 @@ import torch
 
 from passage_retrieval_interface import retrieve_relevant_passages, retrieve_passages_with_reasonir
 from passage_reranking import InvalidLLMResponseError
-from scholarcopilot_model import collect_retrieval_results, single_step_retrieval
+from scholarcopilot_model import collect_retrieval_results, single_step_retrieval, ScholarCopilotRetrievalError
 from passage_retrieval_instructions import retrieval_instruction_query
 
 
-def rank_with_scholarcopilot(context, retrieval_dataset, docs_arxiv_to_corpus_id_map, sc_metadata_corpus, index, lookup_indices, model, tokenizer, config):
+def rank_with_scholarcopilot(context, retrieval_dataset, docs_arxiv_to_corpus_id_map, sc_metadata_corpus, index, lookup_indices, model, tokenizer, config, recall_k=None):
     silence = True
     # if config["enable_query_context_window"]:
     #     context = apply_retrieval_context_window(context, tokenizer, config)
@@ -15,6 +15,9 @@ def rank_with_scholarcopilot(context, retrieval_dataset, docs_arxiv_to_corpus_id
         retrieved_k_results, retrieval_dataset, docs_arxiv_to_corpus_id_map, sc_metadata_corpus, silent=silence
     )
     ranked_corpus_ids = [item["corpus_id"] for item in references]
+    if recall_k is not None:
+        if len(ranked_corpus_ids) < recall_k:
+            raise ScholarCopilotRetrievalError
     return ranked_corpus_ids, references
 
 

@@ -39,6 +39,7 @@
         "reranker_temperature": 0.6,
         "hnsw_efSearch": 32,
         "judge_temperature": 0.6,
+        "judge_should_only_score": false,
         "custom_save_dir": "out_thesis/eval_generation_judge_instruction2_10"
     },
     "instructions": {
