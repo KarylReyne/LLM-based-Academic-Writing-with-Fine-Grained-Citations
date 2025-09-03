@@ -1,25 +1,29 @@
 \chapter{Introduction}\label{introduction}
-TODO
+TODO % intro to this section
+
+% why bother with citations
+citations build trust \cite{do2024facilitatinghumanllmcollaborationfactuality}
+% hallucinations
+% https://arxiv.org/abs/2401.01313
+% https://arxiv.org/abs/2311.05232
+% https://aclanthology.org/2020.acl-main.173/
+
+
+% special challenges of scientific text (short)
 
 % Introduction RAG
 \section{Retrieval-Augmented Generation}\label{rag}
 % traditional rag
 Retrieval-Augmented Generation (RAG, \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}) models are designed to generate text that is grounded in real-world factual knowlege. They have been widely adopted for knowledge-intensive NLP tasks \cite{shao2025reasonirtrainingretrieversreasoning} such as long-form question answering \cite{xia2025groundsentenceimprovingretrievalaugmented}, scientific question answering \cite{lála2023paperqaretrievalaugmentedgenerativeagent} and question synthesis \cite{xu2024kiwidatasetknowledgeintensivewriting}, generation with sentence-level citations \cite{zhang2024longciteenablingllmsgenerate, xia2025groundsentenceimprovingretrievalaugmented} and academic text generation \cite{asai2024openscholarsynthesizingscientificliterature, wang2025scholarcopilottraininglargelanguage}. RAG models usually consist of a generator, a pre-trained sequence-to-sequence (seq2seq) model (e.g. a Transformer-based \cite{vaswani2017attentionneed} decoder, see \refsec{related-work}), and a retriever with access to a retrieval corpus, which may be implemented as a dense vector index (e.g. a HNSW \cite{malkov2016efficientrobustapproximatenearest} index, see \refsec{hnsw}) \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. Thus they combine pre-trained paramentric memory with non-paramentric (retrieval-based) memory \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. 
 
-The RAG architecture initially proposed by \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}  consists of a query encoder $q$, a document index $d$ and a generator $p_\theta$ (see \reffig{fig:rag_architecture}) TODO
+The RAG architecture \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp} is comprised of a retriever $p_\eta$ consisting of a query encoder $q$ and a retrieval corpus $d$, and a generator $p_\theta$ (see \reffig{fig:rag_architecture}). Given a query $x$, the retriever $p_\eta(z|x)$ (with parameters $\eta$) computes a distribution over the text documents $z$ in the retrieval corpus $d$ according to $x$ \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. This distribution is used to obtain the top-k most relevant documents with respect to the query. The generator $p_\theta(y_i|x,z,y_{1:i-1})$, parametrized by $\theta$, then predicts each next token $y_i$ based on the previous tokens $y_{1:i-1}$, the given query $x$ and a document $z$ from the top-k retrieved documents (according to $p_\eta$) \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. Lewis et al. base their retriever on the \mono{Dense Passage Retriever} \cite{karpukhin2020densepassageretrievalopendomain} and use a pre-trained \mono{BART-large} \cite{lewis2019bartdenoisingsequencetosequencepretraining} as the generator. 
 
 \begin{figure}[t]
     \includegraphics[width=\textwidth]{../images/rag_architecture.png}
-    \caption{Overview of the RAG architecture \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. For finding the top-k documents $z_i$, the authors used Maximum Inner Product Search (MIPS).}\label{fig:rag_architecture}
+    \caption{Overview of the RAG architecture initially proposed by \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. For finding the top-k documents $Z'$, the authors used Maximum Inner Product Search (MIPS).}\label{fig:rag_architecture}
 \end{figure}
 
-By using an external retrieval corpus, the knowledge RAG models use to inform their generation can directly be inspected and interpreted \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. Their TODO
-
-% special challenges of scientific text (short)
-
-% why bother with citations
-citations build trust \cite{do2024facilitatinghumanllmcollaborationfactuality}
-% hallucinations
 % interpretability
 % provenance
-% ...
+By using an external retrieval corpus, the knowledge RAG models use to inform their generation can directly be inspected and interpreted \cite{lewis2021retrievalaugmentedgenerationknowledgeintensivenlp}. Their TODO
+
