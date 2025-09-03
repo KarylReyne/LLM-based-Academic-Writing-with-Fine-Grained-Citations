@@ -8,6 +8,8 @@ import glob
 import re
 import time
 
+from passage_retrieval_instructions import retrieval_instruction_query
+
 
 def retrieve_reference(index, lookup_indices, cite_start_hidden_state, config, top_k=5, silent=False):
     start = time.time()
@@ -40,13 +42,13 @@ def retrieve_reference(index, lookup_indices, cite_start_hidden_state, config, t
     return list(zip(retrieved_corpus_indices, distances[0]))
 
 
-def single_complete_step(model, tokenizer, device, input_text, generation_breakpoint=15000, silent=False):
+def single_complete_step(model, tokenizer, passage_retrieval_models, config, input_text, generation_breakpoint=15000, silent=False):
     if not silent:
         print("completing sentence ...\n")
     
     max_new_tokens = 4096
     try: # terminate early if process runs out of memory
-        inputs = tokenizer(input_text, return_tensors="pt").to(device)
+        inputs = tokenizer(input_text, return_tensors="pt").to(config["scholarcopilot_device"])
 
         if len(inputs.input_ids[0]) > generation_breakpoint:
             return input_text, None
@@ -70,15 +72,24 @@ def single_complete_step(model, tokenizer, device, input_text, generation_breakp
         
         generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
 
-        new_input = tokenizer(generated_text, return_tensors="pt").to(device)
-        with torch.no_grad(): # generates cite token representation
-            new_output = model(
-                new_input.input_ids,
-                attention_mask=new_input.attention_mask,
-                output_hidden_states=True,
-                return_dict=True
-            )
-        cite_rep = new_output.hidden_states[-1][:, -1, :]
+        if config["use_only_passage_retriever"]: # reasonir instead of sc retrieval
+            with torch.no_grad():
+                cite_rep = passage_retrieval_models["retriever"].encode(
+                    generated_text,
+                    instruction=retrieval_instruction_query,
+                    # batch_size=config["retr_batch_size"],
+                    # max_length=config["passage_length"]
+                )
+        else: # sc retrieval
+            new_input = tokenizer(generated_text, return_tensors="pt").to(config["scholarcopilot_device"])
+            with torch.no_grad(): # generates cite token representation
+                new_output = model(
+                    new_input.input_ids,
+                    attention_mask=new_input.attention_mask,
+                    output_hidden_states=True,
+                    return_dict=True
+                )
+            cite_rep = new_output.hidden_states[-1][:, -1, :]
     except torch.OutOfMemoryError:
         if not silent:
             print(f"CUDA out of memory. Terminating generation early at length {len(inputs.input_ids[0])}/{generation_breakpoint}")
@@ -95,13 +106,16 @@ def single_complete_step(model, tokenizer, device, input_text, generation_breakp
 def single_step_retrieval(text, index, lookup_indices, model, tokenizer, config, silent=False):
     new_input_text = text + " <|cite_start|>"
     new_input = tokenizer(new_input_text, return_tensors="pt").to(config["scholarcopilot_device"])
-    with torch.no_grad():
-        new_output = model(
-            new_input.input_ids,
-            attention_mask=new_input.attention_mask,
-            output_hidden_states=True,
-            return_dict=True
-        )
+    try:
+        with torch.no_grad():
+            new_output = model(
+                new_input.input_ids,
+                attention_mask=new_input.attention_mask,
+                output_hidden_states=True,
+                return_dict=True
+            )
+    except torch.OutOfMemoryError:
+        raise ScholarCopilotRetrievalError("raised ScholarCopilotRetrievalError due to running out of memory during forward pass")
     cite_rep = new_output.hidden_states[-1][:, -1, :]
     retrieved_k_results = retrieve_reference(index, lookup_indices, cite_rep, config, top_k=config["sc_retriever_topk"], silent=silent)
 
@@ -168,7 +182,7 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset, arxiv_to_c
     for each in retrieved_k_results:
         curr_corpus_idx, distance = each
         try:
-            # sc corpus id -> docs corpus id
+            # sc corpus id -> arxiv id
             docs_corpus_idx = arxiv_to_corpus_id_map[sc_metadata_corpus[curr_corpus_idx]["paper_id"]]
         except KeyError:
             if not silent:
@@ -307,7 +321,11 @@ def load_model(model_path, config):
     model = AutoModelForCausalLM.from_pretrained(model_path, config=model_config)
     model.to(config["scholarcopilot_device"])
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained( # this is also used to apply the query context window for PR
+        model_path,
+        padding_side="left",
+        truncation_side="left"
+    )
     tokenizer.add_tokens(config["special_tokens"])
 
     model.resize_token_embeddings(len(tokenizer))

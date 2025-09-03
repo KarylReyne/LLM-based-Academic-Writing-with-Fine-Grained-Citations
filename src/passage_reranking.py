@@ -163,6 +163,8 @@ def reranking_and_scoring(
     
     if NORMALIZE_SCORES: # min-max normalization
         scores = [float(reranked_documents[section_id]["reranking score"]) for section_id in reranked_documents]
+        if len(scores) < 1:
+            raise InvalidLLMResponseError(f"something went wrong during score normalization.\n\nreranked_documents:{reranked_documents}")
         scores = minmax_normalization(scores)
         for idx, section_id in enumerate(reranked_documents): # iterates doc records
             reranked_documents[section_id]["reranking score"] = scores[idx]
