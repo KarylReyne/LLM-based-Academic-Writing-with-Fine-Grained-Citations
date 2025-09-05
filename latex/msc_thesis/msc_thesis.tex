@@ -19,6 +19,11 @@
 \newcommand{\refsec}[1]{section \ref{#1}}
 \newcommand{\reffig}[1]{\figurename{ \ref{#1}}}
 \newcommand{\refeq}[1]{Eq. \ref{#1}}
+\newcommand{\refalg}[1]{Algo. \ref{#1}}
+
+\definecolor{commentgreen}{rgb}{0.5,0.5,0}
+\newcommand{\note}[1]{\textcolor{commentgreen}{// #1}\\}% colored c-style comment
+\newcommand{\mathnote}[1]{\textcolor{commentgreen}{\text{// #1}}}% for math env
 \newcommand{\D}{\text{d}}% leibniz notation d for derivatives/integrals
 \newcommand{\lp}[1]{\left({#1}\right)}% large parentheses, e.g. for vectors or fractions
 \newcommand{\mono}[1]{\texttt{#1}}% monospace text
