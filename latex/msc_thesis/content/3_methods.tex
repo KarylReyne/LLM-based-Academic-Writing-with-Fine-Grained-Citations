@@ -111,7 +111,7 @@ How the PR module is integrated into ScholarCopilot is shown in \refalg{alg:scho
         $Y^\mono{gen}_{1:i}\leftarrow Y^\mono{gen}_{1:i-1}y_i$\\
         \Return{$Y^\mono{in}$, $Y^\mono{gen}_{1:i}$}
     }
-    \caption{Overview of one generation step of ScholarCopilot with Passage Retrieval.}\label{alg:scholarcopilot-pr}
+    \caption{Overview of one generation step of ScholarCopilot with Passage Retrieval. getDocument$()$ denotes a function that returns the fulltext paper corresponding to $z_j$}\label{alg:scholarcopilot-pr}
 \end{algorithm}
 
 % Batched Self-Consistency
