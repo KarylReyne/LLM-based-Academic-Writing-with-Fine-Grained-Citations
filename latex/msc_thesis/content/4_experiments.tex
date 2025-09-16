@@ -1,11 +1,17 @@
 \chapter{Experiments}\label{experiments}
-TODO
 
-\section{Retrieval Evaluation}\label{retrieval-evaluation}
+\section{Evaluation Methodology}
+The main focus of this thesis is it to determine how the use of the passage retrieval module affects the retrieval accuracy and generation quality of ScholarCopilot. ScholarCopilot retains its original backbone model \mono{Qwen2.5-7B} \cite{an2024qwen2}. Since the retriever of the passage retrieval module is implemented with Batched Self-Consistency, it is required to follow multiple permutations of the same instruction during inference reliably and consistently (see \cite{korikov2025batched}). Instruction tuned models, that is, LLMs that are fine-tuned on (\mono{instruction}, \mono{desired-output}) pairs, are more successful at following instructions closely rather than just minimizing the next token prediction error \cite{shengyu2025instruction}. To make use of this, the PR module uses the instruction-tuned variant of the Qwen2.5 model, \mono{Qwen2.5-7B-Instruct}, as the passage retriever. Even though it has been shown that instruction tuned models may not fully utilize given instructions and are instead just good at learning the specified output format \cite{kung2023followInstructions}, this ability alone is valuable enough for the automated parsing of an LLMs' response (especially when using Batched Self-Consistency which greatly increases the number of responses that need to be parsed) to justify using an instruction tuned model. 
+
 TODO
 % parameters scale to recall k
 
-\section{Generation Evaluation}\label{generation-evaluation}
+\section{Single-Step Retrieval}\label{retrieval-evaluation}
+With ScholarCopilot as baseline, I evaluated the impact of using passage for multiple generation objectives ...
+
+TODO
+
+\section{Generation Quality}\label{generation-evaluation}
 TODO
 
 % \section{Additional Experiments}\label{additional-experiments}
