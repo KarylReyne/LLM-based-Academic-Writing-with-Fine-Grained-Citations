@@ -1,6 +1,13 @@
 \chapter{Methods}\label{methods}
 TODO % intro to this section
 
+\section{Retrieval-Augmented Generation}\label{rag}
+The RAG architecture \cite{lewis2020retrieval} is comprised of a retriever $p_\eta$ consisting of a query encoder $q$ and a retrieval corpus $d$, and a generator $p_\theta$ (see \reffig{fig:rag_architecture}). Given a query $x$, the retriever $p_\eta(z|x)$ (with parameters $\eta$) computes a distribution over the text documents $z$ in the retrieval corpus $d$ according to $x$ \cite{lewis2020retrieval}. This distribution is used to obtain the top-k most relevant documents with respect to the query. The generator $p_\theta(y_i|x,z,y_{1:i-1})$, parametrized by $\theta$, then predicts each next token $y_i$ based on the previous tokens $y_{1:i-1}$, the given query $x$ and a document $z$ from the top-k retrieved documents (according to $p_\eta$) \cite{lewis2020retrieval}. Lewis et al. base their retriever on the \mono{Dense Passage Retriever} \cite{karpukhin2020dense} and use a pre-trained \mono{BART-large} \cite{lewis2019bart} as the generator. 
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{../images/rag_architecture.png}
+    \caption{Overview of the RAG architecture initially proposed by \cite{lewis2020retrieval}. For finding the top-k documents $Z'$, the authors used Maximum Inner Product Search (MIPS).}\label{fig:rag_architecture}
+\end{figure}
+
 % construction of the passage retrieval corpus
 % dataset construction for retr + gen evaluation
 \section{Dataset}\label{dataset}
