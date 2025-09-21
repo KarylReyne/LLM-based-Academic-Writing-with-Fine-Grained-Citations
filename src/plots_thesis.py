@@ -1,3 +1,5 @@
+from tueplots.constants.color import rgb, palettes
+import matplotlib.pyplot as plt
 
 
 def load_results(path):
@@ -5,6 +7,14 @@ def load_results(path):
     with open(path, 'r', encoding='utf-8') as f:
         results = json.load(f)
     return results
+
+
+def get_next_tue_plot_color(idx, mod=1.0):
+    """continuous tue_plot color selector"""
+    try:
+        return palettes.tue_plot[idx]*mod
+    except IndexError:
+        return get_next_tue_plot_color(idx-len(palettes.tue_plot), mod*1.2)
 
 
 if __name__ == "__main__":
@@ -37,6 +47,10 @@ if __name__ == "__main__":
     # intro+relwork, methods, experiments, conclusion
     sc_reasonir_withoutAbs = [0.139, 0.158, 0.316, 0.133]
     pr_reasonir_withoutAbs = [0.075, 0.093, 0.195, 0.08]
+
+    # retrival plots
+    fig, ax = plt.subplots()
+    
 
     # generation
     
