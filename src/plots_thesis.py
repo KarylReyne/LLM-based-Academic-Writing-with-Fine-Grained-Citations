@@ -66,7 +66,7 @@ if __name__ == "__main__":
     MS = 2
     LW = 1.3
     GRID_LW = 0.5
-    AXES_ASPECT = 9
+    AXES_ASPECT = 10
 
     recall_labels = [f"Recall@{k}" for k in [10, 5, 1]]
     for replacement_strategy in plot_data_container.keys():
