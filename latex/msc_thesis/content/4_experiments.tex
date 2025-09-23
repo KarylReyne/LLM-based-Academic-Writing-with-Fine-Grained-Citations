@@ -7,12 +7,9 @@ The main focus of this thesis is it to determine how the use of the passage retr
 TODO
 
 \section{Single-Step Retrieval}\label{retrieval-evaluation}
-With ScholarCopilot as baseline, I evaluated the impact of using the PR module on the retrieval performance for a variety of retrieval contexts. To this end, I introduce the \emph{single-step retrieval} task which aims to assess the models accuracy when resolving a single \mono{[RET]} token during generation. This task closely follows the evaluation methodology used by \cite{wang2025scholarcopilot}. Single-step retrieval is evaluated using the Recall@$k$ metric, which is given as the fraction of cases where the ground truth document appears in the top-$k$ retrieved documents \cite{wang2025scholarcopilot}. As outlined in \refsec{dataset}, the model is given the left-hand context of a citation drawn from an existing paper, together with the cited document as the ground truth. A retrieval token is appended to this context before the resulting sequence is passed to ScholarCopilot, causing the model to compute a representation of the \mono{[RET]} token based on the given context. This representation is then used to compute a distribution over the ScholarCopilot retrieval corpus that measures the relevance of each document in the corpus to the given context. When evaluating standart ScholarCopilot, the $k$ most relevant documents according to this distribution are compared to the ground truth, otherwise the top-$k_{SC}$ most relevant documents are passed to the passage retrieval module (for the reported results I use $k_{SC}=2k$, see also \refsec{hyperparameters}). For each of the top-$k$ ranked passages the PR module returns the document from which each passage was taken. These $k$ documents are then compared to the provided ground truth. 
+With ScholarCopilot as baseline, I evaluated the impact of using the PR module on the retrieval performance for a variety of retrieval contexts. To this end, I introduce the \emph{single-step retrieval} task which aims to assess the models accuracy when resolving a single \mono{[RET]} token during generation. This task closely follows the evaluation methodology used by \cite{wang2025scholarcopilot}. For each of the section groups (\mono{IntroductionAndRelatedWork}, \mono{Methods}, \mono{Experiments}, and \mono{Conclusion}), $1$k randomly selected samples are used for the evaluation. Single-step retrieval is evaluated using the Recall@$k$ metric, which is given as the fraction of cases where the ground truth document appears in the top-$k$ retrieved documents \cite{wang2025scholarcopilot}. As outlined in \refsec{dataset}, the model is given the left-hand context of a citation drawn from an existing paper, together with the cited document as the ground truth. A retrieval token is appended to this context before the resulting sequence is passed to ScholarCopilot, causing the model to compute a representation of the \mono{[RET]} token based on the given context. This representation is then used to compute a distribution over the ScholarCopilot retrieval corpus that measures the relevance of each document in the corpus to the given context. When evaluating standart ScholarCopilot, the $k$ most relevant documents according to this distribution are compared to the ground truth, otherwise the top-$k_{SC}$ most relevant documents are passed to the passage retrieval module (for the reported results I use $k_{SC}=2k$, see also \refsec{hyperparameters}). For each of the top-$k$ ranked passages the PR module returns the document from which each passage was taken. These $k$ documents are then compared to the provided ground truth. 
 
-The evaluation is performed on two datasets that each use different strategies for replacing other citations that appear in the citing context. Other citations are either (1) masked using a \mono{[MASK]} token, this is also how \cite{wang2025scholarcopilot} handle citations, or (2) replaced with the abstract of the cited paper, which is done to imitate the generated context the retriever would be given during inference when the model encounters a \mono{[RET]} token. Following the setup in \cite{wang2025scholarcopilot}, the given citing context is not truncated when passed to ScholarCopilot.\footnote{\cite{wang2025scholarcopilot} only use the last sentence of the context when evaluating their baseline models (\mono{BM25} and \mono{E5-Mistral-7B-Instruct}) but use the full context when evaluating ScholarCopilot.} I found that passing the entire context to the PR module reduces performance, thus only the last $w$ tokens of the citing context are used when the PR retriever is prompted to rank a given set of passages.
-
-% TODO how large are the datasets, are they ordered, how many samples were drawn for eval?
-TODO
+Additionally, I evaluated two different strategies for replacing other citations that appear in the citing context. Other citations are either (1) masked using a \mono{[MASK]} token, this is also how \cite{wang2025scholarcopilot} handle citations, or (2) replaced with the abstract of the cited paper, which is done to imitate the generated context the retriever would be given during inference when the model encounters a \mono{[RET]} token. Following the setup in \cite{wang2025scholarcopilot}, the given citing context is not truncated when passed to ScholarCopilot.\footnote{\cite{wang2025scholarcopilot} only use the last sentence of the context when evaluating their baseline models (\mono{BM25} and \mono{E5-Mistral-7B-Instruct}) but use the full context when evaluating ScholarCopilot.} However, I found that passing the entire context to the PR module reduces performance, thus only the last $w$ tokens of the citing context are used when the PR retriever is prompted to rank a given set of passages.
 
 \begin{figure}[t]
     \includegraphics[width=\textwidth, trim={0 1.5cm 0 1.5cm}, clip]{../images/plot_retrieval_masked.pdf}
@@ -24,7 +21,35 @@ TODO
     \caption{Comparison of single-step retrieval performance between ScholarCopilot (SC) with and without passage retrieval (PR) on context with abstracts (this resembles generated context more closely).}\label{fig:retrieval_evaluation_abstracts}
 \end{figure}
 
-The results of the single-step retrieval evaluation are visualized in \reffig{fig:retrieval_evaluation_masked} for context with masked citations and \reffig{fig:retrieval_evaluation_abstracts} for context with inserted abstracts. ScholarCopilot performs consistently better without the passage retrieval module (with an average increase of TODO). 
+The results of the single-step retrieval evaluation are visualized in \reffig{fig:retrieval_evaluation_masked} for context with masked citations (\mono{masked}) and \reffig{fig:retrieval_evaluation_abstracts} for context with inserted abstracts (\mono{abstracts}). Using the passage retrieval module consistently worsens the performance of ScholarCopilot (on average $-0.035\%$/$-0.027\%$ recall on the \mono{masked}/\mono{abstracts} datasets). 
+
+\begin{table}[t]
+    \begin{center}
+        \begin{tabular}{llccccc}
+            \textbf{Dataset} & \textbf{Metric} & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} & $\mu$ \\
+            \hline
+            \hline
+            \mono{masked} & Recall@$10$ & $0.91$ & $0.97$ & $0.98$ & $0.91$ & $0.943$\\
+            \hline
+            \mono{masked} & Recall@$5$ & $0.94$ & $0.94$ & $0.96$ & $0.94$ & $0.945$\\
+            \hline
+            \mono{masked} & Recall@$1$ & \textbf{0.79} & \textbf{0.89} & \textbf{0.88} & $0.88$ & \textbf{0.86}\\
+            \hline
+            \mono{abstracts} & Recall@$10$ & $0.9$ & $0.93$ & $0.96$ & $0.95$ & $0.935$\\
+            \hline
+            \mono{abstracts} & Recall@$5$ & $0.86$ & $0.97$ & $0.95$ & $0.89$ & $0.918$\\
+            \hline
+            \mono{abstracts} & Recall@$1$ & $0.87$ & $0.87$ & $0.93$ & \textbf{0.84} & \textbf{0.878}\\
+            \hline
+        \end{tabular}
+    \end{center}
+    \caption{Ratio of correct retrievals by the PR module given previously correct retrieval by ScholarCopilot.}
+    \label{tab:successful_retrieval_overlap}
+\end{table}
+
+% successful retrieval overlap
+% masked vs with abstracts (with abstracts is closer to the real performance as SC retrieval never receives normal papers as input -> eval results with masking are slightly misleading!)
+% 
 
 \section{Generation Quality}\label{generation-evaluation}
 TODO
