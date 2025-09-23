@@ -21,7 +21,13 @@ Additionally, I evaluated two different strategies for replacing other citations
     \caption{Comparison of single-step retrieval performance between ScholarCopilot (SC) with and without passage retrieval (PR) on context with abstracts (this resembles generated context more closely).}\label{fig:retrieval_evaluation_abstracts}
 \end{figure}
 
-The results of the single-step retrieval evaluation are visualized in \reffig{fig:retrieval_evaluation_masked} for context with masked citations (\mono{masked}) and \reffig{fig:retrieval_evaluation_abstracts} for context with inserted abstracts (\mono{abstracts}). Using the passage retrieval module consistently worsens the performance of ScholarCopilot (on average $-0.035\%$/$-0.027\%$ recall on the \mono{masked}/\mono{abstracts} datasets). 
+The results of the single-step retrieval evaluation are visualized in \reffig{fig:retrieval_evaluation_masked} for context with masked citations (\mono{masked}) and \reffig{fig:retrieval_evaluation_abstracts} for context with inserted abstracts (\mono{abstracts}). Using the passage retrieval module consistently worsens the performance of ScholarCopilot (on average $-0.035\%$/$-0.027\%$ recall on the \mono{masked}/\mono{abstracts} datasets). What is somewhat surprising however, is the fact that ScholarCopilot does not yield the best performance on contexts from Introduction and Related Work sections (which is what it was trained on). Instead ...
+
+TODO % qualitative analysis experiment section citations
+
+% masked vs with abstracts (with abstracts is closer to the real performance as SC retrieval never receives normal papers as input -> eval results with masking are slightly misleading!)
+
+As shown in \reftab{tab:successful_retrieval_overlap}, the PR module sometimes retrieves the correct document despite ScholarCopilot being previously incorrect, especially for low $k$ (when using Recall@$k$ as measure for correctness). This suggests that the PR module has the capacity to further improve citation retrieval compared to only utilizing ScholarCopilot. The fact that the performance improvement is more prevalent for small $k$ (and consequently small $k_{SC}$ which directly influences the number of candidate passages) also indicates that the PR module may yield better performance if given fewer passages. Furthermore, the PR module tends to produce very confident relevance judgements with low variance for the top most relevant passages, this also suggests that the model struggles to differentiate between similar passages.  
 
 \begin{table}[t]
     \begin{center}
@@ -33,22 +39,21 @@ The results of the single-step retrieval evaluation are visualized in \reffig{fi
             \hline
             \mono{masked} & Recall@$5$ & $0.94$ & $0.94$ & $0.96$ & $0.94$ & $0.945$\\
             \hline
-            \mono{masked} & Recall@$1$ & \textbf{0.79} & \textbf{0.89} & \textbf{0.88} & $0.88$ & \textbf{0.86}\\
+            \mono{masked} & Recall@$1$ & \textbf{0.79} & 0.89 & \textbf{0.88} & $0.88$ & \textbf{0.86}\\
             \hline
             \mono{abstracts} & Recall@$10$ & $0.9$ & $0.93$ & $0.96$ & $0.95$ & $0.935$\\
             \hline
             \mono{abstracts} & Recall@$5$ & $0.86$ & $0.97$ & $0.95$ & $0.89$ & $0.918$\\
             \hline
-            \mono{abstracts} & Recall@$1$ & $0.87$ & $0.87$ & $0.93$ & \textbf{0.84} & \textbf{0.878}\\
+            \mono{abstracts} & Recall@$1$ & $0.87$ & \textbf{0.87} & $0.93$ & \textbf{0.84} & $0.878$\\
             \hline
         \end{tabular}
     \end{center}
-    \caption{Ratio of correct retrievals by the PR module given previously correct retrieval by ScholarCopilot.}
+    \caption{Fraction of correct retrievals by ScholarCopilot given correct retrieval by the PR module (such that the value would be $1$ if SC was correct every time the PR module was correct and $0$ if SC was incorrect whenever the PR module was correct). A retrieval result is considered correct, if it satisfies the given metric.}
     \label{tab:successful_retrieval_overlap}
 \end{table}
 
 % successful retrieval overlap
-% masked vs with abstracts (with abstracts is closer to the real performance as SC retrieval never receives normal papers as input -> eval results with masking are slightly misleading!)
 % 
 
 \section{Generation Quality}\label{generation-evaluation}
