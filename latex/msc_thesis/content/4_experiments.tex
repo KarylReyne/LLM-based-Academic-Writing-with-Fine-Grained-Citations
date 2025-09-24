@@ -11,6 +11,10 @@ With ScholarCopilot as baseline, I evaluated the impact of using the PR module o
 
 Additionally, I evaluated two different strategies for replacing other citations that appear in the citing context. Other citations are either (1) masked using a \mono{[MASK]} token, this is also how \cite{wang2025scholarcopilot} handle citations, or (2) replaced with the abstract of the cited paper, which is done to imitate the generated context the retriever would be given during inference when the model encounters a \mono{[RET]} token. Following the setup in \cite{wang2025scholarcopilot}, the given citing context is not truncated when passed to ScholarCopilot.\footnote{\cite{wang2025scholarcopilot} only use the last sentence of the context when evaluating their baseline models (\mono{BM25} and \mono{E5-Mistral-7B-Instruct}) but use the full context when evaluating ScholarCopilot.} However, I found that passing the entire context to the PR module reduces performance, thus only the last $w$ tokens of the citing context are used when the PR retriever is prompted to rank a given set of passages.
 
+% masked vs with abstracts (with abstracts is closer to the real performance as SC retrieval never receives normal papers as input -> eval results with masking are slightly misleading!)
+
+\textbf{Citation Recall.} The recall results of the single-step retrieval evaluation are visualized in \reffig{fig:retrieval_evaluation_masked} for context with masked citations (\mono{masked}) and \reffig{fig:retrieval_evaluation_abstracts} for context with inserted abstracts (\mono{abstracts}). Using the passage retrieval module consistently worsens the performance of ScholarCopilot (on average $-0.035\%$/$-0.027\%$ recall on the \mono{masked}/\mono{abstracts} datasets). However, as shown in \reftab{tab:cumulative_recall_loss}, when using the PR module the accumulated loss in recall from $k=10$ to $k=1$ is much lower compared to only using ScholarCopilot. 
+
 \begin{figure}[t]
     \includegraphics[width=\textwidth, trim={0 1.5cm 0 1.5cm}, clip]{../images/plot_retrieval_masked.pdf}
     \caption{Comparison of single-step retrieval performance between ScholarCopilot (SC) with and without passage retrieval (PR) on context with masked citations. \mono{intro+relwork} denotes context drawn from Introduction and Related Work sections.}\label{fig:retrieval_evaluation_masked}
@@ -21,13 +25,47 @@ Additionally, I evaluated two different strategies for replacing other citations
     \caption{Comparison of single-step retrieval performance between ScholarCopilot (SC) with and without passage retrieval (PR) on context with abstracts (this resembles generated context more closely).}\label{fig:retrieval_evaluation_abstracts}
 \end{figure}
 
-The results of the single-step retrieval evaluation are visualized in \reffig{fig:retrieval_evaluation_masked} for context with masked citations (\mono{masked}) and \reffig{fig:retrieval_evaluation_abstracts} for context with inserted abstracts (\mono{abstracts}). Using the passage retrieval module consistently worsens the performance of ScholarCopilot (on average $-0.035\%$/$-0.027\%$ recall on the \mono{masked}/\mono{abstracts} datasets). What is somewhat surprising however, is the fact that ScholarCopilot does not yield the best performance on contexts from Introduction and Related Work sections (which is what it was trained on). Instead ...
+\begin{table}[t]
+    \begin{center}
+        \begin{tabular}{llccccc}
+            \textbf{Model} & \textbf{Dataset} & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} & $\Sigma$ \\
+            \hline
+            \hline
+            SC & \mono{masked} & $-0.06$ & $-0.04$ & $-0.09$ & $-0.07$ & $-0.26$\\
+            \hline
+            SC & \mono{abstracts} & $-0.05$ & $-0.06$ & $-0.07$ & $-0.06$ & $-0.24$\\
+            \hline
+            SC+PR & \mono{masked} & $-0.03$ & $-0.03$ & $-0.05$ & $-0.05$ & \textbf{-0.16}\\
+            \hline
+            SC+PR & \mono{abstracts} & $-0.04$ & $-0.04$ & $-0.03$ & $-0.04$ & \textbf{-0.15}\\
+            \hline
+        \end{tabular}
+    \end{center}
+    \caption{Cumulative Recall@$k$ difference from $k=10$ over $k=5$ to $k=1$.}
+    \label{tab:cumulative_recall_loss}
+\end{table}
+
+\textbf{Reproducability.} ScholarCopilot alone is unable to reproduce the retrieval performance reported in \cite{wang2025scholarcopilot} (which is $64.8\%$/$40.1\%$ for Recall@$10$ and Recall@$1$ respectively). The authors do not explicitly state this in their paper but it seems they only used Introduction and Related Work sections to obtain the citing contexts for their evaluation dataset.\footnote{The file \mono{scholar\_copilot\_eval\_data\_1k.json} which is downloaded from \url{https://huggingface.co/datasets/ubowang/ScholarCopilot-TrainingData} when executing the official ScholarCopilot implementation -- and I assume is what they used for their evaluation -- only includes Introduction and Related Work sections.} Thus, using the \mono{IntroductionAndRelatedWork} dataset with \mono{masked} citations (see \reffig{fig:retrieval_evaluation_masked} on the left) as the evaluation setup replicates their methodology (see \cite[4.2]{wang2025scholarcopilot}) and should yield a performance similar to what is stated in \cite{wang2025scholarcopilot}. A possible cause for the lower recall on my dataset may be that ScholarCopilot overfits to their dataset. 
+
+\textbf{Qualitative Analysis.} Surprisingly, ScholarCopilot does not yield the best performance on contexts from Introduction and Related Work sections (which is what it was trained on) but instead shows significantly better performance on Experiment sections. This is possibly due to the fact that Experiments sections often include citations in a form similar to for example "Documents are tokenized with the same byte-pair encoding as GPT-2 (Radford et al., 2019)."\footnote{This example is taken from \cite{lewis2019bart}} where the citation is directly preceded by the name of a model, specific algorithm or otherwise meaningful entity and the cited document is the paper where this algorithm was first proposed. This makes it easier for the model to identify relevant documents. Taking again the previous example, a document that is about GPT-2 and would thus be a good candidate to cite after a sequence like "Documents are tokenized with the same byte-pair encoding as GPT-2" will likely also frequently use the term "GPT-2". ScholarCopilot in particular benefits from this since it only retrieves from a corpus of abstracts and an abstract typically includes the name of the algorithm/method proposed in a paper while simultaneously being less likely than for example the Introduction to name methods that are only similar to or preceding the proposed method. As shown in \reftab{tab:last_token}, the \mono{Experiments} dataset has indeed the highest percentage of cases where the token before the citation appears in the abstract of the cited paper. Note that this metric is likely influenced by some false positives where the last token is not a semantically meaningful entity but rather just a token that appears often in scientific abstracts. 
 
 TODO % qualitative analysis experiment section citations
 
-% masked vs with abstracts (with abstracts is closer to the real performance as SC retrieval never receives normal papers as input -> eval results with masking are slightly misleading!)
+\begin{table}[t]
+    \begin{center}
+        \begin{tabular}{lcccc}
+             & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} \\
+            \hline
+            \hline
+            last token in abstract & $0.08$ & $0.12$ & \textbf{0.22} & $0.11$ \\
+            \hline
+        \end{tabular}
+    \end{center}
+    \caption{Fraction of cases where the last token before the citation appears in the abstract of the cited document.}
+    \label{tab:last_token}
+\end{table}
 
-As shown in \reftab{tab:successful_retrieval_overlap}, the PR module sometimes retrieves the correct document despite ScholarCopilot being previously incorrect, especially for low $k$ (when using Recall@$k$ as measure for correctness). This suggests that the PR module has the capacity to further improve citation retrieval compared to only utilizing ScholarCopilot. The fact that the performance improvement is more prevalent for small $k$ (and consequently small $k_{SC}$ which directly influences the number of candidate passages) also indicates that the PR module may yield better performance if given fewer passages. Furthermore, the PR module tends to produce very confident relevance judgements with low variance for the top most relevant passages, this also suggests that the model struggles to differentiate between similar passages.  
+\textbf{Correct Retrieval Overlap.} As shown in \reftab{tab:successful_retrieval_overlap}, the PR module sometimes retrieves the correct document despite ScholarCopilot being previously incorrect, especially for low $k$ (when using Recall@$k$ as measure for correctness). This suggests that the PR module has the capacity to further improve citation retrieval compared to only utilizing ScholarCopilot. The fact that the performance improvement is more prevalent for small $k$ (and consequently small $k_{SC}$ which directly influences the number of candidate passages) also indicates that the PR module may yield better performance if given fewer passages. Furthermore, the PR module tends to produce very confident relevance judgements with low variance for the top most relevant passages, this also suggests that the model struggles to differentiate between the passages it identified as being relevant. 
 
 \begin{table}[t]
     \begin{center}
