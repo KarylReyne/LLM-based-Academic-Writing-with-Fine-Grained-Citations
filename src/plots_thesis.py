@@ -181,7 +181,6 @@ if __name__ == "__main__":
 
     for label, plot_data in [["with reasoning", gen_eval_reasoning_data], ["without reasoning", gen_eval_scores_data]]:
         dim_labels = list(plot_data["SC scores stats"].keys())[:-1]
-        short_lbl = lambda l: "".join([x[0] for x in l.split(" ")])
         short_lbl = lambda l: "\n".join(l.split(" "))
 
         fig, ax = plt.subplots()
@@ -208,3 +207,29 @@ if __name__ == "__main__":
 
         # fig.tight_layout()
         fig.savefig(SAVE_DIR+f"generation_{label.replace(" ", "_")}.pdf")
+
+
+    fig, ax = plt.subplots()
+    ax.bar(
+        [short_lbl(l) for l in dim_labels],
+        [gen_eval_reasoning_data["SC scores stats"][dim]["std"] for dim in dim_labels],
+        width=BW,
+        color=get_next_tue_plot_color(1),
+        align="center",
+        label="with reasoning"
+    )
+    ax.bar(
+        [short_lbl(l) for l in dim_labels],
+        [gen_eval_scores_data["SC scores stats"][dim]["std"] for dim in dim_labels],
+        width=BW/2,
+        color=get_next_tue_plot_color(3),
+        align="center",
+        label="without reasoning"
+    )
+    ax.set_title(f"Standard deviation of the scores for SC")
+    ax.set_ylabel(r"$\delta$", fontsize=FONTSIZE)
+    ax.set_ylim([0.2, 0.8])
+    ax.legend(bbox_to_anchor=(1.01, 1)).get_frame().set_edgecolor(color=rgb.tue_gray)
+
+    # fig.tight_layout()
+    fig.savefig(SAVE_DIR+f"generation_std_{label.replace(" ", "_")}.pdf")
