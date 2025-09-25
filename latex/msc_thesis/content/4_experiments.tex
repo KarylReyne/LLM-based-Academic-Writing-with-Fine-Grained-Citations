@@ -90,7 +90,19 @@ Since using human experts to evaluate the quality of LLM answers is costly and s
 
 
 \section{Generation Quality}\label{generation-evaluation}
-The results of the generation quality evaluation are shown in \reftab{}.
+The results of the generation quality evaluation are shown in \reffig{fig:generation_evaluation_reasoning} and \reffig{fig:generation_evaluation_scores}. 
+
+% maybe use the std plot?!
+
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{../images/plot_generation_with_reasoning.pdf}
+    \caption{Comparison of the generation quality scores between ScholarCopilot (SC) with and without passage retrieval (PR) when the judge is instructed to provide reasoning for its scoring.}\label{fig:generation_evaluation_reasoning}
+\end{figure}
+
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{../images/plot_generation_without_reasoning.pdf}
+    \caption{Comparison of the generation quality scores between ScholarCopilot (SC) with and without passage retrieval (PR) when the judge is instructed to only provide scores.}\label{fig:generation_evaluation_scores}
+\end{figure}
 
 % \section{Additional Experiments}\label{additional-experiments}
 % TODO
