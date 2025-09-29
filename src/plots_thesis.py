@@ -175,7 +175,8 @@ if __name__ == "__main__":
     gen_eval_scores_data = load_results("out_thesis/eval_generation_judge_instruction2-only-scores_30000_100/2025-08-30/records_eval_generation_2025-08-30_18-38-09.json")
 
     FONTSIZE = 10
-    BW = 1
+    BW = 0.45
+    LW = 0.2
     GRID_LW = 0.5
     AXES_ASPECT = 10
 
@@ -183,53 +184,58 @@ if __name__ == "__main__":
         dim_labels = list(plot_data["SC scores stats"].keys())[:-1]
         short_lbl = lambda l: "\n".join(l.split(" "))
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(10,5))
         ax.bar(
             [short_lbl(l) for l in dim_labels],
             [plot_data["SC scores stats"][dim]["mean"] for dim in dim_labels],
-            width=BW,
+            width=-BW,
             color=get_next_tue_plot_color(0),
-            align="center",
+            align="edge",
             label="SC"
         )
         ax.bar(
             [short_lbl(l) for l in dim_labels],
             [plot_data["SC PR scores stats"][dim]["mean"] for dim in dim_labels],
-            width=BW/2,
+            width=BW,
             color=get_next_tue_plot_color(2),
-            align="center",
+            align="edge",
             label="SC+PR"
         )
         ax.set_title(f"Judge scores {label}")
         ax.set_ylabel("score (0-5)", fontsize=FONTSIZE)
         ax.set_ylim([2.5, 4])
-        ax.legend(bbox_to_anchor=(1.01, 1)).get_frame().set_edgecolor(color=rgb.tue_gray)
+        ax.legend(bbox_to_anchor=(0.99, 0.99)).get_frame().set_edgecolor(color=rgb.tue_gray)
 
         # fig.tight_layout()
         fig.savefig(SAVE_DIR+f"generation_{label.replace(" ", "_")}.pdf")
 
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10,5))
     ax.bar(
         [short_lbl(l) for l in dim_labels],
         [gen_eval_reasoning_data["SC scores stats"][dim]["std"] for dim in dim_labels],
-        width=BW,
+        width=-BW,
+        # linewidth=LW,
+        # edgecolor="w",
         color=get_next_tue_plot_color(1),
-        align="center",
+        align="edge",
         label="with reasoning"
     )
     ax.bar(
         [short_lbl(l) for l in dim_labels],
         [gen_eval_scores_data["SC scores stats"][dim]["std"] for dim in dim_labels],
-        width=BW/2,
+        width=BW,
+        # linewidth=LW,
+        # edgecolor="w",
         color=get_next_tue_plot_color(3),
-        align="center",
+        align="edge",
         label="without reasoning"
     )
+    # barplots side by side with small gap/margin
     ax.set_title(f"Standard deviation of the scores for SC")
     ax.set_ylabel(r"$\delta$", fontsize=FONTSIZE)
     ax.set_ylim([0.2, 0.8])
-    ax.legend(bbox_to_anchor=(1.01, 1)).get_frame().set_edgecolor(color=rgb.tue_gray)
+    ax.legend(bbox_to_anchor=(0.99, 0.99)).get_frame().set_edgecolor(color=rgb.tue_gray)
 
     # fig.tight_layout()
     fig.savefig(SAVE_DIR+f"generation_std_{label.replace(" ", "_")}.pdf")
