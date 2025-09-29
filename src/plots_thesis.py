@@ -174,7 +174,7 @@ if __name__ == "__main__":
     gen_eval_reasoning_data = load_results("out_thesis/eval_generation_judge_instruction2_30000_100/2025-08-30/records_eval_generation_2025-08-30_11-24-16.json")
     gen_eval_scores_data = load_results("out_thesis/eval_generation_judge_instruction2-only-scores_30000_100/2025-08-30/records_eval_generation_2025-08-30_18-38-09.json")
 
-    FONTSIZE = 12
+    FONTSIZE = 15
     BW = 0.45
     LW = 0.2
     GRID_LW = 0.5
@@ -201,7 +201,7 @@ if __name__ == "__main__":
             align="edge",
             label="SC+PR"
         )
-        ax.set_title(f"Judge scores {label}")
+        ax.set_title(f"Judge scores {label}", fontsize=FONTSIZE)
         ax.set_ylabel("score (0-5)", fontsize=FONTSIZE)
         ax.set_ylim([2.5, 4])
         ax.legend(bbox_to_anchor=(0.99, 0.99), fontsize=FONTSIZE).get_frame().set_edgecolor(color=rgb.tue_gray)
@@ -227,7 +227,7 @@ if __name__ == "__main__":
         align="edge",
         label="without reasoning"
     )
-    ax.set_title(f"Standard deviation of the scores for SC")
+    ax.set_title(f"Standard deviation of the scores for SC", fontsize=FONTSIZE)
     ax.set_ylabel(r"$\delta$", fontsize=FONTSIZE)
     ax.set_ylim([0.2, 0.8])
     ax.legend(bbox_to_anchor=(0.99, 0.99), fontsize=FONTSIZE).get_frame().set_edgecolor(color=rgb.tue_gray)
