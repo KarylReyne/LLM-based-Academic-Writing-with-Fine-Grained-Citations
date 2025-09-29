@@ -160,7 +160,7 @@ if __name__ == "__main__":
             ax[1].set_title(f"SC+PR {replacement_strategy}")
 
             ax[0].set_ylabel("Recall %", fontsize=FONTSIZE)
-            ax[1].legend(bbox_to_anchor=(1.01, 1)).get_frame().set_edgecolor(color=rgb.tue_gray)
+            ax[1].legend(bbox_to_anchor=(1.01, 1), fontsize=FONTSIZE).get_frame().set_edgecolor(color=rgb.tue_gray)
             for j in [0, 1]:
                 ax[j].set_aspect(AXES_ASPECT)
                 ax[j].grid(axis="both", color=rgb.tue_gray, linewidth=GRID_LW)
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     gen_eval_reasoning_data = load_results("out_thesis/eval_generation_judge_instruction2_30000_100/2025-08-30/records_eval_generation_2025-08-30_11-24-16.json")
     gen_eval_scores_data = load_results("out_thesis/eval_generation_judge_instruction2-only-scores_30000_100/2025-08-30/records_eval_generation_2025-08-30_18-38-09.json")
 
-    FONTSIZE = 10
+    FONTSIZE = 12
     BW = 0.45
     LW = 0.2
     GRID_LW = 0.5
@@ -204,7 +204,7 @@ if __name__ == "__main__":
         ax.set_title(f"Judge scores {label}")
         ax.set_ylabel("score (0-5)", fontsize=FONTSIZE)
         ax.set_ylim([2.5, 4])
-        ax.legend(bbox_to_anchor=(0.99, 0.99)).get_frame().set_edgecolor(color=rgb.tue_gray)
+        ax.legend(bbox_to_anchor=(0.99, 0.99), fontsize=FONTSIZE).get_frame().set_edgecolor(color=rgb.tue_gray)
 
         # fig.tight_layout()
         fig.savefig(SAVE_DIR+f"generation_{label.replace(" ", "_")}.pdf")
@@ -215,8 +215,6 @@ if __name__ == "__main__":
         [short_lbl(l) for l in dim_labels],
         [gen_eval_reasoning_data["SC scores stats"][dim]["std"] for dim in dim_labels],
         width=-BW,
-        # linewidth=LW,
-        # edgecolor="w",
         color=get_next_tue_plot_color(1),
         align="edge",
         label="with reasoning"
@@ -225,17 +223,17 @@ if __name__ == "__main__":
         [short_lbl(l) for l in dim_labels],
         [gen_eval_scores_data["SC scores stats"][dim]["std"] for dim in dim_labels],
         width=BW,
-        # linewidth=LW,
-        # edgecolor="w",
         color=get_next_tue_plot_color(3),
         align="edge",
         label="without reasoning"
     )
-    # barplots side by side with small gap/margin
     ax.set_title(f"Standard deviation of the scores for SC")
     ax.set_ylabel(r"$\delta$", fontsize=FONTSIZE)
     ax.set_ylim([0.2, 0.8])
-    ax.legend(bbox_to_anchor=(0.99, 0.99)).get_frame().set_edgecolor(color=rgb.tue_gray)
+    ax.legend(bbox_to_anchor=(0.99, 0.99), fontsize=FONTSIZE).get_frame().set_edgecolor(color=rgb.tue_gray)
+
+    plt.xticks(fontsize=FONTSIZE)
+    plt.yticks(fontsize=FONTSIZE)
 
     # fig.tight_layout()
     fig.savefig(SAVE_DIR+f"generation_std_{label.replace(" ", "_")}.pdf")
