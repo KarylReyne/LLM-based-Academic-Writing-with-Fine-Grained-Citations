@@ -206,6 +206,9 @@ if __name__ == "__main__":
         ax.set_ylim([2.5, 4])
         ax.legend(bbox_to_anchor=(0.99, 0.99), fontsize=FONTSIZE).get_frame().set_edgecolor(color=rgb.tue_gray)
 
+        plt.xticks(fontsize=FONTSIZE)
+        plt.yticks(fontsize=FONTSIZE)
+
         # fig.tight_layout()
         fig.savefig(SAVE_DIR+f"generation_{label.replace(" ", "_")}.pdf")
 
