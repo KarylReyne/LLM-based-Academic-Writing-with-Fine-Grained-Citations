@@ -4,7 +4,7 @@ TODO
 \section{Evaluation Methodology}
 The main focus of this thesis is it to determine how the use of the passage retrieval module affects the retrieval accuracy and generation quality of ScholarCopilot. ScholarCopilot retains its original backbone model \mono{Qwen2.5-7B} \cite{an2024qwen2}. Since the retriever of the passage retrieval module is implemented with Batched Self-Consistency, it is required to follow multiple permutations of the same instruction during inference reliably and consistently (see \cite{korikov2025batched}). Instruction tuned models, that is, LLMs that are fine-tuned on (\mono{instruction}, \mono{desired-output}) pairs, are more successful at following instructions closely rather than just minimizing the next token prediction error \cite{shengyu2025instruction}. To make use of this, the PR module uses the instruction-tuned variant of the Qwen2.5 model, \mono{Qwen2.5-7B-Instruct} \cite{an2024qwen2}, as the passage retriever. Even though it has been shown that instruction tuned models may not fully utilize given instructions and are instead just good at learning the specified output format \cite{kung2023followInstructions}, this ability alone is valuable enough for the automated parsing of an LLMs' response to justify using an instruction tuned model (especially when using Batched Self-Consistency which greatly increases the number of responses that need to be parsed). 
 
-With ScholarCopilot as baseline, I evaluated the impact of using the PR module on the retrieval performance for a variety of retrieval contexts. To this end, I introduce the \emph{single-step retrieval} task which aims to assess the models accuracy when resolving a single \mono{[RET]} token during generation. This task closely follows the evaluation methodology used by \cite{wang2025scholarcopilot}. For each of the section groups (\mono{IntroductionAndRelatedWork}, \mono{Methods}, \mono{Experiments}, and \mono{Conclusion}), $1$k randomly selected samples are used for the evaluation. Single-step retrieval is evaluated using the Recall@$k$ metric, which is given as the fraction of cases where the ground truth document appears in the top-$k$ retrieved documents \cite{wang2025scholarcopilot}. As outlined in \refsec{dataset}, the model is given the left-hand context of a citation drawn from an existing paper, together with the cited document as the ground truth. A retrieval token is appended to this context before the resulting sequence is passed to ScholarCopilot, causing the model to compute a representation of the \mono{[RET]} token based on the given context. This representation is then used to compute a distribution over the ScholarCopilot retrieval corpus that measures the relevance of each document in the corpus to the given context. When evaluating standart ScholarCopilot, the $k$ most relevant documents according to this distribution are compared to the ground truth, otherwise the top-$k_{SC}$ most relevant documents are passed to the passage retrieval module (for the reported results I use $k_{SC}=2k$, see also \refsec{hyperparameters}). For each of the top-$k$ ranked passages the PR module returns the document from which each passage was taken. These $k$ documents are then compared to the provided ground truth. Additionally, I evaluated two different strategies for replacing other citations that appear in the citing context. Other citations are either (1) masked using a \mono{[MASK]} token, this is also how \cite{wang2025scholarcopilot} handle citations, or (2) replaced with the abstract of the cited paper, which is done to imitate the generated context the retriever would be given during inference when the model encounters a \mono{[RET]} token. The datasets that use these replacement strategies are denoted as \mono{masked} and \mono{with-abstracts} respectively. Following the setup in \cite{wang2025scholarcopilot}, the given citing context is not truncated when passed to ScholarCopilot.\footnote{\cite{wang2025scholarcopilot} only use the last sentence of the context when evaluating their baseline models (\mono{BM25} and \mono{E5-Mistral-7B-Instruct}) but use the full context when evaluating ScholarCopilot.} However, I found that passing the entire context to the PR module reduces performance, thus only the last $w$ tokens of the citing context are used when the PR retriever is prompted to rank a given set of passages.
+With ScholarCopilot as baseline, I evaluated the impact of using the PR module on the retrieval performance for a variety of retrieval contexts. To this end, I introduce the \emph{single-step retrieval} task which aims to assess the models accuracy when resolving a single \mono{[RET]} token during generation. This task closely follows the evaluation methodology used by \cite{wang2025scholarcopilot}. For each of the section groups (\mono{IntroductionAndRelatedWork}, \mono{Methods}, \mono{Experiments}, and \mono{Conclusion}), $1$k randomly selected samples are used for the evaluation. Single-step retrieval is evaluated using the Recall@$k$ metric, which is given as the fraction of cases where the ground truth document appears in the top-$k$ retrieved documents \cite{wang2025scholarcopilot}. As outlined in \refsec{dataset}, the model is given the left-hand context of a citation drawn from an existing paper, together with the cited document as the ground truth. A retrieval token is appended to this context before the resulting sequence is passed to ScholarCopilot, causing the model to compute a representation of the \mono{[RET]} token based on the given context. This representation is then used to compute a distribution over the ScholarCopilot retrieval corpus that measures the relevance of each document in the corpus to the given context. When evaluating standart ScholarCopilot, the $k$ most relevant documents according to this distribution are compared to the ground truth, otherwise the top-$k_{SC}$ most relevant documents are passed to the passage retrieval module (for the reported results I use $k_{SC}=2k$, see also \refsec{hyperparameters}). For each of the top-$k$ ranked passages the PR module returns the document from which each passage was taken. These $k$ documents are then compared to the provided ground truth. Additionally, I evaluated two different strategies for replacing other citations that appear in the citing context. Other citations are either (1) masked using a \mono{[MASK]} token, this is also how \cite{wang2025scholarcopilot} handle citations, or (2) replaced with the abstract of the cited paper, which is done to imitate the generated context the retriever would be given during inference when the model encounters a \mono{[RET]} token. The datasets that use these replacement strategies are denoted as \mono{masked} and \mono{with-abstracts} respectively. Following the setup in \cite{wang2025scholarcopilot}, the given citing context is not truncated when passed to ScholarCopilot.\footnote{\cite{wang2025scholarcopilot} only use the last sentence of the context when evaluating their baseline models (\mono{BM25} and \mono{E5-Mistral-7B-Instruct}) but use the full context when evaluating ScholarCopilot.} However, I found that passing the entire context to the PR module reduces performance, thus only the last $w$ tokens of the citing context are used when the PR retriever is prompted to rank a given set of passages. See \refsec{passage-retrieval-instruction} for the detailed passage retrieval instruction.
 
 % which generation model?
 Since using human experts to evaluate the quality of LLM answers is costly and slow \cite{heineking2025ranking}, the quality of the generated academic text is evaluated using \mono{DeepSeek-R1-Distill-Qwen-7B} \cite{guo2025deepseek}. Following the setup in \cite{wang2025scholarcopilot}, the evaluating model (judge) is instructed to compare academic text generated by either ScholarCopilot or ScholarCopilot with passage retrieval to the ground truth document (which is the beginning of a scientific paper from arXiv, see \refsec{dataset}). It is instructed to evaluate the given generated text according to the five dimensions \mono{Content Relevance}, \mono{Logical Coherence}, \mono{Academic Rigor}, \mono{Background Completeness} and \mono{Innovation Statement}, see \refsec{generation-evaluation-instruction} for the detailed instruction.\footnote{It is intentional that I don't go into detail on how these categories should be interpreted because this information is also not given in the judge instruction. How the judge interpretes the evaluation categories is thus entirely dependent on the pre-training and fine-tuning data of Qwen2.5 and Deepseek-R1 respectively. This design follows \cite{wang2025scholarcopilot} who also do not provide their judge with interpretation suggestions.} To assess the reliability of the judge, the evaluation is performed two times, once by (1) instructing the judge to only provide a score from 0 to 5 for each evaluation dimension and (2) by additionally prompting the judge to provide reasoning for its decision before assigning each score. To achive consistent and reliable scoring, the scores for the evaluation dimensions are aggregated using Batched Self-Consistency. Specifically, the order in which the individual evaluation dimensions appear in the generation evaluation prompt is randomized every time the judge is instructed to compute a ranking and for each generated paper the judge is queried to evaluate it $m_\mono{judge}$ times. The evaluation is performed on 100 ground truth samples which are selected randomly from the generation evaluation dataset. To save time and computational resources, the text generation (by the evaluated models) is terminated early if the number of generated tokens exceeds 30k (this limit includes the abstracts/passages inserted during generation). 
@@ -62,45 +62,66 @@ Since using human experts to evaluate the quality of LLM answers is costly and s
     \label{tab:last_token}
 \end{table}
 
-\textbf{Correct Retrieval Overlap.} As shown in \reftab{tab:successful_retrieval_overlap}, the PR module sometimes retrieves the correct document despite ScholarCopilot being previously incorrect, especially for low $k$ (when using Recall@$k$ as measure for correctness). This suggests that the PR module has the capacity to further improve citation retrieval compared to only utilizing ScholarCopilot. The fact that the performance improvement is more prevalent for small $k$ (and consequently small $k_{SC}$ which directly influences the number of candidate passages) also indicates that the PR module may yield better performance if given fewer passages. Furthermore, the PR module tends to produce very confident relevance judgements with low variance for the top most relevant passages, this also suggests that the model struggles to differentiate between the passages it identified as being relevant. 
+\textbf{Correct Retrieval Overlap.} As shown in \reftab{tab:successful_retrieval_overlap}, the PR module sometimes retrieves the correct document despite ScholarCopilot being previously incorrect, especially for low $k$ (when using Recall@$k$ as measure for correctness). This suggests that the PR module has the capacity to further improve citation retrieval compared to only utilizing ScholarCopilot. The fact that the performance improvement is more prevalent for small $k$ (and consequently small $k_{SC}$ which directly influences the number of candidate passages) also indicates that the PR module may yield better performance if given fewer passages. To illustrate the how retrieving passages instead of abstracts can be beneficial for generative academic writing, consider the following example where ScholarCopilot fails to retrieve the correct document while the PR module is able to retrieve a passage from the correct document. Note that the following examples are slightly shortened, see  The given context\footnote{"\#refXX\#" are citation markers from the HDT dataset the preprocessing failed to mask properly.} for retrieval was taken from \cite{menick2022teaching}:
+\begin{lstlisting}{language=LaTeX}
+    \textbf{Retrieval context}
 
-\begin{table}[t]
-    \begin{center}
-        \begin{tabular}{llccccc}
-            \textbf{Dataset} & \textbf{Metric} & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} & $\mu$ \\
-            \hline
-            \hline
-            \mono{masked} & Recall@$10$ & $0.91$ & $0.97$ & $0.98$ & $0.91$ & $0.943$\\
-            \hline
-            \mono{masked} & Recall@$5$ & $0.94$ & $0.94$ & $0.96$ & $0.94$ & $0.945$\\
-            \hline
-            \mono{masked} & Recall@$1$ & \textbf{0.79} & 0.89 & \textbf{0.88} & $0.88$ & \textbf{0.86}\\
-            \hline
-            \mono{with-abstracts} & Recall@$10$ & $0.9$ & $0.93$ & $0.96$ & $0.95$ & $0.935$\\
-            \hline
-            \mono{with-abstracts} & Recall@$5$ & $0.86$ & $0.97$ & $0.95$ & $0.89$ & $0.918$\\
-            \hline
-            \mono{with-abstracts} & Recall@$1$ & $0.87$ & \textbf{0.87} & $0.93$ & \textbf{0.84} & $0.878$\\
-            \hline
-        \end{tabular}
-    \end{center}
-    \caption{Fraction of correct retrievals by ScholarCopilot given correct retrieval by the PR module (such that the value would be $1$ if SC was correct every time the PR module was correct and $0$ if SC was incorrect whenever the PR module was correct). A retrieval result is considered correct, if it satisfies the given metric.}
-    \label{tab:successful_retrieval_overlap}
-\end{table}
+    1 Introduction Generative language models (LMs) are increasingly useful for answering questions about the world, steadily improving  #ref52# <|CIT-MASK|> #ref44# on question-answering benchmarks  <|CIT-MASK|> #ref46# #ref39#, and serving generated samples to users via APIs  <|CIT-MASK|> <|CIT-MASK|>. By default, however, LMs generate ungrounded claims that users must choose either to blindly accept or to verify themselves. In this work we train models that help the user or data rater evaluate responses by generating claims alongside supporting evidence. [...] This also affords end-users a qualitatively different level of trust in model samples, compared to systems which simply return an unsupported answer. This consideration has also motivated recently released, partly concurrent work  #ref44# in which a finetuned version of GPT-3 cites sources. One could view self-supporting answers as a specific type of explanation, putting our work alongside other work in explainable AI  #ref51# that aims to provide natural-language explanations of QA model responses  <|CIT-MASK|>
+\end{lstlisting}
+Notice that the citation for which the model is supposed to retrieve a reference (the last \mono{<|CIT-MASK|>} token) seems to be a paper that  TODO
+
+ScholarCopilot retrieved the abstract from \cite{lamm2021qed}: 
+\begin{lstlisting}{language=LaTeX}
+    \textbf{Retrieved reference (SC)}
+    
+    Abstract A question answering system that in addition to providing an answer provides an explanation of the reasoning that leads to that answer has potential advantages in terms of debuggability, extensibility and trust. To this end, we propose QED, a linguistically informed, extensible framework for explanations in question answering. A QED explanation specifies the relationship between a question and answer according to formal semantic notions such as referential equality, sentencehood, and entailment. We describe and publicly release an expert-annotated dataset of QED explanations built upon a subset of the Google Natural Questions dataset, and report baseline models on two tasks  post-hoc explanation generation given an answer, and joint question answering and explanation generation. [...]
+\end{lstlisting}
+
+\cite{latcinnik2020explaining}
+
+% Furthermore, the PR module tends to produce very confident relevance judgements with low variance for the top most relevant passages, this suggests that the model struggles to differentiate between the passages it identified as being relevant. 
 
 % qualitative analysis PR correct SC incorrect one example comparison
 TODO
+
+\begin{table}[t]
+    \begin{tabular}{llccccc}
+        \textbf{Dataset} & \textbf{Metric} & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} & $\mu$ \\
+        \hline
+        \hline
+        \mono{masked} & Recall@$10$ & $0.91$ & $0.97$ & $0.98$ & $0.91$ & $0.943$\\
+        \hline
+        \mono{masked} & Recall@$5$ & $0.94$ & $0.94$ & $0.96$ & $0.94$ & $0.945$\\
+        \hline
+        \mono{masked} & Recall@$1$ & \textbf{0.79} & 0.89 & \textbf{0.88} & $0.88$ & \textbf{0.86}\\
+        \hline
+        \mono{with-abstracts} & Recall@$10$ & $0.9$ & $0.93$ & $0.96$ & $0.95$ & $0.935$\\
+        \hline
+        \mono{with-abstracts} & Recall@$5$ & $0.86$ & $0.97$ & $0.95$ & $0.89$ & $0.918$\\
+        \hline
+        \mono{with-abstracts} & Recall@$1$ & $0.87$ & \textbf{0.87} & $0.93$ & \textbf{0.84} & $0.878$\\
+        \hline
+    \end{tabular}
+    \caption{Fraction of correct retrievals by ScholarCopilot given correct retrieval by the PR module (such that the value would be $1$ if SC was correct every time the PR module was correct and $0$ if SC was incorrect whenever the PR module was correct). A retrieval result is considered correct, if it satisfies the given metric.}
+    \label{tab:successful_retrieval_overlap}
+\end{table}
 
 
 \section{Generation Quality}\label{generation-evaluation}
 \textbf{Quality Comparison.} The results designed to primarily assess the generation quality are shown in \reffig{fig:generation_evaluation_reasoning}. ScholarCopilot achieves higher scores in all evaluation categories, with a score of $15.5/25$ across all dimensions. Using passage retrieval only yields a total score of $14.9/25$ ($-0.6$), falling behind most in \mono{Background Completeness} and \mono{Academic Rigor}. This suggests that passage retrieval is not suited to improve the generation quality of academic text generation with citations. 
 
 \begin{figure}[t]
-    \includegraphics[width=\textwidth]{../images/plot_generation_with_reasoning.pdf}
+    \includegraphics[width=\textwidth, trim={1.2cm 0 1.2cm 0}, clip]{../images/plot_generation_with_reasoning.pdf}
     \caption{Comparison of the generation quality scores between ScholarCopilot (SC) with and without passage retrieval (PR) when the judge is instructed to provide reasoning for its scoring.}\label{fig:generation_evaluation_reasoning}
 \end{figure}
 
-\textbf{Evaluation Reliability.} Instructing the judge to provide reasoning for its generation quality assessment yields ranking scores with a mean difference of ... between the scores achieved with versus without passage ranking. Using a prompt that does not instruct the model to reason about its decision results in a much smaller mean difference of ... (..., see also \reffig{fig:generation_evaluation_scores}). This makes it more difficult to identify key strengths and weaknesses of the evaluated methods. Furthermore, as shown in \reffig{fig:generation_evaluation_std} the standard deviation of the individual ranking scores for each evaluation dimension when instructing the judge $m_\mono{judge}$ times to rank the same generated sequence is on average significantly higher (... compared to ... (...) with reasoning). These results indicate that the judge is more uncertain in its evaluation when not forced to reason about its scoring.
+\textbf{Evaluation Reliability.} Instructing the judge to provide reasoning for its generation quality assessment yields ranking scores with a mean difference of $0.11$ between the scores achieved with versus without passage retrieval. Using a prompt that does not instruct the model to reason about its decision results in a much smaller mean difference of $0.01$ ($-0.1$, see also \reffig{fig:generation_evaluation_scores}). This makes it more difficult to identify key strengths and weaknesses of the evaluated methods. Furthermore, as shown in \reffig{fig:generation_evaluation_std} the standard deviation of the individual ranking scores for each evaluation dimension when instructing the judge $m_\mono{judge}$ times to rank the same generated sequence is on average significantly higher ($2.35$ compared to $2.14$ ($-0.21$) with reasoning). These results indicate that the judge is more uncertain in its evaluation when not forced to reason about its scoring. It is also important to note that the scores computed by the judge don't always align well with human judgement, an example of this is shown in \refsec{bad-generation-evaluation-example}. 
+
+% (3,49-3,4+3,48-3,39+3,21-3,08+3,15-3+3,16-3,08)/5 = 0.108 with reasoning
+% (3,61-3,62+3,56-3,56+3,25-3,3+3,18-3,16+3,1-3,11)/5 = 0.01 without reasoning
+% (2,16+2,54)/2 = 2.35 without reasoning
+% (2,04+2,23)/2 = 2.135 with reasoning
+
 
 % generation quality example?
 TODO
@@ -108,12 +129,12 @@ TODO
 % maybe point out diff to wang etal results?
 
 \begin{figure}[t]
-    \includegraphics[width=\textwidth]{../images/plot_generation_without_reasoning.pdf}
+    \includegraphics[width=\textwidth, trim={1.2cm 0 1.2cm 0}, clip]{../images/plot_generation_without_reasoning.pdf}
     \caption{Comparison of the generation quality scores between ScholarCopilot (SC) with and without passage retrieval (PR) when the judge is instructed to only provide scores.}\label{fig:generation_evaluation_scores}
 \end{figure}
 
 \begin{figure}[t]
-    \includegraphics[width=\textwidth]{../images/plot_generation_std_without_reasoning.pdf}
+    \includegraphics[width=\textwidth, trim={1.2cm 0 1.2cm 0}, clip]{../images/plot_generation_std_without_reasoning.pdf}
     \caption{Comparison of the standard deviation of the computed ranking scores for each evaluation dimension when the judge is instructed with versus without asking to provide reasoning.}\label{fig:generation_evaluation_std}
 \end{figure}
 
