@@ -76,7 +76,7 @@ if __name__ == "__main__":
     # from dataset_loaders import load_scholarcopilot_eval_dataset
     # eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, docs_corpus_id_map, config, shuffle=shuffle)
 
-    RECALL_K = 10
+    RECALL_K = 1
     
     sc_rankings = [] # len_dataset x recall_k
     sc_pr_rankings = [] # len_dataset x recall_k
@@ -99,7 +99,11 @@ if __name__ == "__main__":
     else:
         config["sc_retriever_topk"] = RECALL_K*2
         config["reranker_topk"] = RECALL_K
-        config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
+
+        # config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
+
+        # for computing the example in the thesis
+        config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_SCfailurePRsuccess_example/"
 
     print()
     for i in eval_indices:
@@ -145,6 +149,13 @@ if __name__ == "__main__":
                     "ranked_passages": reranking_results["ranked_passages"]
                 }
                 pr_fail_records[f"sample index {i}"] = rec
+            
+            # for computing the example in the thesis
+            if (not bool_sc) and bool_sc_pr:
+                print(f"context\t{item["source_arxiv_id"]}\t{context}\n")
+                print(f"SC failure\t{references[0]["arxiv_id"]}\t{references[0]["abstract"]}\n")
+                print(f"PR success\t{item["target_arxiv_id"]}\t{reranking_results["ranked_passages"][0]}\n")
+                break
 
             # collect failing llm responses
             if error_msg != None:
