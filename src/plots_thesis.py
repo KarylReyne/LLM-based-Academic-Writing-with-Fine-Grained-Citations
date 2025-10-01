@@ -132,9 +132,8 @@ if __name__ == "__main__":
     MS = 2
     LW = 1.3
     GRID_LW = 0.5
-    # AXES_ASPECT = 10 # for side-by-side
-    AXES_ASPECT = 8
-    BASELINE_ALPHA = 0.5
+    AXES_ASPECT = 10
+    ALPHA = 0.5
 
     recall_labels = [f"Recall@{k}" for k in [10, 5, 1]]
     for replacement_strategy in plot_data_container.keys():
@@ -154,6 +153,7 @@ if __name__ == "__main__":
         #         recall_labels,
         #         plot_data_container[replacement_strategy][1][key],
         #         "-",
+
         #         ms=MS,
         #         lw=LW,
         #         color=get_next_tue_plot_color(i),
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         #     #         color=get_next_tue_plot_color(i),
         #     #         linestyle='--',
         #     #         linewidth=LW*0.8,
-        #     #         alpha=BASELINE_ALPHA
+        #     #         alpha=ALPHA
         #     #         # label is generated later
         #     #     )
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         #     #         color=get_next_tue_plot_color(i),
         #     #         linestyle='--',
         #     #         linewidth=LW*0.8,
-        #     #         alpha=BASELINE_ALPHA
+        #     #         alpha=ALPHA
         #     #         # label is generated later
         #     #     )
 
@@ -189,7 +189,7 @@ if __name__ == "__main__":
         #     #     color=get_next_tue_plot_color(i),
         #     #     linestyle='--',
         #     #     linewidth=LW*0.8,
-        #     #     alpha=BASELINE_ALPHA
+        #     #     alpha=ALPHA
         #     #     # label is generated later
         #     # )
 
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         #     #         color=rgb.tue_dark,
         #     #         linestyle='--',
         #     #         linewidth=LW*0.8,
-        #     #         alpha=BASELINE_ALPHA,
+        #     #         alpha=ALPHA,
         #     #         # label=f"SC baseline"
         #     #         # label=f"SC Recall@10/1"
         #     #         label=f"SC Recall@1"
@@ -218,23 +218,36 @@ if __name__ == "__main__":
         # fig.savefig(SAVE_DIR+f"retrieval_{replacement_strategy.replace(" ", "_")}.pdf")
 
         fig, ax = plt.subplots()
-        for i, key in enumerate(["intro+relwork", "methods", "experiments", "conclusion"]):
-            for j in [0,1]:
-                ax.plot(
+        handles = [[], []]
+        for j in [0,1]:
+            for i, key in enumerate(["intro+relwork", "methods", "experiments", "conclusion"]):
+                line, = ax.plot(
                     recall_labels,
                     plot_data_container[replacement_strategy][j][key],
-                    "-",
+                    "-" if j == 0 else "--",
                     ms=MS,
                     lw=LW,
                     color=get_next_tue_plot_color(i),
-                    alpha=BASELINE_ALPHA if j == 1 else 1,
-                    label=key if j == 0 else None
+                    # alpha=ALPHA if j == 1 else 1,
+                    label=key
                 )
-            ax.set_title(replacement_strategy)
-            ax.set_ylabel("Recall %", fontsize=FONTSIZE)
-            ax.legend(bbox_to_anchor=(1.01, 1), fontsize=FONTSIZE).get_frame().set_edgecolor(color=rgb.tue_gray)
-            ax.set_aspect(AXES_ASPECT)
-            ax.grid(axis="both", color=rgb.tue_gray, linewidth=GRID_LW)
+                handles[j].append(line)
+
+            legend = ax.legend(
+                handles=handles[j],
+                bbox_to_anchor=(1.01, 1+(-0.3*j)), 
+                fontsize=FONTSIZE, 
+                title="SC" if j == 0 else "SC+PR"
+            )
+            legend.get_frame().set_edgecolor(color=rgb.tue_gray)
+            ax.add_artist(legend)
+
+        ax.set_title(replacement_strategy)
+        ax.set_ylabel("Recall %", fontsize=FONTSIZE)
+        ax.set_aspect(AXES_ASPECT)
+        ax.grid(axis="both", color=rgb.tue_gray, linewidth=GRID_LW)
+
+        plt.tick_params(axis='x', which='major', labelsize=10)
 
         fig.tight_layout()
 
