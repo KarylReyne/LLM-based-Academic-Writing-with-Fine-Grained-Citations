@@ -13,6 +13,64 @@ TODO
 % maybe justify your changes?
 TODO
 
+\section{Complete Example of Single-Step Retrieval}\label{retrieval-example}
+Shown below are the full context and retrieved references from \refsec{retrieval-evaluation}:
+\begin{lstlisting}{language=LaTeX}
+    \textbf{Retrieval context}
+    
+    1 Introduction Generative language models (LMs) are increasingly useful for answering questions about the world, steadily improving  #ref52# <|CIT-MASK|> #ref44# on question-answering benchmarks  <|CIT-MASK|> #ref46# #ref39#, and serving generated samples to users via APIs  <|CIT-MASK|> <|CIT-MASK|>. By default, however, LMs generate ungrounded claims that users must choose either to blindly accept or to verify themselves. In this work we train models that help the user or data rater evaluate responses by generating claims alongside supporting evidence. This evidence takes the form of a verbatim quote extracted from a longer source retrieved by Google Search or any suitable information retrieval system. We call this task self-supported question-answering (SQA), and intend it as a sub-task that can be embedded into other generative language modelling tasks such as open-ended dialogue or debate  #ref49# <|CIT-MASK|> <|CIT-MASK|> <|CIT-MASK|> #ref59#. Crucially, citing external sources inline decreases the effort required on the part of human annotators. By extracting specific supporting quotes from the document rather than linking to entire web pages, we allow faster and more specific appraisal of supportedness. This also affords end-users a qualitatively different level of trust in model samples, compared to systems which simply return an unsupported answer. This consideration has also motivated recently released, partly concurrent work  #ref44# in which a finetuned version of GPT-3 cites sources. One could view self-supporting answers as a specific type of explanation, putting our work alongside other work in explainable AI  #ref51# that aims to provide natural-language explanations of QA model responses  <|CIT-MASK|>
+
+    \textbf{Retrieved reference (SC)}
+    
+    Abstract A question answering system that in addition to providing an answer provides an explanation of the reasoning that leads to that answer has potential advantages in terms of debuggability, extensibility and trust. To this end, we propose QED, a linguistically informed, extensible framework for explanations in question answering. A QED explanation specifies the relationship between a question and answer according to formal semantic notions such as referential equality, sentencehood, and entailment. We describe and publicly release an expert-annotated dataset of QED explanations built upon a subset of the Google Natural Questions dataset, and report baseline models on two tasks  post-hoc explanation generation given an answer, and joint question answering and explanation generation. In the joint setting, a promising result suggests that training on a relatively small amount of QED data can improve question answering. In addition to describing the formal, language-theoretic motivations for the QED approach, we describe a large user study showing that the presence of QED explanations significantly improves the ability of untrained raters to spot errors made by a strong neural QA baseline.
+
+    \textbf{Retrieved reference (SC+PR)}
+    
+    , and present examples in Table5. First, we look at cases where both the similarity and LM-based classifiers answered correctly (49[percent] of the cases). We manually annotated whether the hypotheses provide a reasonable answer for a random sample of 100 hypotheses from the development set, assigning 1 point to a reasonable hypothesis, 0.5 point to a somewhat reasonable hypothesis, and 0 points to an unreasonable hypothesis. The score was 0.94, indicating that when both classifiers are correct, the hypotheses are reasonable, and we can have confidence that the model does not cheat. In the few cases where the hypothesis is unreasonable, it reveals a shortcoming in the models knowledge. For example, for the question The hostess was good at her job, she always had a smile when she would what?, the model outputs the hypothesis dinner eat serve food meals, indicating that it does not distinguish a hostess from a waitress. However, the distractors are weak, and the model correctly chooses welcome guests. Next, we look at cases where both classifiers were wrong (23[percent] of the cases). Annotating 51 examples to estimate whether hypotheses are reasonable, we obtain a very low score of 0.21. By examining the hypotheses, we can understand the main reasons of error (examples in Table5): (a) Missing knowledge: the question requires very specific knowledge that the model does not generate, suggesting that the knowledge is missing. (b) Semantic errors: the model ignores parts of the question and is misled by surface clues (ignoring negation in the first example, and a restrictive relative clause in the second). These two reasons cover 54[percent] of the unreasonable hypotheses produced, showing how the hypotheses provide important information for debugging the model. We also analyze cases where the LM-based classifier was correct but the similarity classifier was wrong (22[percent] of the cases). Annotating 50 such examples produces a score of 0.55, showing that many of the hypotheses were actually reasonable. We observe that in two-thirds of these cases, the error is related to the inability of the generator to consider the distractors themselves, and while the hypothesis was reasonable, it was more similar to a distractor than to the gold answer (Table5). Finally, transferring to QASC (Table 7) shows that the model performs well on general knowledge questions, which are somewhat similar to those in CSQA, but fails on more scientific questions that require encyclopedic knowledge. We observe that joint training leads to a model that has comparable
+\end{lstlisting}
+Note that '\%' is replaced with \mono{[percent]} due to formatting issues.
+
+\section{"False Positive" Example of LLM-based Generation Quality Evaluation}\label{bad-generation-evaluation-example}
+TODO % explain
+
+\textbf{Part of the Introduction generated by SC}
+\begin{lstlisting}{language=LaTeX}
+    [...]
+    In this paper, we propose a reversible adversarial example generator (RAEG) that introduces slight changes to the images to fool traditional classification models. Even though malicious attacks train pirated models based on the defensed versions of the protected images, RAEG can significantly weaken the functionality of these models. Meanwhile, the reversibility of RAEG ensures the performance of authorized models. Therefore, the protected data can be used for training the authorized models, but not for pirated models.\n\nThe second problem is how to defend against adversarial defense methods. Adversarial defense methods aim to eliminate the adversarial perturbations from adversarial examples to recover the original data. These methods can be divided into two categories: adversarial training \\cite{arxivID-1705.03387-0, arxivID-2310.05947-1, arxivID-1905.11713-2, arxivID-2109.09901-3, arxivID-1906.11567-4, arxivID-1711.08001-5, arxivID-2007.14672-6, arxivID-2003.02484-7}and adversarial purification \\cite{arxivID-1912.05391-8, arxivID-1612.07767-9, arxivID-1804.01635-10, arxivID-2405.15971-11, arxivID-2405.15971-12, arxivID-2212.05630-13, arxivID-2406.03143-14}.
+    [...]
+\end{lstlisting}
+
+\textbf{Part of the Introduction generated by SC+PR}
+\begin{lstlisting}{language=LaTeX}
+    [...]
+    We develop a reversible adversarial example generator (RAEG) that introduces slight changes to the images to fool traditional classification models. The changes are imperceptible to the human eyes. The protected images cannot be used to train models directly. However, the protected images can be reversely transformed into the original images. The original images can be used to train models and the authorized models can achieve good performance. Meanwhile, the protected images cannot be used to train pirated models. The pirated models trained based on the protected images cannot achieve satisfactory performance. The pipeline of our proposed method is shown in Figure~\\ref{fig1}. The protected images can be used to train models and the authorized models can achieve good performance. Meanwhile, the protected images cannot be used to train pirated models. The pirated models trained based on the protected images cannot achieve satisfactory performance.
+    [...]
+    \\textbf{Adversarial Training:} Adversarial training is a proactive defense method. Adversarial training is used to train models that are robust to adversarial attacks. Adversarial training is a widely used defense method. Adversarial training is used to train models that are robust to adversarial attacks. Adversarial training is a widely used defense method. Adversarial training is used to train models that are robust to adversarial attacks. Adversarial training is a widely used defense method.
+    [...]
+\end{lstlisting}
+
+\textbf{Scores computed by the judge}
+\begin{lstlisting}{language=LaTeX}
+    "sc_scores": {
+        "Content Relevance": 3.4,
+        "Logical Coherence": 2.8,
+        "Academic Rigor": 3.0,
+        "Background Completeness": 2.8,
+        "Innovation Statement": 2.4,
+        "total": 13.4
+    },
+    "sc_pr_scores": {
+        "Content Relevance": 4.2,
+        "Logical Coherence": 4.0,
+        "Academic Rigor": 3.4,
+        "Background Completeness": 3.6,
+        "Innovation Statement": 4.4,
+        "total": 18.6
+    }
+\end{lstlisting}
+
+Note that getting stuck in generating repetitive sequences is not an issue introduced by the PR module, ScholarCopilot also occationally shows this behaviour, see for example \mono{records\_eval\_generation\_2025-08-30\_11-24-16.json}, line 2738-2759.
+
 % numerical retr results
 
 % PR with reasonir
