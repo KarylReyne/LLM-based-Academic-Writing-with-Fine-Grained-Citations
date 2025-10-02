@@ -174,22 +174,22 @@ if __name__ == "__main__":
     # reasonir
     AXES_ASPECT = 9.5
 
-    reasonir_results = {# SC, PR_reasonir
-        "intro+relwork": [0.139, 0.075], 
-        "methods": [0.158, 0.093], 
-        "experiments": [0.316, 0.195], 
-        "conclusion": [0.133, 0.08]
+    reasonir_results = {# SC, PR_reasonir, (PR)
+        "intro+relwork": [0.139, 0.075, 0.092], 
+        "methods": [0.158, 0.093, 0.149], 
+        "experiments": [0.316, 0.195, 0.256], 
+        "conclusion": [0.133, 0.08, 0.117]
     }
     fig, ax = plt.subplots()
-    for j in [0,1]:
+    for j in [0,1,2]:
         line, = ax.plot(
             reasonir_results.keys(),
             [scores[j] for _, scores in reasonir_results.items()],
-            "-" if j == 0 else "--",
+            "-" if j != 2 else "--",
             ms=MS,
             lw=LW,
-            color=get_next_tue_plot_color(0 if j == 0 else 2),
-            label="SC" if j == 0 else "SC+PR_ReasonIR"
+            color=get_next_tue_plot_color([0, 2, 5][j]),
+            label=["SC", "SC+PR_ReasonIR", "SC+PR"][j]
         )
     legend = ax.legend(
         bbox_to_anchor=(1.01, 1), 
