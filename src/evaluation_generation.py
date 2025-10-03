@@ -154,12 +154,12 @@ if __name__ == "__main__":
     )
 
     samples = 0
-    max_samples = 100
+    max_samples = 10
     retrieval_fails = 0
     llm_fails = 0
     catch_retrieval_fails = True
     total_num_retrievals = 0
-    generation_breakpoint = 8000
+    generation_breakpoint = 30000
     shuffle_instruction = True
     eps = 1e-6 # fail metrics
     scoring_records = []
@@ -245,11 +245,13 @@ if __name__ == "__main__":
         # judge each generated output individually (prompt from SC paper)
         # (judge both at once by contrasting them?)
         judge_scores_avg = [] # [0]: SC, [1]: SC PR
+        judge_responses = [] # [0]: SC, [1]: SC PR
         for gen in [sc_generated_paper, sc_pr_generated_paper]:
             start = time.time()
             scores_per_call = []
             scoring_fails = 0
             num_successful_scorings = 0
+            per_model_responses = []
             print()
             while num_successful_scorings < config["m_judging"]: # try to score until enough scorings are collected
                 sys.stdout.write("\033[F")
@@ -268,6 +270,7 @@ if __name__ == "__main__":
                     )
                     res = judge_tokenizer.batch_decode(res)[0]
                     scores_per_call.append(parse_judge_response(res))
+                    per_model_responses.append(res.split("<｜Assistant｜>")[1])
                     num_successful_scorings += 1
                 except ResponseParsingError:
                     scoring_fails += 1
@@ -282,6 +285,7 @@ if __name__ == "__main__":
             for key in scores_avg:
                 scores_avg[key] /= len(scores_per_call)
             judge_scores_avg.append(scores_avg)
+            judge_responses.append(per_model_responses)
             print(f"judging{len(judge_scores_avg)} done in {time.time() - start}")
             print(f"SC {"PR" if len(judge_scores_avg) == 2 else ""} scores:")
             print(scores_avg)
@@ -291,6 +295,8 @@ if __name__ == "__main__":
             "gold": gold_generation,
             "sc_generation": sc_generated_paper,
             "sc_pr_generation": sc_pr_generated_paper,
+            "sc_responses": judge_responses[0],
+            "sc_pr_responses": judge_responses[1],
             "sc_scores": judge_scores_avg[0],
             "sc_pr_scores": judge_scores_avg[1]
         })
