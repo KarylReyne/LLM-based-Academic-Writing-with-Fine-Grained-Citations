@@ -1,5 +1,9 @@
 \chapter{Introduction}\label{introduction}
-TODO % intro to this section
+
+% traditional rag
+Retrieval-Augmented Generation (RAG, \cite{lewis2020retrieval}) models are designed to generate text that is grounded in real-world factual knowlege. They have been widely adopted for knowledge-intensive NLP tasks \cite{shao2025reasonir} such as long-form question answering \cite{xia2024ground}, scientific question answering \cite{lala2023paperqa} and question synthesis \cite{xu2024kiwi}, generation with sentence-level citations \cite{zhang2024longcite, xia2024ground} and academic text generation \cite{asai2024openscholar, wang2025scholarcopilot}. RAG models usually consist of a generator, a pre-trained sequence-to-sequence (seq2seq) model (e.g. a Transformer-based \cite{vaswani2017attention} decoder), and a retriever with access to a retrieval corpus, which may be implemented as a dense vector index (e.g. a HNSW \cite{malkov2018efficient} index) \cite{lewis2020retrieval}. The RAG architecture is briefly introduced in \refsec{rag}. Such models combine pre-trained paramentric memory with non-paramentric (retrieval-based) memory \cite{lewis2020retrieval}, which has a number of benefits: while neural language models are able to store a substantial amount of world knowledge in their parameters \cite{roberts2020much}, this knowledge can't easily be modified, expanded or directly be used to gain insight into their decision-making process \cite{lewis2019bart}. By using an external retrieval corpus, the knowledge RAG models use to inform their generation can directly be inspected and interpreted \cite{lewis2020retrieval}. Their TODO
+% interpretability
+% provenance
 
 % why bother with citations
 citations build trust \cite{do2024facilitating}
@@ -9,13 +13,11 @@ citations build trust \cite{do2024facilitating}
 % https://aclanthology.org/2020.acl-main.173/
 
 
+% goal of using fine-grained citations instead of abstract citations
+
+
 % special challenges of scientific text (short)
 
-
-% traditional rag
-Retrieval-Augmented Generation (RAG, \cite{lewis2020retrieval}) models are designed to generate text that is grounded in real-world factual knowlege. They have been widely adopted for knowledge-intensive NLP tasks \cite{shao2025reasonir} such as long-form question answering \cite{xia2024ground}, scientific question answering \cite{lala2023paperqa} and question synthesis \cite{xu2024kiwi}, generation with sentence-level citations \cite{zhang2024longcite, xia2024ground} and academic text generation \cite{asai2024openscholar, wang2025scholarcopilot}. RAG models usually consist of a generator, a pre-trained sequence-to-sequence (seq2seq) model (e.g. a Transformer-based \cite{vaswani2017attention} decoder), and a retriever with access to a retrieval corpus, which may be implemented as a dense vector index (e.g. a HNSW \cite{malkov2018efficient} index) \cite{lewis2020retrieval}. The RAG architecture is briefly introduced in \refsec{rag}. Such models combine pre-trained paramentric memory with non-paramentric (retrieval-based) memory \cite{lewis2020retrieval}, which has a number of benefits: while neural language models are able to store a substantial amount of world knowledge in their parameters \cite{roberts2020much}, this knowledge can't easily be modified, expanded or directly be used to gain insight into their decision-making process \cite{lewis2019bart}. By using an external retrieval corpus, the knowledge RAG models use to inform their generation can directly be inspected and interpreted \cite{lewis2020retrieval}. Their TODO
-% interpretability
-% provenance
 
 % what do I want to achieve with PR ?!
 % !!!!!!
