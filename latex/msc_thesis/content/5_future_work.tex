@@ -1,11 +1,41 @@
 \chapter{Limitations and Future Work}\label{limitations-future-work}
-Despite using ScholarCopilot with the passage retrieval module TODO
+Passage retrieval in the form that is evaluated in this thesis is not an improvement over ScholarCopilot in either citation recall or generation quality. However, the evaluation results do suggest that passage retrieval has the capacity to enhance ScholarCopilot by being able to retrieve passages that are more informative that the abstracts retrieved by ScholarCopilot, particularly in cases where ScholarCopilot fails to retrieve the correct document. This additional information can potentially be used to inform the generation of academic writing, although according to the conducted LLM-based generation quality evaluation, this does currently not result in more coherent, rigorous, complete or innovative generation.
 
+\textbf{Evaluation methodology.}
+% why bad performance is underexplored
+% why is their performance so much better?!
+
+\textbf{Disadvantages of using passages.} Passages can also, just like abstracts, introduce irrelevant or misleading information into the generation process. This is currently not addressed by the PR module which only subdivides candidate papers into evenly-sized passages. In academic writing, papers are often cited because of their primary contributions (see e.g. \refsec{retrieval-example}). Taking the Transformer paper \cite{vaswani2017attention} as an example, a passage like 
+\begin{lstlisting}{language=LaTeX}
+    Recurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks in particular, have been firmly established as state of the art approaches in sequence modeling and transduction problems such as language modeling and machine translation [35, 2, 5].
+\end{lstlisting}
+\cite[1]{vaswani2017attention} is much less likely to be the reason why \cite{vaswani2017attention} is cited in a given context than a passage like 
+\begin{lstlisting}{language=LaTeX}
+    To the best of our knowledge, however, the Transformer is the first transduction model relying entirely on self-attention to compute representations of its input and output without using sequence-aligned RNNs or convolution. In the following sections, we will describe the Transformer, motivate self-attention and discuss its advantages over models such as [17, 18] and [9].
+\end{lstlisting}
+\cite[2]{vaswani2017attention} because the latter describes the method proposed in \cite{vaswani2017attention} whereas the former mentions architectures related to the Transformer, information that is not unique to \cite{vaswani2017attention}. The fact that passages can be representative of the paper they are drawn from to varying degrees (e.g. where the second passage from before would be a better represenatation of \cite{vaswani2017attention} than the first) makes it necessary for the passage retrieval model to be able to distinguish between such better and worse representations. ScholarCopilot does not have to be able to make this distinction since it makes use of the fact that abstracts are inherently representative the paper they are taken from (see \cite{cross2006abstracts}). Because of this, the PR module would likely benefit from a more sophisticated architecture that is tailored to identifying ... TODO
+% sometimes you don't want a good representation! short example!!
+
+a retrieval corpus comprised of passages like that of the PR module tends to contain a larger amount of irrelevant candidate references compared to a corpus of abstracts. 
 % condense a retrieved passage further and only retain the most relevant information (e.g. via summarization? or just more fine-grained passage retrieval?)
-% maybe pr helps with reducing the amount of consecutive citations
-% train sc for direct passage retrieval
+
+\textbf{Recall and runtime performance.} As shown in the evaluation, the PR module tends to perform better when given fewer passages
 % sc with context window
-% build corpus from passages instead of abstracts
-% passage reasoning
+% build corpus for passage retrieval
 % dont use all passages for the retrieval corpus (e.g. introductions often include summaries of other papers which may mislead the model)
+
+\textbf{LLM-based generation evaluation.}
+% LLM-based generation eval as a whole is not sufficiently accurate to be used as the sole sufficient metric in scientific research
 % contrastive generation eval between sc and sc+pr
+% compare how different (larger) models perform evaluation
+
+\textbf{Training.}
+% sc and pr solve different tasks
+% train sc for direct passage retrieval
+% build corpus from passages instead of abstracts
+% maybe obtain labelled data with ContextCite?
+
+\textbf{Usability.}
+% passage reasoning
+% maybe pr helps with reducing the amount of consecutive citations
+
