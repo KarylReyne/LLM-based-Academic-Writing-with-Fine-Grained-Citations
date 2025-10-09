@@ -6,28 +6,117 @@ TODO
 % + reasonir!!
 
 \section{Passage Retrieval Instruction}\label{passage-retrieval-instruction}
-% what is the instruction based on?
-% maybe justify your changes?
-TODO
+This instruction is based on the \mono{bright\_general}\footnote{\url{https://github.com/facebookresearch/ReasonIR/blob/main/evaluation/bright/prompts.py}} instruction proposed for ReasonIR \cite{shao2025reasonir}, which is included as "Prompt for reranking StackExchange" in the paper. Fields marked with \mono{\{\}} are filled during retrieval.
+
+\begin{lstlisting}
+    You are given a query and {} paragraphs. Assign each paragraph a score based how likely it is for the given paragraph to be cited at the end of the query. A paragraph should receive a high score if it explains the same or a topic similar to what is discussed towards the end of the query. Following the order of the passages below, your answer should be '[..., xi, ...]' where each xi is a number from 0-10 and the score of the corresponding paragraph-i. 0 means completely irrelevant, 10 means highly relevant and very likely to be cited at the end of the query. Don't output anything else. Output exactly {} scores. Here is the query: 
+    <start_query>
+    {}
+    <end_query>
+    Here are the paragraphs: 
+    <start_paragraph-1>
+    {}
+    <end_paragraph-1><start_paragraph-2>
+    {}
+    <end_paragraph-2>
+    [...]
+\end{lstlisting}
 
 \section{Generation Evaluation Instruction}\label{generation-evaluation-instruction}
-% what is the instruction based on?
-% maybe justify your changes?
-TODO
+These instructions are based on the "Generation Quality Evaluation prompt" proposed together with ScholarCopilot \cite{wang2025scholarcopilot}. Note that every time the evaluation dimensions are listed, this list is shuffled and ordered randomly before the prompt is passed to the judge. This is part of the implementation of Batched Self-Consistency \cite{korikov2025batched} for the judge. Fields marked with \mono{\{\}} are filled during evaluation.
+
+\textbf{Instruction querying for reasoning}
+\begin{lstlisting}
+    You are a senior computer science scholar. Please evaluate the AI-generated content using the ground truth as reference. Evaluate the following five dimensions by comparing the AI-generated content with the ground truth:
+    [Detailed Evaluation]
+    1. Content Relevance:
+        - Key strengths:
+        - Main gaps:
+        - Comparison with ground truth:
+    2. Logical Coherence:
+        - Key strengths:
+        - Main gaps:
+        - Comparison with ground truth:
+    3. Academic Rigor:
+        - Key strengths:
+        - Main gaps:
+        - Comparison with ground truth:
+    4. Background Completeness:
+        - Key strengths:
+        - Main gaps:
+        - Comparison with ground truth:
+    5. Innovation Statement:
+        - Key strengths:
+        - Main gaps:
+        - Comparison with ground truth:
+    [End Evaluation]
+    [Improvement Suggestions]
+        1.
+        2.
+        3.
+    [End Suggestions]
+    Based on your above analysis, provide numerical scores in the following format:
+    [Scores]
+    Content Relevance: <score>/5
+    Logical Coherence: <score>/5
+    Academic Rigor: <score>/5
+    Background Completeness: <score>/5
+    Innovation Statement: <score>/5
+    Total: <sum>/25
+    [End Scores]
+    Below are the materials for evaluation:
+    Paper Title:
+    {}
+    Abstract:
+    {}
+    Ground Truth Content:
+    {}
+    AI Generated Content:
+    {}
+    Remember to first provide detailed evaluation, then improvement suggestions, and finally the numerical scores in the exact format specified above.
+    Make sure that you output the numerical scores last.
+\end{lstlisting}
+
+\textbf{Instruction querying only for scores}
+\begin{lstlisting}
+    You are a senior computer science scholar. Please evaluate the AI-generated content using the ground truth as reference. Evaluate the following five dimensions by comparing the AI-generated content with the ground truth.
+    Based on your analysis, provide numerical scores in the following format:
+    [Scores]
+    Content Relevance: <score>/5
+    Logical Coherence: <score>/5
+    Academic Rigor: <score>/5
+    Background Completeness: <score>/5
+    Innovation Statement: <score>/5
+    Total: <sum>/25
+    [End Scores]
+    Below are the materials for evaluation:
+    Paper Title:
+    {}
+    Abstract:
+    {}
+    Ground Truth Content:
+    {}
+    AI Generated Content:
+    {}
+    Remember to provide the numerical scores in the exact format specified above.
+    Make sure that you output the numerical scores last.
+\end{lstlisting}
 
 \section{Complete Example of Single-Step Retrieval}\label{retrieval-example}
 Shown below are the full context and retrieved references for the example that was used in \refsec{retrieval-evaluation}:
+
+\textbf{Retrieval context}
 \begin{lstlisting}{language=LaTeX}
-    \textbf{Retrieval context}
-    
     1 Introduction Task-oriented dialog (TOD) systems have been widely deployed for popular virtual assistants, like Siri and Google Assistant. They help people with tasks such as booking restaurants and looking for a hotel by searching databases with constraints provided by users. After retrieving a result from the database, a system may continue by conducting actions like making a reservation or providing more information about receiving the result. However, there can be multiple results from the database that match the same constraints. For example, as shown in Fig.1, the system finds two available hotels at different locations when the user is asking the system to help book a hotel. This kind of ambiguity stops system from proceeding until the system finds out which result the user looks for. Therefore, we need to enhance the system with the ability to resolve such ambiguity brought out by multiple items returned from database search. We call this type of ambiguity as database search result ambiguity (DSR-ambiguity). Different from semantic ambiguous words (e.g. orange can be referred as either color or fruit), the DSR-ambiguity focuses on results from multiple database search results. Solving such disambiguation tasks consists of two steps: asking clarification questions and understanding users corresponding answers. While there is a relatively larger body of literature focusing on when and how to give out the clarification question #ref23# #ref22# #ref13#, the focus on understanding users answers/intents has been relatively sparse. Our work mainly focuses on improving models ability of understanding the answers by augmenting two existing task-oriented dialog datasets: MultiWOZ <|CIT-MASK|> and Schema-Guided Dataset (SGD) #ref25#. MultiWOZ and SGD are the most popular large-scale task-oriented dialog datasets, based on which most of the state-of-the-art dialog system models are commonly trained and evaluated. According to our analysis, there are around 66[percent] dialogs of the dataset contains multiple dataset-searching results, which means the DSR-ambiguity exists. In this setting, ambiguities are skipped and the model trained based on these datasets can hardly handle the cases where users prefer to make their own choices among all the results satisfies the constraints. Furthermore, users should be given more detailed information about search results. Ideally, dialog models should provide the information and assist users to make choices, rather than picking one from the result list and recommending it to users. It is not necessary to list all the results, but enumerating 2 or 3 options would help increase users engagement. To strengthen the model with the ability to handle the ambiguity, we propose to augment these two datasets with disambiguation turns, where the system provides all possible matched results and lets the user make their own decision based on the complete information. Specifically, we first extract templates from the SIMMC 2.0 dataset <|CIT-MASK|>
+\end{lstlisting}
 
-    \textbf{Retrieved reference (SC)}
-    
+\textbf{Reference retrieved by SC}
+\begin{lstlisting}
     Abstract This paper presents our work on the Situated Interactive MultiModal Conversations 2.0 challenge held at Dialog State Tracking Challenge 10. SIMMC 2.0 includes 4 subtasks, and we introduce our multimodal approaches for the subtask #1, #2 and the generation of subtask #4. SIMMC 2.0 dataset is a multimodal dataset containing image and text information, which is more challenging than the problem of only text-based conversations because it must be solved by understanding the relationship between image and text. Therefore, since there is a limit to solving only text models such as BERT or GPT2, we propose a multimodal model combining image and text. We first pretrain the multimodal model to understand the relationship between image and text, then finetune our model for each task. We achieve the 3rd best performance in subtask #1, #2 and a runner-up in the generation of subtask #4. The source code is available at https://github.com/rungjoo/simmc2.0.
+\end{lstlisting}
 
-    \textbf{Retrieved reference (SC+PR)}
-    
+\textbf{Reference retrieved by SC+PR}
+\begin{lstlisting}
     The aim of the SIMMC 2.0 dataset is to emulate futuristic, real-world shopping scenarios where humans converse with a dialog agent in natural language grounded in a situated multimodal context. As a step towards this intelligent conversational agent, we leverage the dialogs and annotations in our dataset and propose four benchmark tasks (summarized in Tab.4) along with evaluation metrics. These tasks capture several multimodal conversational reasoning challenges, as elaborated next. In a real-world conversation, humans often use shorthands (coreferences) in order to refer to objects / events that have already been mentioned in the dialog. While we reserve modeling coreference resolution as a challenging task in Sec.4.2, it is important for the system to recognize ambiguous uses of such coreferences even before attempting to resolve them. For example, consider A: The blue trousers are priced at $45. U: What about those?, where the phrase those could be ambiguous in the following situations: (a) The user refers to a group of trousers without specifying the exact one they have in mind, (b) The user incorrectly uses a shorthand for a novel pair of trousers not mentioned in the dialog due to conversational brevity. In either cases, identifying the need for disambiguation and responding with Which ones are you talking about? The red or the green pair? is a desirable trait for a robust assistant system. The multimodal disambiguation task tests this ability of the agent. More concretely, given the dialog history and the current user utterance, multimodal disambiguation requires the agent to predict a binary label conditioned on the multimodal context, to indicate the presence of a referential ambiguity in the user utterance. This label could also be useful for other downstream tasks like assistant response generation (Sec.4.4) in order to continue the conversation in a meaningful way. We use accuracy to measure and compare model performances for this task. For this task, we aim to resolve referential mentions in user utterances to their canonical object IDs as defined for each scene. These mentions can be resolved through (1) the dialog context (e.g. A: This shirt comes in XL and is $29. #eq50# U: Please add it to cart., or (2) the multimodal context (e.g. U: How much is that red shirt? ), or (3) both (e.g. U: How much is the one next to the one you mentioned?). The input for
 \end{lstlisting}
 Note that "\%" is replaced with \mono{[percent]} due to formatting issues.
@@ -101,8 +190,3 @@ The expected behaviour would be that the judge assigns a lower \mono{Logical Coh
         "total": 18.6
     }
 \end{lstlisting}
-
-% numerical retr results
-
-% PR with reasonir
-% initial retrieval with reasonir instead of SC+passage_cutting
