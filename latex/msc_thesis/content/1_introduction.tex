@@ -1,32 +1,9 @@
 \chapter{Introduction}\label{introduction}
+Advances in natural language processing (NLP), notably the introduction of large language models (LLMs) such as the Transformer \cite{vaswani2017attention} and the following development of decoder architectures such as GPT-3 \cite{brown2020language}, LLaMA \cite{touvron2023llama} and Qwen2.5 \cite{an2024qwen2} have enabled the generation of increasingly fluent and human-like text that can be utilized for a variety of applications including creative writing, programming or academic research \cite{tonmoy2024comprehensive}. Especially methods that focus on the LLMs ability to reason \cite{guo2025deepseek,shao2025reasonir} show that these models could be useful for knowledge-intensive tasks such as scientific question-answering \cite{lala2023paperqa,xia2024ground} and academic writing \cite{asai2024openscholar,wang2025scholarcopilot}. One factor that prohibits their widespread application in real-world settings is the tendency of large language models to \emph{hallucinate}, that is, generate information that is factually incorrect but presented as if it were true \cite{do2024facilitating}. This expecially impacts their usefulness for academic writing where faithfulness to the provided sources is very important. To mitigate hallucinations, various methods have been proposed (see for example \cite{tonmoy2024comprehensive}), such as context ablation \cite{cohen2024contextcite,chuang2025selfcite} and notably, Retrieval-Augmented Generation (RAG, \cite{lewis2020retrieval}) which allows an LLM to ground their generated text in real-world knowledge by generating citations that refer to existing literature. Citations are of particular importance as they allow the reader of an LLMs' response to more easily validate the responses' accuracy and factuality, thereby increasing the readers trust in the LLM \cite{do2024facilitating}. 
 
-% traditional rag
-Retrieval-Augmented Generation (RAG, \cite{lewis2020retrieval}) models are designed to generate text that is grounded in real-world factual knowlege. They have been widely adopted for knowledge-intensive NLP tasks \cite{shao2025reasonir} such as long-form question answering \cite{xia2024ground}, scientific question answering \cite{lala2023paperqa} and question synthesis \cite{xu2024kiwi}, generation with sentence-level citations \cite{zhang2024longcite, xia2024ground} and academic text generation \cite{asai2024openscholar, wang2025scholarcopilot}. RAG models usually consist of a generator, a pre-trained sequence-to-sequence (seq2seq) model (e.g. a Transformer-based \cite{vaswani2017attention} decoder), and a retriever with access to a retrieval corpus, which may be implemented as a dense vector index (e.g. a HNSW \cite{malkov2018efficient} index) \cite{lewis2020retrieval}. The RAG architecture is briefly introduced in \refsec{rag}. Such models combine pre-trained paramentric memory with non-paramentric (retrieval-based) memory \cite{lewis2020retrieval}, which has a number of benefits: while neural language models are able to store a substantial amount of world knowledge in their parameters \cite{roberts2020much}, this knowledge can't easily be modified, expanded or directly be used to gain insight into their decision-making process \cite{lewis2019bart}. By using an external retrieval corpus, the knowledge RAG models use to inform their generation can directly be inspected and interpreted \cite{lewis2020retrieval}. Their TODO
-% interpretability
-% provenance
+ScholarCopilot \cite{wang2025scholarcopilot} is one such RAG-based method that was proposed specifically to generate academic writing with accurate citations. It is intended as a tool that assists the user with academic paper writing by providing iterative text generation with automated citation retrieval \cite{wang2025scholarcopilot}. ScholarCopilot also enables user interaction during generation \cite{wang2025scholarcopilot} by allowing the user to rewrite the generated text or forcefully trigger citation retrieval between the consecutive generation steps but this feature is beyond the scope of this thesis and is thus not utilized for the experiments. While ScholarCopilot has the ability to generate citations by retrieving relevant scholarly references from a corpus of scientific documents \cite{wang2025scholarcopilot}, it can only cite entire academic papers but is unable to identify, which part of the cited paper is most relevant to the citing text. This hinders the readers ability to quickly validate whether a cited source actually supports the corresponding generated statement, if the supporting evidence is not easily locatable in the cited text. In addition, ScholarCopilot represents candidate papers for citations by their abstracts and is thus unable to retrieve and consequently cite any information a paper does not include in its abstract.
 
-% why bother with citations
-citations build trust \cite{do2024facilitating}
-% hallucinations
-% https://arxiv.org/abs/2401.01313
-% https://arxiv.org/abs/2311.05232
-% https://aclanthology.org/2020.acl-main.173/
+To mitigate these limitations, this thesis introduces a method for retrieving arbitrary passages from candidate papers that allows ScholarCopilot to retrieve, cite and utilize the information contained in these passages, information, that would otherwise be inaccessible to the model. Extensive experiments are conducted that assess the impact the proposed \emph{passage retrieval module} (PR module) has on the retrieval accuracy and generation quality of ScholarCopilot and whether it can help advance LLM-based academic writing. 
 
-
-% goal of using fine-grained citations instead of abstract citations
-
-
-% special challenges of scientific text (short)
-
-
-% what do I want to achieve with PR ?!
-% !!!!!!
-% SC aims to retrieve "relevant scholarly references" and represents them during inference via "abstracts or key excepts" \cite{wang2025scholarcopilot}. Is this a good way to represent this information?
-% example why I might want a fitting passage instead of the abstract (name an instance where a passage is more informative than the abstract)
-TODO
-
-
-% summarize the thesis contributions!
-% PR is backbone agnostic
-TODO
+To give a brief overview of how the remainder of this thesis will be structured: first, \refsec{related-work} will introduce, what progress has been made recently in text generation and in particular, generation for scientific applications. Section \ref{methods} will very briefly recapitulate the basic structure of RAG models before discussing the design and differences of ScholarCopilot and the passage retrieval module in detail. Section \ref{experiments} presents the methodology and results of the evaluation, where ScholarCopilot and the PR module are compared in regard to their retrieval accuracy and generation quality. Finally, \refsec{limitations-future-work} will discuss these results, highlight the limitations of the proposed method and suggest directions for future research, before \refsec{conclusion} concludes the thesis by summarizing its contributions. Supplementary material is provided in the appendix. 
 

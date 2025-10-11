@@ -1,7 +1,7 @@
 \chapter{Methods}\label{methods}
 TODO % intro to this section
 
-\section{Retrieval-Augmented Generation}\label{rag}
+\section{Retrieval-Augmented Generation}\label{rag-method}
 The RAG architecture \cite{lewis2020retrieval} is comprised of a retriever $p_\eta$ consisting of a query encoder $q$ and a retrieval corpus $d$, and a generator $p_\theta$ (see \reffig{fig:rag_architecture}). Given a query $x$, the retriever $p_\eta(z|x)$ (with parameters $\eta$) computes a distribution over the text documents $z$ in the retrieval corpus $d$ according to $x$ \cite{lewis2020retrieval}. This distribution is used to obtain the top-k most relevant documents with respect to the query. The generator $p_\theta(y_i|x,z,y_{1:i-1})$, parametrized by $\theta$, then predicts each next token $y_i$ based on the previous tokens $y_{1:i-1}$, the given query $x$ and a document $z$ from the top-k retrieved documents (according to $p_\eta$) \cite{lewis2020retrieval}. Lewis et al. base their retriever on the \mono{Dense Passage Retriever} \cite{karpukhin2020dense} and use a pre-trained \mono{BART-large} \cite{lewis2019bart} as the generator. 
 \begin{figure}[t]
     \includegraphics[width=\textwidth]{../images/rag_architecture.png}
@@ -67,15 +67,6 @@ The generator $p_G(y_{i+1}|Y^\mono{in}\mathbb{Y}^\mono{gen}_{1:i})$ predicts the
     \caption{Overview of one generation step of ScholarCopilot. Here $Y$ denotes the vocabulary (the set of all tokens), $Z$ the retrieval corpus (all encoded abstracts), $G$ ScholarCopilot's decoder and getAbstract$()$ a function that returns the unencoded abstract corresponding to $z_i$}\label{alg:scholarcopilot}
 \end{algorithm}
 
-
-% % FAISS + HNSW
-% \subsection{HNSW}\label{hnsw}
-% TODO
-
-% \subsection{ScholarCopilot Training}\label{sc-training}
-% TODO
-
-
 \section{Passage Retrieval}\label{passage-retrieval}
 As outlined in \refsec{scholarcopilot}, ScholarCopilot (SC) represents each scientific document in the retrieval corpus with its abstract. But, depending on the context for which the model is supposed to retrieve a reference, the abstract might not be the most informative passage of a candidate paper (see \refsec{introduction}). Thus always using a paper's abstract as reference may add irrelevant information into the generated sequence which can negatively affect the model's reasoning capabilities \cite{shi2023large}. 
 
@@ -137,14 +128,4 @@ On the other hand, the passages obtained from a document's sections often contai
     }
     \caption{Overview of one generation step of ScholarCopilot with Passage Retrieval. getDocument$()$ denotes a function that returns the fulltext paper corresponding to $z_j$}\label{alg:scholarcopilot-pr}
 \end{algorithm}
-
-% % Batched Self-Consistency
-% \subsection{Batched Self-Consistency}\label{batched-self-consistency}
-% TODO
-
-% Self-consistency improves the performance of prompting techniques \cite{shi2023large}
-
-% % Min-Max Normalization of scores
-% \subsection{Min-Max Normalization}\label{normalization}
-% TODO
 
