@@ -1,9 +1,68 @@
 \chapter{Appendix}
 
 \section{Hyperparameters}\label{hyperparameters}
-TODO
+TODO \reftab{tab:hyperparams-retr} \reftab{tab:hyperparams-gen}
 % adaptive k_SC!!!
 % + reasonir!!
+\begin{table}[t]
+    \begin{center}
+        \resizebox{\textwidth}{!}{\begin{tabular}{cccc}
+            \textbf{Parameter} & \shortstack{\textbf{Retrieval}\\\mono{masked}} & \shortstack{\textbf{Retrieval}\\\mono{with-abstracts}} & \shortstack{\textbf{Retrieval-ReasonIR}\\\mono{masked}} \\
+            \hline
+            \hline
+            Recall $k$ & $\{10,5,1\}$ & $\{10,5,1\}$ & 10 \\
+            \hline
+            $m_{PR}$ & 3 & 3 & 3 \\
+            \hline
+            passage length & 512 & 512 & 512 \\
+            \hline
+            $w$ & 128 & 128 & 128 \\
+            \hline
+            $\delta$ & - & - & 0.5 \\
+            \hline
+            $k_{SC}$ & $2k$ & $2k$ & $3k$ \\
+            \hline
+            $k_\mono{ReasonIR}$ & - & - & $2k$\\
+            \hline
+            psg. perm.  & STB & STB & STB \\
+            \hline
+            psg. per batch & 5 & 5 & 5 \\
+            \hline
+            ranking min-max norm. & \textbf{true} & \textbf{true} & \textbf{true} \\
+            \hline
+        \end{tabular}}
+    \end{center}
+    \caption{TODO}
+    \label{tab:hyperparams-retr}
+\end{table}
+
+\begin{table}[t]
+    \begin{center}
+        \resizebox{\textwidth}{!}{\begin{tabular}{ccc}
+            \textbf{Parameter} & \shortstack{\textbf{Generation}\\\mono{with reasoning}} & \shortstack{\textbf{Generation}\\\mono{without reasoning}} \\
+            \hline
+            \hline
+            max. gen. length & 30000 & 30000 \\
+            \hline
+            $m_{PR}$ & 3 & 3 \\
+            \hline
+            $m_{judge}$ & 5 & 5 \\
+            \hline
+            passage length & 512 & 512 \\
+            \hline
+            $w$ & 128 & 128 \\
+            \hline
+            psg. perm.  & STB & STB \\
+            \hline
+            psg. per batch & 5 & 5 \\
+            \hline
+            ranking min-max norm. & \textbf{true} & \textbf{true} \\
+            \hline
+        \end{tabular}}
+    \end{center}
+    \caption{TODO}
+    \label{tab:hyperparams-gen}
+\end{table}
 
 \section{Passage Retrieval Instruction}\label{passage-retrieval-instruction}
 This instruction is based on the \mono{bright\_general}\footnote{\url{https://github.com/facebookresearch/ReasonIR/blob/main/evaluation/bright/prompts.py}} instruction proposed for ReasonIR \cite{shao2025reasonir}, which is included as "Prompt for reranking StackExchange" in the paper. Fields marked with \mono{\{\}} are filled during retrieval.
