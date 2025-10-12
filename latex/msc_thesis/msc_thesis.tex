@@ -13,6 +13,7 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{colortbl}
 
 % this is adapted from from the source code of the ScholarCopilot paper published on arxiv.
 \lstset{
@@ -47,6 +48,7 @@
 \newcommand{\reftab}[1]{Table \ref{#1}}
 
 \definecolor{commentgreen}{rgb}{0.5,0.5,0}
+\definecolor{tablegray}{rgb}{0.95,0.95,0.95}
 \newcommand{\note}[1]{\textcolor{commentgreen}{// #1}\\}% colored c-style comment
 \newcommand{\mathnote}[1]{\textcolor{commentgreen}{\text{// #1}}}% for math env
 \newcommand{\D}{\text{d}}% leibniz notation d for derivatives/integrals
@@ -56,15 +58,13 @@
 \newcommand{\ceil}[1]{\lceil{#1}\rceil}
 \newcommand{\floor}[1]{\lfloor{#1}\rfloor}
 
-% \title{LLM-Enhanced Scientific Literature Search with Active Disambiguation}
-% \author{My Name \thanks{e-mail: my.name@uni-tuebingen.de}}
-% \date{\today}
+
 \begin{document}
 
 \input{teaser}
 
 \chapter*{Abstract}
-TODO
+Recent advances in text generation have made it possible for Retrieval-Augmented Generation models to produce academic-style writing. ScholarCopilot in particular presents a unified architecture that dynamically triggers retrieval during continuous generation based on the evolving information needs of the generator, thereby enabling coherent generative scientific writing with accurate citations. However, the choice to represent possible citation targets exclusively by their abstracts greatly limits ScholarCopilots' ability to utilize all the information contained in scientific papers and significantly lowers its verifyability. In this thesis, I propose a passage retrieval module for ScholarCopilot that is designed to address these limitations by allowing the model to retrieve arbitrary passages from scientific documents and incorporate this information in the generation process. Extensive evaluation is conducted to access the impact of the passage retrieval module on the citation recall and generation quality of ScholarCopilot, revealing not only chances to advance generative academic writing with fine-grained citations but also uncovering significant limitations of entirely LLM-based generation quality evaluation.
 
 \tableofcontents
 

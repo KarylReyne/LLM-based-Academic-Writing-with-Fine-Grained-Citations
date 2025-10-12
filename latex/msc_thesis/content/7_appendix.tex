@@ -1,66 +1,89 @@
 \chapter{Appendix}
 
 \section{Hyperparameters}\label{hyperparameters}
-TODO \reftab{tab:hyperparams-retr} \reftab{tab:hyperparams-gen}
-% adaptive k_SC!!!
-% + reasonir!!
+The hyperparameters used for the single-step retrieval and generation quality evaluation are presented in \reftab{tab:hyperparams-retr} and \reftab{tab:hyperparams-gen} respectively. Not discussed in the thesis are the parameters that control the Batched Self-Consistency implementations for the passage retriever and judge: \emph{psg. permutation} denotes the permutation strategy used (I implemented and tested both \mono{shuffled-then-batched} (STB) and \mono{batched-then-shuffled} (BTS) but didn't observe a significant impact on performance when using either) and \emph{psg. per batch} denotes how many passages are ranked in the same batch/LLM call. See \cite[3.2.2]{korikov2025batched} for details. The hyperparameters of ScholarCopilot, the passage retriever, ReasonIR and the judge are left unchanged after the models were cloned from Hugging Face\footnote{\url{https://huggingface.co/}}, except for the Softmax temperature of the passage retriever and judge, which is set to $0.6$. Refer to the implementation submitted with this thesis for the detailed configurations. 
+
 \begin{table}[t]
     \begin{center}
         \resizebox{\textwidth}{!}{\begin{tabular}{cccc}
             \textbf{Parameter} & \shortstack{\textbf{Retrieval}\\\mono{masked}} & \shortstack{\textbf{Retrieval}\\\mono{with-abstracts}} & \shortstack{\textbf{Retrieval-ReasonIR}\\\mono{masked}} \\
             \hline
             \hline
-            Recall $k$ & $\{10,5,1\}$ & $\{10,5,1\}$ & 10 \\
+            \multicolumn{4}{c}{\cellcolor{tablegray}\emph{Evaluation parameters}} \\
             \hline
-            $m_{PR}$ & 3 & 3 & 3 \\
+            Recall $k$ & $k\in\{10,5,1\}$ & $k\in\{10,5,1\}$ & 10 \\
+            \hline
+            \# samples & 1000 & 1000 & 1000 \\
+            \hline
+            shuffled samples & \textbf{true} & \textbf{true} & \textbf{true} \\
+            \hline
+            \multicolumn{4}{c}{\cellcolor{tablegray}\emph{PR module settings}} \\
             \hline
             passage length & 512 & 512 & 512 \\
             \hline
             $w$ & 128 & 128 & 128 \\
             \hline
-            $\delta$ & - & - & 0.5 \\
-            \hline
             $k_{SC}$ & $2k$ & $2k$ & $3k$ \\
             \hline
             $k_\mono{ReasonIR}$ & - & - & $2k$\\
             \hline
-            psg. perm.  & STB & STB & STB \\
-            \hline
-            psg. per batch & 5 & 5 & 5 \\
+            $\delta$ & - & - & 0.5 \\
             \hline
             ranking min-max norm. & \textbf{true} & \textbf{true} & \textbf{true} \\
             \hline
+            \multicolumn{4}{c}{\cellcolor{tablegray}\emph{Batched Self-Consistency settings}} \\
+            \hline
+            $m_{PR}$ & 3 & 3 & 3 \\
+            \hline
+            psg. permutation  & STB & STB & STB \\
+            \hline
+            psg. per batch & 5 & 5 & 5 \\
+            \hline
         \end{tabular}}
     \end{center}
-    \caption{TODO}
+    \caption{The hyperparameters used for the retrieval evaluation. Note that the top-$k_*$ values change based on the Recall $k$ used.}
     \label{tab:hyperparams-retr}
 \end{table}
 
 \begin{table}[t]
     \begin{center}
-        \resizebox{\textwidth}{!}{\begin{tabular}{ccc}
+        % \resizebox{\textwidth}{!}{
+            \begin{tabular}{ccc}
             \textbf{Parameter} & \shortstack{\textbf{Generation}\\\mono{with reasoning}} & \shortstack{\textbf{Generation}\\\mono{without reasoning}} \\
             \hline
             \hline
-            max. gen. length & 30000 & 30000 \\
+            \multicolumn{3}{c}{\cellcolor{tablegray}\emph{Evaluation parameters}} \\
             \hline
-            $m_{PR}$ & 3 & 3 \\
+            max. generation length & 30000 & 30000 \\
             \hline
-            $m_{judge}$ & 5 & 5 \\
+            \# samples & 100 & 100 \\
+            \hline
+            shuffled samples & \textbf{true} & \textbf{true} \\
+            \hline
+            \multicolumn{3}{c}{\cellcolor{tablegray}\emph{PR module settings}} \\
             \hline
             passage length & 512 & 512 \\
             \hline
             $w$ & 128 & 128 \\
             \hline
-            psg. perm.  & STB & STB \\
-            \hline
-            psg. per batch & 5 & 5 \\
+            $k_{SC}$ & 10 & 10 \\
             \hline
             ranking min-max norm. & \textbf{true} & \textbf{true} \\
             \hline
-        \end{tabular}}
+            \multicolumn{3}{c}{\cellcolor{tablegray}\emph{Batched Self-Consistency settings}} \\
+            \hline
+            $m_{PR}$ & 3 & 3 \\
+            \hline
+            $m_{judge}$ & 5 & 5 \\
+            \hline
+            psg. permutation  & STB & STB \\
+            \hline
+            psg. per batch & 5 & 5 \\
+            \hline
+        \end{tabular}
+        % }
     \end{center}
-    \caption{TODO}
+    \caption{The hyperparameters used for the generation evaluation.}
     \label{tab:hyperparams-gen}
 \end{table}
 
@@ -162,7 +185,7 @@ These instructions are based on the "Generation Quality Evaluation prompt" propo
 \end{lstlisting}
 
 \section{Complete Example of Single-Step Retrieval}\label{retrieval-example}
-Shown below are the full context and retrieved references for the example that was used in \refsec{retrieval-evaluation}:
+Shown below are the full context and retrieved references for the example that was used in \refsec{retrieval-evaluation}. Note that "\%" is replaced with \mono{[percent]} due to formatting issues.
 
 \textbf{Retrieval context}
 \begin{lstlisting}{language=LaTeX}
@@ -178,10 +201,9 @@ Shown below are the full context and retrieved references for the example that w
 \begin{lstlisting}
     The aim of the SIMMC 2.0 dataset is to emulate futuristic, real-world shopping scenarios where humans converse with a dialog agent in natural language grounded in a situated multimodal context. As a step towards this intelligent conversational agent, we leverage the dialogs and annotations in our dataset and propose four benchmark tasks (summarized in Tab.4) along with evaluation metrics. These tasks capture several multimodal conversational reasoning challenges, as elaborated next. In a real-world conversation, humans often use shorthands (coreferences) in order to refer to objects / events that have already been mentioned in the dialog. While we reserve modeling coreference resolution as a challenging task in Sec.4.2, it is important for the system to recognize ambiguous uses of such coreferences even before attempting to resolve them. For example, consider A: The blue trousers are priced at $45. U: What about those?, where the phrase those could be ambiguous in the following situations: (a) The user refers to a group of trousers without specifying the exact one they have in mind, (b) The user incorrectly uses a shorthand for a novel pair of trousers not mentioned in the dialog due to conversational brevity. In either cases, identifying the need for disambiguation and responding with Which ones are you talking about? The red or the green pair? is a desirable trait for a robust assistant system. The multimodal disambiguation task tests this ability of the agent. More concretely, given the dialog history and the current user utterance, multimodal disambiguation requires the agent to predict a binary label conditioned on the multimodal context, to indicate the presence of a referential ambiguity in the user utterance. This label could also be useful for other downstream tasks like assistant response generation (Sec.4.4) in order to continue the conversation in a meaningful way. We use accuracy to measure and compare model performances for this task. For this task, we aim to resolve referential mentions in user utterances to their canonical object IDs as defined for each scene. These mentions can be resolved through (1) the dialog context (e.g. A: This shirt comes in XL and is $29. #eq50# U: Please add it to cart., or (2) the multimodal context (e.g. U: How much is that red shirt? ), or (3) both (e.g. U: How much is the one next to the one you mentioned?). The input for
 \end{lstlisting}
-Note that "\%" is replaced with \mono{[percent]} due to formatting issues.
 
 \section{Complete Example of LLM-based Generation Quality Evaluation with Reasoning}\label{generation-evaluation-example}
-TODO % explain
+Shown below is a full example of the LLM-based generation quality evaluation used, including the original human-written introduction and both generated introductions provided to the judge, as well as the evaluations and corresponing reasonings generated by the judge:
 
 \textbf{Original Introduction of the paper}
 \begin{lstlisting}{language=LaTeX}
@@ -210,11 +232,11 @@ TODO % explain
 \end{lstlisting}
 
 \section{"False Positive" Example of LLM-based Generation Quality Evaluation}\label{bad-generation-evaluation-example}
-TODO % explain
+Shown below is an example where an aspect of the generated introductions provided to the judge is not reflected in the scores computed by the judge, highlighting that the evaluation by the judge can significantly disagree with human judgement. This example was generated by prompting the judge to evaluate the given generated introductions with reasoning.
 
 The expected behaviour would be that the judge assigns a lower \mono{Logical Coherence} score to the text generated by \mono{SC+PR} (which is not the case since $4>2.8$) and that this score is on the lower end of the permitted scale (which is also false since $4>2.5$ when we define 'lower end' of the interval $[0,5]$ to be $[0,2.5)$). Note that generating long sequences of consecutive citations or getting stuck in generating repetitive sequences are not issues unique to ScholarCopilot and the PR module respectively, both models occationally show such behaviour.
 
-\textbf{Title and abstract of the paper the models are asked to generate}
+\textbf{Title and abstract of the paper the models were asked to generate}
 \begin{lstlisting}{language=LaTeX}
     INVERTIBLE IMAGE DATASET PROTECTION
 
@@ -236,8 +258,8 @@ The expected behaviour would be that the judge assigns a lower \mono{Logical Coh
     \\textbf{Adversarial Training:} Adversarial training is a proactive defense method. Adversarial training is used to train models that are robust to adversarial attacks. Adversarial training is a widely used defense method. Adversarial training is used to train models that are robust to adversarial attacks. Adversarial training is a widely used defense method. Adversarial training is used to train models that are robust to adversarial attacks. Adversarial training is a widely used defense method.
     [...]
 \end{lstlisting}
-
-\textbf{Scores computed by the judge}
+\newpage
+\textbf{(Aggregated) Scores computed by the judge}
 \begin{lstlisting}{language=LaTeX}
     "sc_scores": {
         "Content Relevance": 3.4,
