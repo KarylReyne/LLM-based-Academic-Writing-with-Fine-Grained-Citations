@@ -1,2 +1,2 @@
-# LLM-Enhanced Scientific Literature Search with Active Disambiguation
+# LLM-based Academic Writing with Fine-Grained Citations
 TODO

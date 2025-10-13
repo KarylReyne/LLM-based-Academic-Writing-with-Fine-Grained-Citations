@@ -181,7 +181,8 @@ if __name__ == "__main__":
     }
 
     # override some model settings to match the settings defined in this file
-    config["custom_save_dir"] = f"out_thesis/eval_generation_judge_instruction2{"-only-scores" if config["judge_should_only_score"] else ""}_{generation_breakpoint}_{max_samples}"
+    suffix = "-only-scores" if config["judge_should_only_score"] else ""
+    config["custom_save_dir"] = f"out_thesis/eval_generation_judge_instruction2{suffix}_{generation_breakpoint}_{max_samples}"
 
     print()
     for i in eval_indices:
@@ -287,7 +288,8 @@ if __name__ == "__main__":
             judge_scores_avg.append(scores_avg)
             judge_responses.append(per_model_responses)
             print(f"judging{len(judge_scores_avg)} done in {time.time() - start}")
-            print(f"SC {"PR" if len(judge_scores_avg) == 2 else ""} scores:")
+            pr = "PR" if len(judge_scores_avg) == 2 else ""
+            print(f"SC {pr} scores:")
             print(scores_avg)
 
         scoring_records.append({

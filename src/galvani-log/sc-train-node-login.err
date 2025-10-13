@@ -1,5 +1,0 @@
-
-CondaError: Run 'conda init' before 'conda activate'
-
-slurmstepd: error: *** JOB 1668243 ON galvani-cn212 CANCELLED AT 2025-08-15T09:40:04 ***
-slurmstepd: error: *** JOB 1668261 ON galvani-cn231 CANCELLED AT 2025-08-15T19:27:21 DUE TO TIME LIMIT ***

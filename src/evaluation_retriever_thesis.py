@@ -39,10 +39,10 @@ if __name__ == "__main__":
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
     print("index building finished")
 
-    SECTIONS = "intro+relwork" # eval1
-    # SECTIONS = "methods" # eval2
-    # SECTIONS = "experiments" # eval3
-    # SECTIONS = "conclusion" # eval4
+    SECTIONS = "intro+relwork"
+    # SECTIONS = "methods"
+    # SECTIONS = "experiments"
+    # SECTIONS = "conclusion"
 
     with_abstracts = False
     shuffle = True
@@ -55,7 +55,8 @@ if __name__ == "__main__":
         target_sections = ["experiments"]
     elif SECTIONS == "conclusion":
         target_sections = ["conclusion"]
-    eval_dataset_path = f"data_thesis/eval_dataset_{SECTIONS}-sections_documents_3.0_for_sc_corpus{"_with_abstracts" if with_abstracts else ""}.jsonl"
+    insert = "_with_abstracts" if with_abstracts else ""
+    eval_dataset_path = f"data_thesis/eval_dataset_{SECTIONS}-sections_documents_3.0_for_sc_corpus{insert}.jsonl"
     docs_dataset_path = "data/documents_3.0_with_ids.jsonl"
     eval_dataset, eval_indices = load_sections_eval_dataset(
         target_sections, 
@@ -69,12 +70,6 @@ if __name__ == "__main__":
         populate_with_abstracts=with_abstracts, 
         shuffle=shuffle
     )
-
-    # sc_arxiv_id_map = {v: k for k, v in sc_corpus_id_map.items()}
-    # eval_dataset_path = "data_thesis/eval_dataset_scholarcopilot_eval_data_1k_eval_pairs.jsonl"
-    # sc_eval_dataset_path = "scholarcopilot_data/scholar_copilot_eval_data_1k.json"
-    # from dataset_loaders import load_scholarcopilot_eval_dataset
-    # eval_dataset, eval_indices = load_scholarcopilot_eval_dataset(eval_dataset_path, sc_eval_dataset_path, sc_arxiv_id_map, docs_corpus_id_map, config, shuffle=shuffle)
 
     RECALL_K = 1
     
@@ -91,19 +86,20 @@ if __name__ == "__main__":
     eps = 1e-6 # fail metrics
 
     # override some model settings to match the settings defined in this file
+    insert = "out" if not with_abstracts else ""
     if config["enable_passage_retriever"]:
         config["sc_retriever_topk"] = RECALL_K*3
         config["retriever_topk"] = RECALL_K*2
         config["reranker_topk"] = RECALL_K
-        config["custom_save_dir"] = f"out_thesis/eval_retrieval_with-reasonir-ranking_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
+        config["custom_save_dir"] = f"out_thesis/eval_retrieval_with-reasonir-ranking_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{insert}_abstracts/"
     else:
         config["sc_retriever_topk"] = RECALL_K*2
         config["reranker_topk"] = RECALL_K
 
-        # config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
+        config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{insert}_abstracts/"
 
         # for computing the example in the thesis
-        config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_SCfailurePRsuccess_example/"
+        # config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_SCfailurePRsuccess_example/"
 
     print()
     for i in eval_indices:
@@ -114,24 +110,20 @@ if __name__ == "__main__":
             item = eval_dataset[i]
             context = item["context"]
             target_docs_corpus_id = docs_corpus_id_map[item["target_arxiv_id"]]
-            # print(context)
 
             sc_ranking, references = rank_with_scholarcopilot(
                 context, docs_retrieval_dataset, docs_corpus_id_map, sc_metadata_corpus, index, lookup_indices, model, tokenizer, config, recall_k=RECALL_K
             )
-            # print(sc_ranking)
 
             sc_pr_ranking, fail, reranking_results, error_msg = rank_with_passage_retrieval_from_sc_rankings(
                 context, references, docs_corpus_id_map, tokenizer, passage_retrieval_models, config
             )
-            # print(sc_pr_ranking)
 
             # appending to the containers is delayed until all retrievals are done (because of the error handling)
             gold.append(target_docs_corpus_id)
             sc_rankings.append(sc_ranking)
             sc_pr_rankings.append(sc_pr_ranking)
             num_llm_fails += fail
-            # print(gold[-1])
 
             # determine overlap
             bool_sc = single_recall_at_k(sc_ranking, target_docs_corpus_id, RECALL_K)
@@ -151,11 +143,11 @@ if __name__ == "__main__":
                 pr_fail_records[f"sample index {i}"] = rec
             
             # for computing the example in the thesis
-            if (not bool_sc) and bool_sc_pr:
-                print(f"context\t{item["source_arxiv_id"]}\t{context}\n")
-                print(f"SC failure\t{references[0]["arxiv_id"]}\t{references[0]["abstract"]}\n")
-                print(f"PR success\t{item["target_arxiv_id"]}\t{reranking_results["ranked_passages"][0]}\n")
-                break
+            # if (not bool_sc) and bool_sc_pr:
+            #     print(f"context\t{item["source_arxiv_id"]}\t{context}\n")
+            #     print(f"SC failure\t{references[0]["arxiv_id"]}\t{references[0]["abstract"]}\n")
+            #     print(f"PR success\t{item["target_arxiv_id"]}\t{reranking_results["ranked_passages"][0]}\n")
+            #     break
 
             # collect failing llm responses
             if error_msg != None:

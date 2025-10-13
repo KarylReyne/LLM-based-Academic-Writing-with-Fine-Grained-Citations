@@ -744,7 +744,8 @@ def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_a
 
             generation_context = f"Title: {entry_title}\n\n"
             generation_context += f"Abstract: {entry_abstract}\n\n"
-            generation_context += f"Introduction:\n{" ".join(entry_introduction_sents[:2])} " # two full sentences
+            sents = " ".join(entry_introduction_sents[:2])
+            generation_context += f"Introduction:\n{sents} " # two full sentences
             generation_context += third_sent_start 
 
             rec = {
@@ -770,7 +771,8 @@ def load_generation_eval_dataset(eval_dataset_path, docs_retrieval_dataset, sc_a
     eval_indices = np.arange(len(eval_dataset))
     if shuffle:
         random.shuffle(eval_indices)
-    print(f"generation eval dataset loaded (contains {len(eval_dataset)} samples, oldest is {eval_dataset[-1]["source_arxiv_id"]}).")
+    oldest_id = eval_dataset[-1]["source_arxiv_id"]
+    print(f"generation eval dataset loaded (contains {len(eval_dataset)} samples, oldest is {oldest_id}).")
 
     return eval_dataset, eval_indices
 

@@ -31,60 +31,8 @@ def get_arxiv_id_from_citation(citation, title_to_arxiv_id):
         except KeyError:
             pass
 
-    if arxiv_id == None: # arxiv title search
+    if arxiv_id == None:
         raise ArxivSearchFailedError
-        # ARXIV_MAX_RESULTS = 10
-        # title = ""
-        # for substring in citation.split(".")[1:]:
-        #     if substring.startswith("  "): # titles seem to always be preceded by "  "
-        #         title = substring.lstrip("  ")
-        #         break
-        # title_for_url = title.replace(" ", "+").replace(":", "%3A").replace("\"", "%3F").replace("<", "%3F")
-        # url = f'https://export.arxiv.org/api/query?search_query={title_for_url}&searchtype=title&start=0&max_results={ARXIV_MAX_RESULTS}'
-        # try: 
-        #     data = urllib.request.urlopen(url) # sometimes returns 400
-        #     xml = data.read().decode()
-        #     xml = xml.split("<entry>")[1:] # skip to the actual search results
-        # except urllib.error.HTTPError as e:
-        #     print(title)
-        #     print(url)
-        #     raise e
-        # except IndexError:
-        #     # no search results returned
-        #     raise ArxivSearchFailedError
-        # except UnicodeDecodeError:
-        #     # decoding failed
-        #     raise ArxivSearchFailedError
-
-        # for entry in xml:
-        #     entry = entry.replace(">\n", ">SPLIT").split("SPLIT")
-        #     entry_title = ""
-        #     entry_id = ""
-        #     for entry_item in entry:
-        #         entry_item = entry_item.lstrip().replace("\n", " ")
-        #         if entry_item.startswith("<title>"):
-        #             entry_title = entry_item.lstrip("<title>").rstrip("</title>")
-        #         elif entry_item.startswith("<id>"):
-        #             item_body = entry_item.lstrip("<id>").rstrip("</id>")
-        #             entry_id = item_body.split("/")[-1]
-        #     # check if the entry is about the correct paper by comparing titles
-        #     process_title = lambda t: t.lower().replace(" ", "")
-        #     t1 = process_title(title) # citation
-        #     t2 = process_title(entry_title) # search result entry
-        #     if not t1 == t2:
-        #         # print(f"t1 {t1}")
-        #         # print(f"t2 {t2}")
-        #         continue # try the next search result
-        #     else:
-        #         arxiv_id = entry_id
-        #         id_type = "searched"
-        #         break # found the paper
-        # if arxiv_id == None:
-        #     # print(citation)
-        #     # print(title)
-        #     raise NoResultMatchedError
-
-        # time.sleep(0.1) # delay after each api request
         
     assert arxiv_id != None, citation
     arxiv_id = arxiv_id.split("v")[0] # remove version

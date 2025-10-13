@@ -186,14 +186,16 @@ def collect_retrieval_results(retrieved_k_results, retrieval_dataset, arxiv_to_c
             docs_corpus_idx = arxiv_to_corpus_id_map[sc_metadata_corpus[curr_corpus_idx]["paper_id"]]
         except KeyError:
             if not silent:
-                print(f"arxiv id {sc_metadata_corpus[curr_corpus_idx]["paper_id"]} not found in the docs retrieval_dataset")
+                paper_id = sc_metadata_corpus[curr_corpus_idx]["paper_id"]
+                print(f"arxiv id {paper_id} not found in the docs retrieval_dataset")
             continue
         references.append(retrieval_dataset[docs_corpus_idx])
         distances.append(distance)
     if len(references) == 0:
         raise ScholarCopilotRetrievalError(f"none of the retrieved results found in the retrieval_dataset")
     if not silent:
-        print(f"best reference before passage retrieval: {references[0]["arxiv_id"]}")
+        arxiv_id = references[0]["arxiv_id"]
+        print(f"best reference before passage retrieval: {arxiv_id}")
     return references, distances
 
 

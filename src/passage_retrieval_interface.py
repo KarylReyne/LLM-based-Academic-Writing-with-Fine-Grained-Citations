@@ -33,14 +33,15 @@ def save_results(
     if "custom_save_dir" in config:
         out_dir = config["custom_save_dir"]
     results = None
+    date_str = datetime.now().strftime('%Y-%m-%d')
     try:
-        with open(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'r', encoding='utf-8') as f:
+        with open(f'{out_dir}/{date_str}/records.json', 'r', encoding='utf-8') as f:
             results = json.load(f)
     except FileNotFoundError:
-        if not os.path.exists(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}'):
-            os.makedirs(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}')
+        if not os.path.exists(f'{out_dir}/{date_str}'):
+            os.makedirs(f'{out_dir}/{date_str}')
         results = {}
-    assert os.path.exists(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}')
+    assert os.path.exists(f'{out_dir}/{date_str}')
     assert results != None
 
     results["last changed"] = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -69,13 +70,14 @@ def save_results(
         raise NotImplementedError(f"mode '{mode}' is not implemented!")
 
 
-    with open(f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records.json', 'w', encoding='utf-8') as f:
+    with open(f'{out_dir}/{date_str}/records.json', 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
 
     if mode in ["generation", "eval_retrieval", "eval_generation"]:
+        date_exact = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         os.rename( # rename results file for final save
-            f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records.json',
-            f'{out_dir}/{datetime.now().strftime('%Y-%m-%d')}/records_{mode}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json'
+            f'{out_dir}/{date_str}/records.json',
+            f'{out_dir}/{date_str}/records_{mode}_{date_exact}.json'
         )
 
 
@@ -131,7 +133,9 @@ def get_candidate_passages(references, tokenizer, config):
     for rec in references:
         if "sections" in rec: # rec is from a retrieval dataset
             for section in rec["sections"]:
-                section_label = f"{rec["arxiv_id"]}_{section["title"].lstrip(" ").replace(" ", "-")}"
+                arxiv_id = rec["arxiv_id"]
+                title = section["title"].lstrip(" ").replace(" ", "-")
+                section_label = f"{arxiv_id}_{title}"
                 text = " ".join(section["sentences"])
                 tokens = tokenizer(text).to(config["retriever_device"])
                 tokens = tokens["input_ids"] # get only the encoded tokens
@@ -242,10 +246,6 @@ def retrieve_passages_with_reasonir(index, lookup_indices, cite_start_hidden_sta
 
     # cpu index search
     distances, indices = index.search(cite_start_hidden_state, top_k)
-    # gpu index search
-    # res = faiss.StandardGpuResources()
-    # gpu_index = faiss.index_cpu_to_gpu(res, config["retriever_device"], index)
-    # distances, indices = gpu_index.search(cite_start_hidden_state, top_k)
 
     retrieved_passage_labels = []
     for i in indices[0]:
@@ -278,13 +278,9 @@ def apply_retrieval_context_window(generated_context, tokenizer, config):
             padding="max_length",
             truncation=True
         ).to(config["retriever_device"])
-        assert len(tokens.input_ids) == config["query_context"], f"{len(tokens.input_ids)} != {config["query_context"]}"
+        w = config["query_context"]
+        assert len(tokens.input_ids) == w, f"{len(tokens.input_ids)} != {w}"
         context = tokenizer.decode(tokens.input_ids)
-        # tokens = tokens["input_ids"] # get only the encoded tokens
-        # index = len(tokens)-1 # index of the citation, for generation always the last index
-        # low = max(index-config["query_context"], 0)
-        # high = index+1
-        # context = tokenizer.decode(tokens[low:high])
         context = context.replace(config["tokenizer_begin_token"], "")
     return context
 

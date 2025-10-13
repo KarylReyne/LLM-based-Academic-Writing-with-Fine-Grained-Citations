@@ -169,7 +169,8 @@ if __name__ == "__main__":
 
         fig.tight_layout()
 
-        fig.savefig(SAVE_DIR+f"retrieval_{replacement_strategy.replace(" ", "_")}.pdf")
+        insert = replacement_strategy.replace(" ", "_")
+        fig.savefig(SAVE_DIR+f"retrieval_{insert}.pdf")
 
     # reasonir
     AXES_ASPECT = 9.5
@@ -246,7 +247,8 @@ if __name__ == "__main__":
         plt.yticks(fontsize=FONTSIZE)
 
         # fig.tight_layout()
-        fig.savefig(SAVE_DIR+f"generation_{label.replace(" ", "_")}.pdf")
+        insert = label.replace(" ", "_")
+        fig.savefig(SAVE_DIR+f"generation_{insert}.pdf")
 
 
     fig, ax = plt.subplots(figsize=(10,5))
@@ -275,4 +277,5 @@ if __name__ == "__main__":
     plt.yticks(fontsize=FONTSIZE)
 
     # fig.tight_layout()
-    fig.savefig(SAVE_DIR+f"generation_std_{label.replace(" ", "_")}.pdf")
+    insert = label.replace(" ", "_")
+    fig.savefig(SAVE_DIR+f"generation_std_{insert}.pdf")

@@ -1,6 +1,0 @@
-Title: [PUT YOUR TITLE HERE]
-
-Abstract: [PUT YOUR ABSTRACT HERE]
-
-Introduction:
-[WRITE HERE]

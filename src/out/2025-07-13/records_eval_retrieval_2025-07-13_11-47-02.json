@@ -1,6 +1,0 @@
-{
-    "last changed": "2025-07-13_11-47-02",
-    "eval_dataset": "data/context_citation_pairs_256_documents_3.0.jsonl",
-    "num_samples": 50,
-    "ScholarCopilot recall@100": 0.02
-}

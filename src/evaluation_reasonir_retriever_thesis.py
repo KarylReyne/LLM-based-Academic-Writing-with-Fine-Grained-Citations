@@ -44,10 +44,10 @@ if __name__ == "__main__":
     reasonir_index, reasonir_lookup_indices = load_faiss_index(reasonir_index_dir, reasonir_lookup_indices_dir)
     print("index building finished")
 
-    SECTIONS = "intro+relwork" # eval1
-    # SECTIONS = "methods" # eval2
-    # SECTIONS = "experiments" # eval3
-    # SECTIONS = "conclusion" # eval4
+    SECTIONS = "intro+relwork"
+    # SECTIONS = "methods"
+    # SECTIONS = "experiments"
+    # SECTIONS = "conclusion"
 
     with_abstracts = False
     shuffle = True
@@ -60,7 +60,8 @@ if __name__ == "__main__":
         target_sections = ["experiments"]
     elif SECTIONS == "conclusion":
         target_sections = ["conclusion"]
-    eval_dataset_path = f"data_thesis/eval_dataset_{SECTIONS}-sections_documents_3.0_for_sc_corpus{"_with_abstracts" if with_abstracts else ""}.jsonl"
+    insert = "_with_abstracts" if with_abstracts else ""
+    eval_dataset_path = f"data_thesis/eval_dataset_{SECTIONS}-sections_documents_3.0_for_sc_corpus{insert}.jsonl"
     docs_dataset_path = "data/documents_3.0_with_ids.jsonl"
     eval_dataset, eval_indices = load_sections_eval_dataset(
         target_sections, 
@@ -92,7 +93,8 @@ if __name__ == "__main__":
     # override some model settings to match the settings defined in this file
     config["only_passage_retriever_topk"] = RECALL_K*2
     config["reranker_topk"] = RECALL_K
-    config["custom_save_dir"] = f"out_thesis/eval_reasonir_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{"out" if not with_abstracts else ""}_abstracts/"
+    insert = "out" if not with_abstracts else ""
+    config["custom_save_dir"] = f"out_thesis/eval_reasonir_retrieval_recall@{RECALL_K}_{max_samples}_{SECTIONS}/with{insert}_abstracts/"
 
     print()
     for i in eval_indices:
@@ -103,24 +105,20 @@ if __name__ == "__main__":
             item = eval_dataset[i]
             context = item["context"]
             target_docs_corpus_id = docs_corpus_id_map[item["target_arxiv_id"]]
-            # print(context)
 
             reasonir_ranking, reasonir_references = rank_with_reasonir(
                 context, passage_retrieval_models, reasonir_index, reasonir_lookup_indices, passages_data_dataset, docs_corpus_id_map, config
             )
-            # print(reasonir_ranking)
 
             reasonir_pr_ranking, fail, reasonir_reranking_results, error_msg = rank_with_passage_retrieval_from_sc_rankings(
                 context, reasonir_references, docs_corpus_id_map, tokenizer, passage_retrieval_models, config
             )
-            # print(reasonir_pr_ranking)
 
             # appending to the containers is delayed until all retrievals are done (because of the error handling)
             gold.append(target_docs_corpus_id)
             reasonir_rankings.append(reasonir_ranking)
             reasonir_pr_rankings.append(reasonir_pr_ranking)
             num_llm_fails += fail
-            # print(gold[-1])
 
             # determine overlap
             bool_sc = single_recall_at_k(reasonir_ranking, target_docs_corpus_id, RECALL_K)
