@@ -9,7 +9,7 @@ pip install -r requirements.txt
 Next, download the required models and some of the datasets:
 ```
 cd src
-sh download_models.py
+sh download_models.sh
 ```
 Note that you will additionally need the HDT dataset `documents_3.0.json`. Place this dataset in the `src/data/` folder.
 To augment this dataset with the arxiv ids for (most of) the cited documents, run
@@ -62,4 +62,4 @@ If you're interested how the plots in the thesis were generated, have a look at 
  - `generation_breakpoint`: Maximum number of tokens to generate (by the evaluated models) during generation evaluation.
  - `shuffle_instruction`: Whether the generation quality dimensions (see section 4.1 in the thesis) should be shuffled before the judge instruction is put together.
 ## License
-This software is released under a BSD 3-Clause License. A copy of this license can be found in LICENSE.txt. It makes use of and is distributed with substantial portions of modified code from [ScholarCopilot](https://github.com/TIGER-AI-Lab/ScholarCopilot/tree/main) which is licensed under the MIT license. A copy of their license can be found in license/ScholarCopilot.LICENSE. Source files derived from ScholarCopilot code are marked with the prefix `scholarcopilot_`.
+This software is released under a BSD 3-Clause License. A copy of this license can be found in `LICENSE`. It makes use of and is distributed with substantial portions of modified code from [ScholarCopilot](https://github.com/TIGER-AI-Lab/ScholarCopilot/tree/main) which is licensed under the MIT license. A copy of their license can be found in `ScholarCopilot.LICENSE`. Source files derived from ScholarCopilot code are marked with the prefix `scholarcopilot_`.
