@@ -5,7 +5,7 @@ import numpy as np
 
 from passage_retrieval_interface import get_config, get_passage_retrieval_models, save_results
 from scholarcopilot_model import load_model, load_faiss_index
-from evaluation_generation_instruction import judge_instruction, judge_instruction2
+from evaluation_generation_instruction import judge_instruction2
 from scholarcopilot_generation import stream_generate
 from dataset_loaders import load_generation_eval_dataset, arxiv_to_corpus_id, scholarcopilot_arxiv_to_corpus_id, load_retrieval_dataset, load_scholarcopilot_metadata_corpus
 
@@ -143,24 +143,24 @@ if __name__ == "__main__":
     complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
     docs_retrieval_dataset = load_retrieval_dataset(docs_retrieval_dataset_path, complete_dataset_path, docs_corpus_id_map)
 
-    shuffle = True
+    shuffle = config["shuffle_samples"]
     eval_dataset_path = "data_thesis/eval_dataset_generation.jsonl"
     eval_dataset, eval_indices = load_generation_eval_dataset(
         eval_dataset_path, 
         docs_retrieval_dataset, 
         sc_arxiv_id_map, 
-        max_samples=100000, 
+        max_samples=config["max_samples"], 
         shuffle=shuffle
     )
 
     samples = 0
-    max_samples = 10
+    max_samples = config["num_samples"]
     retrieval_fails = 0
     llm_fails = 0
     catch_retrieval_fails = True
     total_num_retrievals = 0
-    generation_breakpoint = 30000
-    shuffle_instruction = True
+    generation_breakpoint = config["generation_breakpoint"]
+    shuffle_instruction = config["shuffle_instruction"]
     eps = 1e-6 # fail metrics
     scoring_records = []
     all_sc_judge_scores_avg = {

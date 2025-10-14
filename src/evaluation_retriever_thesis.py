@@ -32,20 +32,15 @@ if __name__ == "__main__":
     corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
     sc_metadata_corpus = load_scholarcopilot_metadata_corpus(corpus_path)
 
-    # TODO: rebuild the retrieval index with only papers in sc and docs
-
     index_dir = "scholarcopilot_data/index"
     lookup_indices_dir = "scholarcopilot_data/lookup_indices.npy"
     index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
     print("index building finished")
 
-    SECTIONS = "intro+relwork"
-    # SECTIONS = "methods"
-    # SECTIONS = "experiments"
-    # SECTIONS = "conclusion"
+    SECTIONS = config["SECTIONS"]
 
-    with_abstracts = False
-    shuffle = True
+    with_abstracts = config["with_abstracts"]
+    shuffle = config["shuffle_samples"]
 
     if SECTIONS == "intro+relwork":
         target_sections = ["introduction", "related work"]
@@ -66,17 +61,17 @@ if __name__ == "__main__":
         docs_corpus_id_map, 
         sc_corpus_id_map, 
         config, 
-        max_samples=100000, 
+        max_samples=config["max_samples"], 
         populate_with_abstracts=with_abstracts, 
         shuffle=shuffle
     )
 
-    RECALL_K = 1
+    RECALL_K = config["RECALL_K"]
     
     sc_rankings = [] # len_dataset x recall_k
     sc_pr_rankings = [] # len_dataset x recall_k
     gold = [] # len_dataset x 1
-    max_samples = 50
+    max_samples = config["num_samples"]
     samples = 0
     num_llm_fails = 0
     retrieval_fails = 0
@@ -100,6 +95,7 @@ if __name__ == "__main__":
 
         # for computing the example in the thesis
         # config["custom_save_dir"] = f"out_thesis/eval_retrieval_recall@{RECALL_K}_SCfailurePRsuccess_example/"
+
 
     print()
     for i in eval_indices:

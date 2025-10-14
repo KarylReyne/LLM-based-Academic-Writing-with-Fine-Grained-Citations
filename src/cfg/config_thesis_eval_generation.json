@@ -30,5 +30,13 @@
     "reranker_temperature": 0.6,
     "hnsw_efSearch": 32,
     "judge_temperature": 0.6,
-    "judge_should_only_score": false
+    "judge_should_only_score": false,
+    "RECALL_K": 10,
+    "SECTIONS": "intro+relwork",
+    "with_abstracts": false,
+    "shuffle_samples": true,
+    "num_samples": 100,
+    "max_samples": 100000,
+    "generation_breakpoint": 30000,
+    "shuffle_instruction": true
 }

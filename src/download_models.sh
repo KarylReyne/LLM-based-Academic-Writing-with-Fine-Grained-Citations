@@ -1,5 +1,15 @@
-mkdir -p reasonir_8b
-cd reasonir_8b
+mkdir -p scholarcopilot_data
+cd scholarcopilot_data
+huggingface-cli download TIGER-Lab/ScholarCopilot-Data-v1 --local-dir . --repo-type dataset
+
+
+mkdir -p ../scholarcopilot_model_v1208
+cd ../scholarcopilot_model_v1208
+huggingface-cli download TIGER-Lab/ScholarCopilot-v1 --local-dir . --repo-type model
+
+
+mkdir -p ../reasonir_8b
+cd ../reasonir_8b
 huggingface-cli download reasonir/ReasonIR-8B --local-dir . --repo-type model
 
 
