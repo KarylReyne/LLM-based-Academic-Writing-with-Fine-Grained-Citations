@@ -3,7 +3,6 @@ import time
 import passage_reranking
 from passage_retrieval_interface import *
 from dataset_loaders import arxiv_to_corpus_id, load_retrieval_dataset, load_scholarcopilot_metadata_corpus
-from training_create_passage_encodings import load_passages_data_dataset
 
 
 def split_yield_list(input_text, prefix_length):
@@ -155,67 +154,4 @@ def stream_generate(text, citations_data, index, lookup_indices, model, tokenize
     citations_data += new_citation_data
     yield display_text, citations_data, [retrieval_fails, llm_fails]
     time.sleep(0.1)
-
-
-def load_example(file_path=""):
-    example_text = ""
-    with open(file_path, "r") as fi:
-        for line in fi.readlines():
-            example_text += line
-    return example_text
-
-
-if __name__ == "__main__":
-    config = get_config()
-
-    model_path = "scholarcopilot_model_v1208/"
-    model, tokenizer = load_model(model_path, config)
-
-    passage_retrieval_models = get_passage_retrieval_models(config)
-    print("models loaded")
-
-    id_map_path = "data/arxiv_to_corpus_id_documents_3.0.json"
-    processed_corpus_path = "data/documents_3.0_processed_corpus.jsonl"
-    docs_corpus_id_map = arxiv_to_corpus_id(id_map_path, processed_corpus_path)
-    
-    retrieval_dataset_path = "data/retrieval_dataset_documents_3.0.jsonl"
-    complete_dataset_path = "data/documents_3.0_with_ids.jsonl"
-    retrieval_dataset = load_retrieval_dataset(retrieval_dataset_path, complete_dataset_path, docs_corpus_id_map)
-
-    corpus_path = "scholarcopilot_data/corpus_data_arxiv_1215.jsonl"
-    sc_metadata_corpus = load_scholarcopilot_metadata_corpus(corpus_path)
-
-    passages_data_dataset_path = "data/documents_3.0_512-passages_passages-data.jsonl"
-    passages_data_dataset = load_passages_data_dataset(passages_data_dataset_path, docs_corpus_id_map)
-
-    if config["use_only_passage_retriever"]:
-        index_dir = "data/documents_3.0_512-passages_reasonir_8b-encoded_index"
-        lookup_indices_dir = "data/documents_3.0_512-passages_reasonir_8b-encoded_lookup_indices.npy"
-    else: # sc index
-        index_dir = "scholarcopilot_data/index"
-        lookup_indices_dir = "scholarcopilot_data/lookup_indices.npy"
-    index, lookup_indices = load_faiss_index(index_dir, lookup_indices_dir)
-    print("index building finished")
-
-    citations_data = []
-
-    # starting left-side context for the generation model
-    example_path = "scholarcopilot_examples/vlm2vec-example.txt"
-    text_input = load_example(example_path)
-
-    print("pre-generation text_input:", text_input)
-
-    gen = stream_generate(
-        text_input, citations_data, index, lookup_indices, model, tokenizer, retrieval_dataset, sc_metadata_corpus, passages_data_dataset, docs_corpus_id_map, passage_retrieval_models, config
-    )
-    for t in gen:
-        text_input, citations_data, _ = t
-    print("text_input:", text_input)
-    
-    save_results({
-        "given generation input": example_path,
-        "generated paper": text_input,
-        "citations_data": citations_data
-    }, config, mode="generation")
-
 

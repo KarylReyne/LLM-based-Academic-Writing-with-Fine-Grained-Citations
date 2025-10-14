@@ -1,6 +1,6 @@
 # LLM-based Academic Writing with Fine-Grained Citations
 ## Included Evaluation Data
-TODO
+The evaluation results reported in the thesis are included in `src/out_thesis/`. New evaluation results will also be recorded in this folder.
 ## How to reproduce the results from the thesis
 Start by installing the dependencies: 
 ```
@@ -53,7 +53,7 @@ If you're interested how the plots in the thesis were generated, have a look at 
  - `reranker_temperature`, `judge_temperature`: Passage retriever / judge Softmax temperature respectively.
  - `hnsw_efSearch`: `efSearch` parameter used for ScholarCopilots' HNSW index retrieval.
  - `judge_should_only_score`: Whether the judge should only generate scores (**true**) or reasoning + scores (**false**). See section 4.1 in the thesis.
- - `RECALL_K`: Recall `k` used for evaluation. May override `*_topk` settings, see Table A.1 in the thesis.
+ - `RECALL_K`: Recall `k` used for evaluation. May override `*_topk` settings, see Table A.1 in the thesis. If you don't want your `*_topk` settings overridden, modify `evaluation_retriever_thesis.py`, line 83-97 accordingly.
  - `SECTIONS`: Which dataset to use for retrieval evaluation. Supported are `"intro+relwork"`, `"methods"`, `"experiments"` and `"conclusion"`. See section 4.1 in the thesis.
  - `with_abstracts`: How citations should be replaced in citing contexts during retrieval evaluation. Setting this to **false** is equivalent to the `masked` strategy described in the thesis (see section 4.1) 
  - `shuffle_samples`: Whether evaluation samples should be shuffled. Works for both retrieval and generation evaluation.
@@ -62,4 +62,4 @@ If you're interested how the plots in the thesis were generated, have a look at 
  - `generation_breakpoint`: Maximum number of tokens to generate (by the evaluated models) during generation evaluation.
  - `shuffle_instruction`: Whether the generation quality dimensions (see section 4.1 in the thesis) should be shuffled before the judge instruction is put together.
 ## License
-This software is released under a BSD 3-Clause License. A copy of this license can be found in LICENSE.txt. It makes use of and is distributed with substantial portions of modified code from [Scholarcopilot](https://github.com/TIGER-AI-Lab/ScholarCopilot/tree/main) which is licensed under the MIT license. A copy of their license can be found in license/ScholarCopilot.LICENSE. Source files derived from ScholarCopilot code are marked with the prefix `scholarcopilot_`.
+This software is released under a BSD 3-Clause License. A copy of this license can be found in LICENSE.txt. It makes use of and is distributed with substantial portions of modified code from [ScholarCopilot](https://github.com/TIGER-AI-Lab/ScholarCopilot/tree/main) which is licensed under the MIT license. A copy of their license can be found in license/ScholarCopilot.LICENSE. Source files derived from ScholarCopilot code are marked with the prefix `scholarcopilot_`.
