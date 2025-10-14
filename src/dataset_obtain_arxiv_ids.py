@@ -55,6 +55,7 @@ if __name__ == "__main__":
     FORCE_MAP_GENERATION = False
 
     title_to_arxiv_id = {}
+    dataset = {}
     dataset_size = None
     try:
         if FORCE_MAP_GENERATION:
@@ -77,13 +78,16 @@ if __name__ == "__main__":
     print(f"title_to_arxiv_id loaded (unique titles: {dataset_size}/unique ids: {len(arxiv_id_dict.keys())}).")
 
     prev_processed_dataset = {}
-    with open(new_dataset_path, "r") as file:
-        prev_processed_dataset_size = 0
-        for line in file:
-            rec = json.loads(line)
-            prev_processed_dataset[rec["arxiv_id"]] = rec
-            prev_processed_dataset_size += 1
-    print(f"prev_processed_dataset loaded ({prev_processed_dataset_size}).")
+    prev_processed_dataset_size = 0
+    try:
+        with open(new_dataset_path, "r") as file:
+            for line in file:
+                rec = json.loads(line)
+                prev_processed_dataset[rec["arxiv_id"]] = rec
+                prev_processed_dataset_size += 1
+        print(f"prev_processed_dataset loaded ({prev_processed_dataset_size}).")
+    except FileNotFoundError:
+        pass
 
     ids = 0
     ids_in_dataset = 0
