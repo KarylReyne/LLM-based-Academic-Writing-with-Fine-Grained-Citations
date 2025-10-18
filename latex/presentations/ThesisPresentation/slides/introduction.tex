@@ -1,13 +1,13 @@
-\begin{frame}{Research Question}
-    TODO % question
-\end{frame}
-
 \begin{frame}{ScholarCopilot Overview}
     \begin{figure}[t]
         \centering
         \includegraphics[width=\textwidth]{images/SC_vs_RAG.png}
         \caption{From \cite{wang2025scholarcopilot} (modified).}
     \end{figure}
+\end{frame}
+
+\begin{frame}{Research Question}
+    Does retrieving most relevant \textbf{passages} instead of abstracts improve ScholarCopilot regarding citation recall or generation quality ?
 \end{frame}
 
 \begin{frame}{ScholarCopilot Reference Retrieval}
@@ -29,7 +29,29 @@
 \end{frame}
 
 \begin{frame}{Models}
-    TODO % models
+    \begin{itemize}
+        \item ScholarCopilot: \mono{ScholarCopilot-v1} \cite{wang2025scholarcopilot}
+            \begin{itemize}
+                \item backbone: \mono{Qwen2.5-7B} \cite{an2024qwen2}
+                \item fine-tuned on the 500k ScholarCopilot training dataset
+            \end{itemize}
+        \item Passage Retriever: \mono{Qwen2.5-7B-Instruct} \cite{an2024qwen2}
+        \item Generation Evaluation model ("judge"): \mono{DeepSeek-R1-Distill-Qwen-7B} \cite{guo2025deepseek}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Task 1: Reference Retrieval}
+    Given a citing context, e.g. \cite{dosovitskiy2020image}:
+    \begin{lstlisting}
+        Transformers were proposed by Vaswani et al. (2017) for machine translation, and have since become the state of the art method in many NLP tasks. Large Transformer-based models are often pre-trained on large corpora and then fine-tuned for the task at hand: BERT (<|TARGET-CITATION|>
+    \end{lstlisting}
+    the model is tasked to retrieve the cited document.\\
+    \bigskip
+    Other citations -- here "Vaswani et al. (2017)" -- are either
+    \begin{itemize}
+        \item masked or
+        \item replaced with the abstract of the cited document
+    \end{itemize}
 \end{frame}
 
 \begin{frame}{Citation Recall Performance}
@@ -69,20 +91,25 @@
     \end{table}
 \end{frame}
 
-\begin{frame}{Why is the recall for \mono{experiments} so much higher?}
+\begin{frame}[fragile]{Why is the recall for \mono{experiments} so much higher?}
+    Maybe citations in \mono{experiments} are easier for the model to resolve?\\
+    Consider this example from \cite{dosovitskiy2020image}:
+    \begin{lstlisting}
+        We transfer the models trained on these dataset to several benchmark tasks: ImageNet on the original validation labels and the cleaned-up ReaL labels (Beyer et al., 2020), CIFAR-10/100 (Krizhevsky, 2009), Oxford-IIIT Pets (Parkhi et al., 2012), and Oxford Flowers-102 (Nilsback & Zisserman, 2008).
+    \end{lstlisting}
     \begin{table}[t]
-    \begin{center}
-        \resizebox{\textwidth}{!}{\begin{tabular}{lcccc}
-             & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} \\
-            \hline
-            \hline
-            last token in abstract & $0.08$ & $0.12$ & \textbf{0.22} & $0.11$ \\
-            \hline
-        \end{tabular}}
-    \end{center}
-    \caption{Fraction of cases where the last token before the citation appears in the abstract of the cited document.}
-    \label{tab:last_token}
-\end{table}
+        \begin{center}
+            \resizebox{\textwidth}{!}{\begin{tabular}{lcccc}
+                & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} \\
+                \hline
+                \hline
+                last token in abstract & $0.08$ & $0.12$ & \textbf{0.22} & $0.11$ \\
+                \hline
+            \end{tabular}}
+        \end{center}
+        \caption{Fraction of cases where the last token before the citation appears in the abstract of the cited document.}
+        \label{tab:last_token}
+    \end{table}
 \end{frame}
 
 \begin{frame}{Correct Retrieval Overlap}
@@ -109,7 +136,26 @@
     \end{table}
 \end{frame}
 
-\begin{frame}{Generation Quality Evaluation}
+\begin{frame}{Task 2: Generation Quality Evaluation}
+    Given
+    \begin{itemize}
+        \item title
+        \item abstract
+        \item the first 2,5 sentences of the introduction
+    \end{itemize}
+    of an existing paper, the model is tasked to generate a scientific paper.\\
+    \bigskip
+    The judge evaluates the quality of the generated paper against the real paper by considering the following dimensions:
+    \begin{itemize}
+        \item Content Relevance
+        \item Logical Coherence
+        \item Academic Rigor
+        \item Background Completeness
+        \item Innovation Statement
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Generation Quality Evaluation: Results}
     \begin{figure}[t]
         \centering
         \includegraphics[width=0.75\textwidth, trim={1.3cm 0 2.5cm 0}, clip]{images/plot_generation_with_reasoning.pdf}
@@ -138,6 +184,19 @@
     \end{figure}
 \end{frame}
 
-\begin{frame}{TODO}
-    TODO % ReasonIR maybe?
+\begin{frame}{Conclusion}
+    \begin{itemize}
+        \item the PR module does \textbf{not improve ScholarCopilot} in either citation recall or generation quality
+        \item the PR module is able to \textbf{identify correct citation targets}, even if ScholarCopilot fails to do so
+        \item citations in experiments sections tend to be \textbf{easier to retrieve} compared to other sections
+        \item LLM-based generation evaluation shows more consistent scoring behaviour when prompted to \textbf{provide reasoning} for its decision
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Passage Retrieval with ReasonIR}
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=0.68\textwidth, trim={0 1.8cm 0 1cm}, clip]{images/plot_retrieval_reasonir.pdf}
+        \caption{Citation recall when retrieving passages with ReasonIR \cite{shao2025reasonir} and reranking with Qwen.}
+    \end{figure}
 \end{frame}

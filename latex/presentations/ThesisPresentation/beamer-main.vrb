@@ -1,0 +1,19 @@
+\frametitle{Why is the recall for \mono {experiments} so much higher?}
+Maybe citations in \mono{experiments} are easier for the model to resolve?\\
+    Consider this example from \cite{dosovitskiy2020image}:
+    \begin{lstlisting}
+        We transfer the models trained on these dataset to several benchmark tasks: ImageNet on the original validation labels and the cleaned-up ReaL labels (Beyer et al., 2020), CIFAR-10/100 (Krizhevsky, 2009), Oxford-IIIT Pets (Parkhi et al., 2012), and Oxford Flowers-102 (Nilsback & Zisserman, 2008).
+    \end{lstlisting}
+    \begin{table}[t]
+        \begin{center}
+            \resizebox{\textwidth}{!}{\begin{tabular}{lcccc}
+                & \mono{intro+relwork} & \mono{methods} & \mono{experiments} & \mono{conclusion} \\
+                \hline
+                \hline
+                last token in abstract & $0.08$ & $0.12$ & \textbf{0.22} & $0.11$ \\
+                \hline
+            \end{tabular}}
+        \end{center}
+        \caption{Fraction of cases where the last token before the citation appears in the abstract of the cited document.}
+        \label{tab:last_token}
+    \end{table}
